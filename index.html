@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ANUSHRI_ARCHIVE.vhs</title>
+    <style>
+        :root {
+            --plastic: #1a1a1a;
+            --led-off: #330000;
+            --led-on: #ff0000;
+            --vhs-blue: #0000aa;
+            --font-vcr: 'Courier New', monospace;
+        }
+
+        body {
+            background: #050505;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-family: var(--font-vcr);
+            color: #ccc;
+            perspective: 1000px;
+        }
+
+        /* --- CRT OVERLAY --- */
+        .scanlines {
+            position: fixed; inset: 0; pointer-events: none; z-index: 100;
+            background: linear-gradient(rgba(18,16,16,0) 50%, rgba(0,0,0,0.25) 50%),
+                        linear-gradient(90deg, rgba(255,0,0,0.06), rgba(0,255,0,0.02), rgba(0,0,255,0.06));
+            background-size: 100% 3px, 3px 100%;
+            animation: flicker 0.15s infinite;
+            opacity: 0.4;
+        }
+        
+        .static {
+            position: fixed; inset: 0; pointer-events: none; z-index: 99;
+            opacity: 0.05;
+            background: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIj48ZmlsdGVyIGlkPSJnoiPjxmZVR1cmJ1bGVuY2UgdHlwZT0iZnJhY3RhbE5vaXNlIiBiYXNlRnJlcXVlbmN5PSIwLjYiIC8+PC9maWx0ZXI+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsdGVyPSJ1cmwoI2cpIiBvcGFjaXR5PSIwLjUiLz48L3N2Zz4=');
+        }
+
+        /* --- TV SET --- */
+        .tv-set {
+            width: 800px; height: 600px;
+            background: #000;
+            border: 20px solid #222;
+            border-radius: 4px;
+            position: relative;
+            box-shadow: 0 0 50px rgba(0,0,0,0.8);
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        .screen-content {
+            width: 100%; height: 100%;
+            background: var(--vhs-blue);
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            text-shadow: 2px 2px 0px rgba(0,0,0,0.5);
+            position: relative;
+        }
+
+        /* --- VHS TAPES --- */
+        .tape-rack {
+            display: flex; gap: 20px; margin-top: 40px;
+            transform-style: preserve-3d;
+        }
+
+        .tape {
+            width: 160px; height: 100px;
+            background: #111;
+            border-radius: 4px;
+            position: relative;
+            cursor: pointer;
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border: 2px solid #333;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+
+        .tape::before {
+            content: ''; position: absolute; top: 10px; left: 10px; right: 10px; height: 50px;
+            background: #333; border-radius: 2px;
+            background-image: linear-gradient(90deg, transparent 50%, #000 50%);
+            background-size: 20px 100%;
+        }
+
+        .tape-label {
+            margin-top: 40px; background: #fff; color: #000; padding: 2px 10px;
+            font-size: 0.7rem; font-weight: bold; transform: rotate(-2deg);
+            box-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        }
+
+        .tape:hover { transform: translateY(-20px) scale(1.05); border-color: #555; }
+        .tape.inserted { transform: translateY(-200px) scale(0); opacity: 0; }
+
+        /* --- UI TEXT --- */
+        h1 { font-size: 3rem; margin: 0; animation: glitch 3s infinite; }
+        .play-text { font-size: 1.5rem; margin-top: 20px; animation: blink 1s infinite; }
+        .date-stamp { position: absolute; top: 40px; left: 40px; font-size: 1.2rem; }
+        
+        .loading-bar { 
+            width: 300px; height: 10px; border: 2px solid #fff; margin-top: 20px; 
+            display: none; position: relative; 
+        }
+        .loading-fill { width: 0%; height: 100%; background: #fff; transition: width 0.1s linear; }
+
+        /* --- ANIMATIONS --- */
+        @keyframes blink { 50% { opacity: 0; } }
+        @keyframes flicker { 0% { opacity: 0.4; } 50% { opacity: 0.45; } 100% { opacity: 0.4; } }
+        @keyframes glitch { 
+            0% { transform: translate(0); } 
+            20% { transform: translate(-2px, 2px); } 
+            22% { transform: translate(2px, -2px); } 
+            24% { transform: translate(0); } 
+            100% { transform: translate(0); } 
+        }
+
+        /* --- MOBILE --- */
+        @media (max-width: 800px) {
+            .tv-set { width: 100vw; height: 60vh; border: none; }
+            .tape { width: 100px; height: 70px; }
+            .tape-label { font-size: 0.5rem; margin-top: 25px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="scanlines"></div>
+    <div class="static"></div>
+
+    <div class="tv-set">
+        <div class="screen-content" id="screen">
+            <div class="date-stamp" id="clock">00:00:00</div>
+            <h1>AV-1</h1>
+            <div class="play-text" id="status">INSERT TAPE</div>
+            <div class="loading-bar" id="loader"><div class="loading-fill" id="fill"></div></div>
+        </div>
+    </div>
+
+    <div class="tape-rack">
+        <div class="tape" onclick="insertTape(1, 'A1.html')">
+            <div class="tape-label">THE CLIMB</div>
+        </div>
+        <div class="tape" onclick="insertTape(2, 'A2.html')">
+            <div class="tape-label">THE SHIELD</div>
+        </div>
+        <div class="tape" onclick="insertTape(3, 'A3.html')">
+            <div class="tape-label">THE VOID</div>
+        </div>
+        <div class="tape" onclick="insertTape(4, 'A4.html')">
+            <div class="tape-label">THE SUN</div>
+        </div>
+    </div>
+
+    <script>
+        // --- CLOCK ---
+        setInterval(() => {
+            const now = new Date();
+            document.getElementById('clock').innerText = 
+                `FEB 08 2026 ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+        }, 1000);
+
+        // --- AUDIO ENGINE (Procedural Noise) ---
+        const AudioSys = {
+            ctx: null,
+            init() {
+                if(!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                if(this.ctx.state === 'suspended') this.ctx.resume();
+            },
+            playStatic(duration) {
+                if(!this.ctx) return;
+                const bufferSize = this.ctx.sampleRate * duration;
+                const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+                
+                const noise = this.ctx.createBufferSource();
+                noise.buffer = buffer;
+                const gain = this.ctx.createGain();
+                gain.gain.value = 0.1;
+                noise.connect(gain);
+                gain.connect(this.ctx.destination);
+                noise.start();
+            },
+            playClunk() {
+                if(!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.frequency.setValueAtTime(100, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.3);
+                gain.gain.value = 0.5;
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.3);
+                osc.connect(gain); gain.connect(this.ctx.destination);
+                osc.start(); osc.stop(this.ctx.currentTime + 0.3);
+            }
+        };
+
+        // --- TAPE MECHANIC ---
+        function insertTape(id, url) {
+            AudioSys.init();
+            AudioSys.playClunk();
+            
+            // Visuals
+            const tape = document.querySelectorAll('.tape')[id-1];
+            tape.classList.add('inserted');
+            
+            const screen = document.getElementById('screen');
+            const status = document.getElementById('status');
+            const loader = document.getElementById('loader');
+            const fill = document.getElementById('fill');
+
+            status.innerText = "TRACKING...";
+            status.style.animation = "none";
+            
+            setTimeout(() => {
+                screen.style.background = "#111"; // Black out
+                AudioSys.playStatic(0.5);
+                
+                setTimeout(() => {
+                    screen.style.background = "#0000aa"; // Blue screen
+                    status.innerText = "PLAY";
+                    loader.style.display = "block";
+                    
+                    // Fake Load
+                    let width = 0;
+                    const interval = setInterval(() => {
+                        width += Math.random() * 5;
+                        fill.style.width = width + "%";
+                        if(width >= 100) {
+                            clearInterval(interval);
+                            window.location.href = url;
+                        }
+                    }, 50);
+                }, 500);
+            }, 800);
+        }
+    </script>
+</body>
+</html>
