@@ -427,4 +427,465 @@
       height: 72px;
       border-radius: var(--rad);
       border: 1px solid rgba(255,255,255,0.10);
+      background:
+        radial-gradient(520px 140px at 50% 0%, rgba(0,242,255,0.10), rgba(0,0,0,0) 55%),
+        rgba(0,0,0,0.18);
+      display:flex;
+      align-items:flex-end;
+      justify-content:center;
+      gap: 4px;
+      padding: 12px 12px 10px;
+      overflow:hidden;
+    }
+    .barv{
+      width: 5px;
+      height: 4px;
+      border-radius: 999px;
+      background: linear-gradient(to top, rgba(123,44,191,0.95), rgba(0,242,255,0.95));
+      opacity: .92;
+      will-change: height;
+      transform: translateZ(0);
+    }
+
+    .statusBox{
+      margin-top: 14px;
+      border-radius: var(--rad);
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(0,0,0,0.20);
+      padding: 14px;
+      color: rgba(234,234,246,.78);
+      line-height: 1.75;
+      font-size: 14.5px;
+    }
+    .hl{ color: rgba(0,242,255,.92); font-weight: 650; }
+    .hlg{ color: rgba(255,215,0,.92); font-weight: 650; }
+    .hlp{ color: rgba(123,44,191,.92); font-weight: 650; }
+
+    footer{
+      padding: 24px 0 56px;
+      text-align:center;
+      color: rgba(234,234,246,.55);
+      font-family: var(--mono);
+      font-size: 12px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+
+    /* Modal "TV" */
+    #modal{
+      position: fixed;
+      inset: 0;
+      z-index: 1200;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding: 18px;
+      background: rgba(0,0,0,0.84);
+      backdrop-filter: blur(10px);
+      opacity: 0;
+      visibility:hidden;
+      pointer-events:none;
+      transition: opacity .22s ease, visibility .22s ease;
+    }
+    #modal.open{ opacity:1; visibility:visible; pointer-events:auto; }
+    .tv{
+      width: min(1100px, 96vw);
+      max-height: min(86vh, 860px);
+      border-radius: calc(var(--rad) + 12px);
+      border: 1px solid rgba(255,255,255,0.16);
+      background:
+        radial-gradient(900px 320px at 50% 0%, rgba(0,242,255,0.10), rgba(0,0,0,0) 55%),
+        linear-gradient(145deg, rgba(255,255,255,0.07), rgba(255,255,255,0.03));
+      box-shadow: var(--shadow);
+      overflow:hidden;
+      display:flex;
+      flex-direction:column;
+      position: relative;
+    }
+    .tv::after{
+      content:"";
+      position:absolute; inset:0;
+      pointer-events:none;
+      opacity:.18;
+      background: repeating-linear-gradient(
+        0deg,
+        rgba(255,255,255,0.00),
+        rgba(255,255,255,0.00) 2px,
+        rgba(0,0,0,0.20) 2px,
+        rgba(0,0,0,0.20) 4px
+      );
+      mix-blend-mode: overlay;
+    }
+    .tvTop{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap: 10px;
+      padding: 12px 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.10);
+      background: rgba(0,0,0,0.18);
+      position: relative;
+      z-index: 1;
+    }
+    .tvTitle{
+      font-family: var(--mono);
+      font-size: 12px;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: rgba(234,234,246,.82);
+      padding-left: 6px;
+    }
+    .tvBody{
+      padding: clamp(16px, 3vw, 26px);
+      overflow:auto;
+      position: relative;
+      z-index: 1;
+    }
+    .tvBody::-webkit-scrollbar{ width: 10px; }
+    .tvBody::-webkit-scrollbar-thumb{ background: rgba(255,255,255,0.18); border-radius: 12px; }
+    .tvBody::-webkit-scrollbar-track{ background: rgba(0,0,0,0.18); }
+
+    .sectionTitle{
+      font-family: var(--display);
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      font-size: clamp(18px, 2.3vw, 22px);
+      margin-bottom: 10px;
+    }
+    .bodyText{
+      color: rgba(234,234,246,.86);
+      line-height: 1.95;
+      font-size: 16px;
+      max-width: 82ch;
+    }
+    .mono{
+      font-family: var(--mono);
+      font-size: 12px;
+      color: rgba(234,234,246,.70);
+      letter-spacing: .10em;
+      text-transform: uppercase;
+    }
+
+    /* Dialogue box (Undertale-ish but grounded) */
+    .dlg{
+      margin-top: 14px;
+      border-radius: calc(var(--rad) + 10px);
+      border: 1px solid rgba(255,255,255,0.14);
+      background: rgba(0,0,0,0.25);
+      padding: 14px;
+    }
+    .dlgHdr{
+      display:flex;
+      justify-content:space-between;
+      gap: 10px;
+      align-items:flex-start;
+      margin-bottom: 10px;
+    }
+    .speaker{
+      font-family: var(--mono);
+      font-size: 12px;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+      color: rgba(0,242,255,.86);
+    }
+    .dlgText{
+      font-size: 16px;
+      line-height: 1.85;
+      color: rgba(234,234,246,.92);
+      min-height: 3.2em;
+      white-space: pre-wrap;
+    }
+    .choices{
+      margin-top: 12px;
+      display:grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+    @media (max-width: 660px){
+      .choices{ grid-template-columns: 1fr; }
+    }
+    .choice{
+      border-radius: 12px;
+      padding: 12px 12px;
+      border: 1px solid rgba(255,255,255,0.14);
+      background: rgba(255,255,255,0.04);
+      font-family: var(--mono);
+      font-size: 12px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      text-align:left;
+    }
+    .choice[data-active="true"]{
+      border-color: rgba(0,242,255,.55);
+      box-shadow: 0 0 0 6px rgba(0,242,255,0.06);
+    }
+
+    /* Calibration mini-game */
+    .calib{
+      margin-top: 14px;
+      display:grid;
+      grid-template-columns: 1fr .9fr;
+      gap: 14px;
+      align-items:start;
+    }
+    @media (max-width: 900px){
+      .calib{ grid-template-columns: 1fr; }
+    }
+    .calibList{
+      border-radius: var(--rad);
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(0,0,0,0.20);
+      padding: 12px;
+    }
+    .chipRow{
+      display:flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+    .chip{
+      border-radius: 999px;
+      padding: 9px 10px;
+      border: 1px solid rgba(255,255,255,0.14);
+      background: rgba(255,255,255,0.04);
+      font-family: var(--mono);
+      font-size: 12px;
+      letter-spacing: .08em;
+      color: rgba(234,234,246,.80);
+      cursor:pointer;
+    }
+    .chip[data-tag="signal"]{ border-color: rgba(0,242,255,0.30); }
+    .chip[data-tag="noise"]{ border-color: rgba(255,42,109,0.30); }
+    .chip[data-picked="true"]{
+      background: rgba(0,242,255,0.08);
+      border-color: rgba(0,242,255,0.55);
+    }
+    .chip[data-picked="true"][data-tag="noise"]{
+      background: rgba(255,42,109,0.08);
+      border-color: rgba(255,42,109,0.55);
+    }
+    .meter{
+      border-radius: var(--rad);
+      border: 1px solid rgba(0,242,255,0.18);
+      background: rgba(0,0,0,0.20);
+      padding: 12px;
+    }
+    .meterBar{
+      height: 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.10);
+      overflow:hidden;
+      border: 1px solid rgba(255,255,255,0.10);
+      margin-top: 10px;
+    }
+    .meterBar > i{
+      display:block; height:100%; width: 0%;
+      background: linear-gradient(90deg, rgba(255,42,109,.82), rgba(255,215,0,.82), rgba(0,242,255,.82));
+      transition: width .24s ease;
+    }
+
+    /* Gallery */
+    .gallery{
+      margin-top: 14px;
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: auto auto;
+      gap: 14px;
+      align-items: stretch;
+    }
+    @media (max-width: 820px){
+      .gallery{ grid-template-columns: 1fr; }
+    }
+    .frame{
+      border-radius: calc(var(--rad) + 8px);
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(0,0,0,0.20);
+      overflow:hidden;
+      position: relative;
+      box-shadow: var(--shadow2);
+      cursor:pointer;
+      transition: transform .22s ease, border-color .22s ease, box-shadow .22s ease;
+    }
+    .frame:hover{
+      transform: translateY(-3px);
+      border-color: rgba(0,242,255,0.32);
+      box-shadow: 0 20px 52px rgba(0,0,0,0.60);
+    }
+    .frame.portrait{ grid-row: span 2; aspect-ratio: 3/4; }
+    .frame.landscape{ aspect-ratio: 16/9; }
+    .frame img{
+      width:100%;
+      height:100%;
+      object-fit: cover;
+      display:block;
+      filter: saturate(.98) contrast(1.02);
+    }
+    .frame .cap{
+      position:absolute;
+      left: 12px; bottom: 12px;
+      padding: 9px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.14);
+      background: rgba(0,0,0,0.42);
+      backdrop-filter: blur(8px);
+      font-family: var(--mono);
+      font-size: 12px;
+      letter-spacing: .10em;
+      text-transform: uppercase;
+      color: rgba(234,234,246,.82);
+    }
+    .frame .fallback{
+      position:absolute; inset:0;
+      display:flex; align-items:center; justify-content:center;
+      padding: 18px;
+      text-align:center;
+      color: rgba(234,234,246,.72);
+      background:
+        radial-gradient(700px 260px at 50% 0%, rgba(0,242,255,0.10), rgba(0,0,0,0) 55%),
+        linear-gradient(145deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
+    }
+
+    /* Lightbox */
+    #lightbox{
+      position: fixed; inset: 0;
+      z-index: 1300;
+      display:flex; align-items:center; justify-content:center;
+      padding: 18px;
+      background: rgba(0,0,0,0.86);
+      backdrop-filter: blur(10px);
+      opacity:0; visibility:hidden; pointer-events:none;
+      transition: opacity .22s ease, visibility .22s ease;
+    }
+    #lightbox.open{ opacity:1; visibility:visible; pointer-events:auto; }
+    .lbCard{
+      width: min(1200px, 96vw);
+      border-radius: calc(var(--rad) + 10px);
+      border: 1px solid rgba(255,255,255,0.16);
+      background: rgba(0,0,0,0.36);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .lbTop{
+      display:flex; justify-content:space-between; align-items:center; gap: 10px;
+      padding: 12px 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.10);
+      background: rgba(255,255,255,0.04);
+    }
+    .lbTitle{
+      font-family: var(--mono);
+      font-size: 12px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: rgba(234,234,246,.78);
+      padding-left: 6px;
+    }
+    .lbImg{
+      width:100%;
+      height: min(78vh, 780px);
+      object-fit: contain;
+      display:block;
+      background: rgba(0,0,0,0.35);
+    }
+
+    /* Finale typography */
+    .letter{
+      margin-top: 14px;
+      border-left: 2px solid rgba(123,44,191,0.65);
+      padding-left: clamp(14px, 2.6vw, 24px);
+    }
+    .letter p{
+      margin-bottom: 16px;
+      color: rgba(234,234,246,.90);
+      line-height: 1.95;
+      font-size: 16px;
+    }
+    .poem{
+      margin-top: 16px;
+      padding: 14px;
+      border-radius: var(--rad);
+      border: 1px solid rgba(0,242,255,0.16);
+      background: rgba(0,0,0,0.22);
+    }
+    .poem p{
+      margin: 0 0 6px 0;
+      font-size: 16px;
+      color: rgba(234,234,246,.90);
+    }
+    .punch{
+      margin-top: 18px;
+      padding: 14px 16px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.14);
+      background: rgba(0,0,0,0.26);
+      font-family: var(--mono);
+      font-size: 12px;
+      letter-spacing: .10em;
+      text-transform: uppercase;
+      display:inline-block;
+    }
+    .daddy{
+      color: rgba(255,215,0,.96);
+      text-shadow: 0 0 18px rgba(255,215,0,0.18);
+      font-weight: 900;
+    }
+
+    @media (prefers-reduced-motion: reduce){
+      .sigDot{ animation:none; }
+      *{ scroll-behavior:auto !important; transition:none !important; }
+      .noise{ display:none; }
+    }
+  </style>
+</head>
+
+<body>
+  <canvas id="bg" aria-hidden="true"></canvas>
+  <div class="noise" aria-hidden="true"></div>
+  <div class="scanlines" aria-hidden="true"></div>
+  <div class="vignette" aria-hidden="true"></div>
+
+  <!-- Boot gate -->
+  <section id="boot" aria-label="Boot">
+    <div class="bootCard">
+      <div class="bootHdr">
+        <div>
+          <div class="bootTitle">BIRTHDAY TAPE ARCHIVE</div>
+          <div class="bootSub">
+            This page checks its local files first. If something is missing, it won’t crash—
+            it continues gracefully and logs the missing assets in DevTools → Console.
+          </div>
+        </div>
+        <div class="bootTag" id="bootTag">phase: booting</div>
+      </div>
+
+      <div class="bootPanel">
+        <div class="bar" aria-label="Loading progress"><i id="bootBar"></i></div>
+        <div class="bootMeta">
+          <span id="bootPct">0%</span>
+          <span id="bootCount">0/0</span>
+        </div>
+        <div class="bootWarn" id="bootWarn">
+          <strong>Notice:</strong> Some assets failed. The archive will still work with placeholders.
+        </div>
+      </div>
+
+      <div class="bootActions">
+        <button class="btnPill" id="enterBtn" disabled>Insert Tape</button>
+      </div>
+    </div>
+  </section>
+
+  <div class="shell">
+    <div class="wrap">
+      <header class="hdr">
+        <div class="kicker">VHS / PRIVATE / ONE YEAR EDITION</div>
+        <div class="hTitle">For <span class="accent">Anushri</span></div>
+        <p class="hSub">
+          Not a loud party page. More like a tape archive: pieces you can play in any order.
+          Some are gentle. Some are honest. All of them are yours.
+        </p>
+      </header>
+
+      <section class="grid" aria-label="Archive hub">
+        <!-- Left: tape deck -->
+        <div class="card">
      
