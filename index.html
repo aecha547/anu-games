@@ -1,544 +1,430 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>ANUSHRI: PLAY/REWIND</title>
-<style>
-@import url('https://fonts.googleapis.com/css2?family=VT323&family=Cormorant+Garamond:ital,wght@0,400;1,400&display=swap');
-:root{--bg:#050505;--crt-green:#a8e6a3;--static-white:#d4d4d4;--warm:#ffeedd;--tape-red:#cc4444;--tape-blue:#5588bb;--tape-gold:#d4af37;--ui:#888}
-*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{height:100%;overflow:hidden;background:#000;font-family:'VT323',monospace;color:var(--static-white);user-select:none}
-
-/* === CRT TV FRAME === */
-#tv-frame{
-position:relative;width:100%;height:100%;
-display:flex;justify-content:center;align-items:center;
-background:radial-gradient(ellipse at 50% 60%,#0a0a0a 0%,#000 100%);
-}
-
-/* The TV "set" */
-.tv-body{
-position:relative;
-width:min(92vw,700px);
-aspect-ratio:4/3;
-background:#1a1a1a;
-border-radius:28px;
-border:3px solid #2a2a2a;
-box-shadow:0 20px 60px rgba(0,0,0,0.8),inset 0 2px 0 rgba(255,255,255,0.03);
-overflow:hidden;
-display:flex;flex-direction:column;
-}
-
-/* Screen area */
-.tv-screen{
-flex:1;margin:16px 16px 8px;
-background:#000;
-border-radius:12px;
-position:relative;overflow:hidden;
-box-shadow:inset 0 0 30px rgba(0,0,0,0.9);
-}
-
-/* Scanlines */
-.tv-screen::before{
-content:'';position:absolute;inset:0;z-index:50;pointer-events:none;
-background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.15) 2px,rgba(0,0,0,0.15) 4px);
-}
-
-/* Screen curvature */
-.tv-screen::after{
-content:'';position:absolute;inset:0;z-index:51;pointer-events:none;
-background:radial-gradient(ellipse at center,transparent 60%,rgba(0,0,0,0.55) 100%);
-}
-
-/* Screen glow */
-.screen-glow{
-position:absolute;inset:-20px;z-index:-1;
-border-radius:20px;
-background:radial-gradient(ellipse at center,rgba(168,230,163,0.04) 0%,transparent 70%);
-pointer-events:none;
-}
-
-/* Static noise canvas */
-#static-canvas{position:absolute;inset:0;z-index:10;opacity:0.12}
-/* Content layer */
-#screen-content{position:absolute;inset:0;z-index:20;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:20px}
-
-/* TV controls strip */
-.tv-controls{
-height:48px;display:flex;align-items:center;justify-content:space-between;
-padding:0 24px;background:#111;
-border-top:1px solid #222;
-}
-.tv-label{font-size:11px;letter-spacing:0.3em;color:#444;text-transform:uppercase}
-.tv-led{width:8px;height:8px;border-radius:50%;background:#1a1a1a;border:1px solid #333}
-.tv-led.on{background:var(--tape-red);box-shadow:0 0 8px var(--tape-red)}
-
-/* === SCREEN STATES === */
-
-/* Boot state */
-.boot-text{
-font-size:clamp(14px,2.5vw,20px);
-color:var(--crt-green);
-text-align:left;
-width:80%;
-line-height:1.8;
-text-shadow:0 0 8px rgba(168,230,163,0.3);
-}
-.boot-text .cursor{display:inline-block;width:10px;height:1.2em;background:var(--crt-green);animation:blink 1s step-end infinite;vertical-align:text-bottom;margin-left:2px}
-@keyframes blink{50%{opacity:0}}
-
-/* Tape select state */
-.tape-shelf{
-display:flex;flex-direction:column;align-items:center;gap:16px;
-width:90%;max-width:400px;
-}
-.shelf-label{
-font-size:11px;letter-spacing:0.4em;color:var(--ui);text-transform:uppercase;margin-bottom:8px
-}
-.tape{
-width:100%;padding:16px 20px;
-background:rgba(255,255,255,0.02);
-border:1px solid rgba(255,255,255,0.06);
-border-left:4px solid var(--tape-color,#555);
-cursor:pointer;
-display:flex;justify-content:space-between;align-items:center;
-transition:all 0.25s ease;
-position:relative;overflow:hidden;
-}
-.tape::before{
-content:'';position:absolute;top:0;left:-100%;width:100%;height:100%;
-background:linear-gradient(90deg,transparent,rgba(255,255,255,0.03),transparent);
-transition:left 0.5s;
-}
-.tape:hover::before{left:100%}
-.tape:hover{
-border-color:rgba(255,255,255,0.15);
-background:rgba(255,255,255,0.04);
-transform:translateX(4px);
-box-shadow:0 4px 20px rgba(0,0,0,0.3);
-}
-.tape-title{font-size:16px;letter-spacing:0.15em;text-transform:uppercase}
-.tape-status{font-size:12px;color:var(--ui);letter-spacing:0.1em}
-.tape-status.done{color:var(--crt-green)}
-.tape.locked{opacity:0.35;pointer-events:none}
-.tape.locked .tape-status::after{content:' [CORRUPTED]'}
-
-/* VHS insert animation */
-.inserting .tv-screen{animation:tvNoise 0.6s}
-@keyframes tvNoise{
-0%,100%{filter:none}
-10%{filter:brightness(2) contrast(0.5)}
-20%{filter:brightness(0.3)}
-40%{filter:brightness(1.5) hue-rotate(90deg)}
-60%{filter:brightness(0.5) saturate(3)}
-80%{filter:brightness(1.2)}
-}
-
-/* Info line */
-.info-line{
-position:absolute;bottom:12px;left:0;width:100%;
-text-align:center;font-size:11px;color:rgba(255,255,255,0.2);
-letter-spacing:0.15em;z-index:30;
-}
-
-/* Final tape overlay */
-.final-overlay{
-position:absolute;inset:0;z-index:40;
-background:rgba(0,0,0,0.95);
-display:flex;flex-direction:column;justify-content:center;align-items:center;
-padding:30px;text-align:center;
-opacity:0;pointer-events:none;
-transition:opacity 1s ease;
-}
-.final-overlay.visible{opacity:1;pointer-events:auto}
-.final-text{
-font-family:'Cormorant Garamond',serif;
-font-size:clamp(14px,2.2vw,18px);
-line-height:2;color:var(--warm);
-max-width:500px;
-}
-.final-text .gold{color:var(--tape-gold);font-weight:600;text-shadow:0 0 12px rgba(212,175,55,0.4)}
-.final-text .hl{color:var(--crt-green)}
-
-/* Audio toggle */
-.audio-toggle{
-position:fixed;top:12px;right:12px;z-index:200;
-background:rgba(0,0,0,0.6);border:1px solid #333;
-color:#666;font-family:'VT323';font-size:13px;
-padding:4px 10px;cursor:pointer;
-}
-.audio-toggle.on{color:var(--crt-green);border-color:var(--crt-green)}
-
-/* Mobile */
-@media(max-width:600px){
-.tv-body{border-radius:16px;width:96vw}
-.tv-screen{margin:10px 10px 6px}
-.tv-controls{height:38px;padding:0 16px}
-.tape{padding:12px 14px}
-}
-</style>
-</head>
-<body>
-
-<div id="tv-frame">
-<div class="tv-body">
-<div class="screen-glow"></div>
-<div class="tv-screen">
-<canvas id="static-canvas"></canvas>
-<div id="screen-content"></div>
-<div class="info-line" id="info-line">REC ● 00:00:00</div>
-<div class="final-overlay" id="final-overlay">
-<div class="final-text" id="final-text"></div>
-</div>
-</div>
-<div class="tv-controls">
-<span class="tv-label">ANUSHRI TAPES</span>
-<div style="display:flex;gap:8px;align-items:center">
-<span class="tv-label" style="font-size:10px">PWR</span>
-<div class="tv-led on" id="pwr-led"></div>
-</div>
-</div>
-</div>
-</div>
-
-<button class="audio-toggle" id="audio-toggle">AUDIO: OFF</button>
-
-<audio id="bgm-pisces" loop preload="auto">
-<source src="Pisces - Tony Ann (Piano Cover).mp3" type="audio/mpeg">
-</audio>
-<audio id="bgm-fallen" loop preload="auto">
-<source src="fallen-down.mp3" type="audio/mpeg">
-</audio>
-
-<script>
-'use strict';
-/*═══════════════════════════════════════════
-  INDEX.HTML — VHS PLAYER HUB
-  FP-focused, TypeScript-style, robust
-═══════════════════════════════════════════*/
-
-// ── Utilities ──
-const $=s=>document.getElementById(s);
-const qs=s=>document.querySelector(s);
-const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-
-// ── Static Noise ──
-const Static=(()=>{
-const canvas=$('static-canvas');
-const ctx=canvas.getContext('2d');
-let w=0,h=0,active=true,intensity=0.12;
-
-const resize=()=>{
-const rect=canvas.parentElement.getBoundingClientRect();
-w=canvas.width=Math.floor(rect.width);
-h=canvas.height=Math.floor(rect.height);
-};
-
-const draw=()=>{
-if(!active){requestAnimationFrame(draw);return}
-const img=ctx.createImageData(w,h);
-const d=img.data;
-const len=d.length;
-for(let i=0;i<len;i+=4){
-const v=Math.random()*255;
-d[i]=d[i+1]=d[i+2]=v;
-d[i+3]=Math.random()*50*intensity;
-}
-ctx.putImageData(img,0,0);
-requestAnimationFrame(draw);
-};
-
-const setIntensity=v=>{canvas.style.opacity=v};
-
-window.addEventListener('resize',resize);
-
-return{
-init:()=>{resize();draw()},
-setIntensity,
-burst:async(dur=600)=>{
-setIntensity(0.6);
-await sleep(dur);
-setIntensity(0.12);
-}
-};
-})();
-
-// ── Audio ──
-const Audio=(()=>{
-const pisces=$('bgm-pisces');
-const fallen=$('bgm-fallen');
-const toggle=$('audio-toggle');
-let muted=true;
-let current=null;
-
-const setMuted=m=>{
-muted=m;
-toggle.textContent=muted?'AUDIO: OFF':'AUDIO: ON';
-toggle.classList.toggle('on',!muted);
-if(current){current.muted=muted;if(!muted&&current.paused)current.play().catch(()=>{})}
-};
-
-const playTrack=el=>{
-if(current&&current!==el){current.pause();current.currentTime=0}
-current=el;
-el.volume=0.35;
-el.muted=muted;
-el.play().catch(()=>{});
-};
-
-const fadeOut=async(ms=800)=>{
-if(!current)return;
-const start=current.volume;
-const steps=20;
-for(let i=0;i<steps;i++){
-current.volume=Math.max(0,start*(1-i/steps));
-await sleep(ms/steps);
-}
-current.pause();
-current.volume=start;
-};
-
-toggle.addEventListener('click',()=>setMuted(!muted));
-
-return{
-playPisces:()=>playTrack(pisces),
-playFallen:()=>playTrack(fallen),
-fadeOut,
-unmute:()=>setMuted(false),
-init:()=>{
-// Pre-check audio availability
-pisces.addEventListener('error',()=>console.warn('[Audio] Pisces failed to load'));
-fallen.addEventListener('error',()=>console.warn('[Audio] Fallen Down failed to load'));
-}
-};
-})();
-
-// ── Completion State (localStorage) ──
-const State=(()=>{
-const KEY='anushri_tapes';
-const get=()=>{
-try{return JSON.parse(localStorage.getItem(KEY))||{}}catch{return{}}
-};
-const set=(k,v)=>{
-const s=get();s[k]=v;
-try{localStorage.setItem(KEY,JSON.stringify(s))}catch{}
-};
-return{
-isComplete:tape=>!!get()[tape],
-markComplete:tape=>set(tape,true),
-allComplete:()=>['A1','A2','A3'].every(t=>!!get()[t]),
-reset:()=>{try{localStorage.removeItem(KEY)}catch{}}
-};
-})();
-
-// ── Typewriter ──
-const typewrite=async(el,text,speed=35)=>{
-el.innerHTML='';
-for(let i=0;i<text.length;i++){
-if(text[i]==='<'){
-const close=text.indexOf('>',i);
-el.innerHTML+=text.substring(i,close+1);
-i=close;
-}else{
-el.innerHTML+=text[i];
-}
-await sleep(speed);
-}
-};
-
-// ── Screen Manager ──
-const Screen=(()=>{
-const content=$('screen-content');
-const info=$('info-line');
-
-const clear=()=>{content.innerHTML='';};
-
-const showBoot=async()=>{
-clear();
-const div=document.createElement('div');
-div.className='boot-text';
-content.appendChild(div);
-
-const lines=[
-'> ANUSHRI TAPE ARCHIVE v1.0',
-'> LOADING MEMORY SUBSYSTEM...',
-'> 3 TAPES FOUND',
-'> WARNING: SOME RECORDINGS MAY CONTAIN DISTORTION',
-'> THIS IS NORMAL.',
-'',
-'> PRESS ANY KEY TO CONTINUE'
-];
-
-for(const line of lines){
-await typewrite(div,div.innerHTML+line+'\n',20);
-await sleep(300);
-}
-div.innerHTML+='<span class="cursor"></span>';
-
-return new Promise(resolve=>{
-const handler=()=>{
-document.removeEventListener('click',handler);
-document.removeEventListener('keydown',handler);
-resolve();
-};
-document.addEventListener('click',handler);
-document.addEventListener('keydown',handler);
-});
-};
-
-const showTapeSelect=()=>{
-clear();
-info.textContent='SELECT TAPE';
-
-const shelf=document.createElement('div');
-shelf.className='tape-shelf';
-
-const label=document.createElement('div');
-label.className='shelf-label';
-label.textContent='Available Recordings';
-shelf.appendChild(label);
-
-const tapes=[
-{id:'A1',title:'Side A',subtitle:'The Hallway',color:'var(--tape-red)',file:'A1.html'},
-{id:'A2',title:'Tracking',subtitle:'Fix the Signal',color:'var(--tape-blue)',file:'A2.html'},
-{id:'A3',title:'Play',subtitle:'Face the Static',color:'var(--tape-gold)',file:'A3.html'}
-];
-
-tapes.forEach(t=>{
-const tape=document.createElement('div');
-tape.className='tape';
-tape.style.setProperty('--tape-color',t.color);
-
-const done=State.isComplete(t.id);
-const left=document.createElement('div');
-left.innerHTML=`<div class="tape-title">${t.title}</div><div style="font-size:12px;color:#555;margin-top:2px">${t.subtitle}</div>`;
-
-const right=document.createElement('div');
-right.className='tape-status'+(done?' done':'');
-right.textContent=done?'PLAYED':'NEW';
-
-tape.appendChild(left);
-tape.appendChild(right);
-
-tape.addEventListener('click',async()=>{
-await insertTape(t.file);
-});
-
-shelf.appendChild(tape);
-});
-
-// Check if all complete → show final tape
-if(State.allComplete()){
-const finalTape=document.createElement('div');
-finalTape.className='tape';
-finalTape.style.setProperty('--tape-color','var(--tape-gold)');
-finalTape.style.borderColor='rgba(212,175,55,0.2)';
-
-finalTape.innerHTML=`
-<div><div class="tape-title" style="color:var(--tape-gold)">★ Final Recording</div>
-<div style="font-size:12px;color:#555;margin-top:2px">For You, From Me</div></div>
-<div class="tape-status" style="color:var(--tape-gold)">UNLOCKED</div>`;
-
-finalTape.addEventListener('click',()=>showFinalMessage());
-shelf.appendChild(finalTape);
-}
-
-content.appendChild(shelf);
-};
-
-const insertTape=async(file)=>{
-const body=document.querySelector('.tv-body');
-body.classList.add('inserting');
-await Static.burst(600);
-body.classList.remove('inserting');
-await sleep(200);
-window.location.href=file;
-};
-
-const showFinalMessage=async()=>{
-Audio.playFallen();
-const overlay=$('final-overlay');
-const textEl=$('final-text');
-overlay.classList.add('visible');
-
-await sleep(1000);
-const lines=[
-'I recorded all of this because I wanted you to see what I see.',
-'',
-'But the truth is —',
-'the bravest tape in this box is the one <span class="hl">you</span> recorded.',
-'',
-'The one where you decided to keep going',
-'when no one was watching.',
-'When every voice said stop.',
-'When even your own reflection looked away.',
-'',
-'You pressed play anyway.',
-'',
-'That is not my strength living inside you.',
-'That is <span class="hl">yours</span>.',
-'',
-'Happy Birthday, <span class="gold">Anushri</span>.',
-'',
-'As much as you may hate to hear this:',
-'I will always be <span class="gold">DADDY</span>',
-];
-
-for(const line of lines){
-const p=document.createElement('p');
-p.innerHTML=line||'&nbsp;';
-p.style.opacity='0';
-p.style.transform='translateY(10px)';
-p.style.transition='all 0.8s ease';
-textEl.appendChild(p);
-await sleep(100);
-p.style.opacity='1';
-p.style.transform='translateY(0)';
-await sleep(600);
-}
-};
-
-return{showBoot,showTapeSelect};
-})();
-
-// ── Init ──
-const init=async()=>{
-Static.init();
-Audio.init();
-
-// Boot sequence
-await Screen.showBoot();
-
-// Audio start (user gesture has happened)
-Audio.playPisces();
-Audio.unmute();
-
-// Static burst transition
-await Static.burst(400);
-
-// Show tape selection
-Screen.showTapeSelect();
-};
-
-// ── REC timer ──
-(()=>{
-const info=$('info-line');
-let seconds=0;
-setInterval(()=>{
-seconds++;
-const h=String(Math.floor(seconds/3600)).padStart(2,'0');
-const m=String(Math.floor((seconds%3600)/60)).padStart(2,'0');
-const s=String(seconds%60).padStart(2,'0');
-info.textContent=`REC ● ${h}:${m}:${s}`;
-},1000);
-})();
-
-if(document.readyState==='loading'){
-document.addEventListener('DOMContentLoaded',init);
-}else{
-init();
-}
-</script>
-</body>
-</html>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="dark" />
+  <title>For Anushri | A Birthday Tape Archive</title>
+  <link rel="icon" href="data:;base64,iVBORw0KGgo=">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400&family=JetBrains+Mono:wght@300;500&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --void:#050506;
+      --void2:#07070b;
+      --paper:#eaeaf6;
+      --dim:rgba(234,234,246,.72);
+
+      --cyan:#00f2ff;
+      --purple:#7b2cbf;
+      --gold:#ffd700;
+      --red:#ff2a6d;
+
+      --glass: rgba(255,255,255,0.06);
+      --glass2: rgba(255,255,255,0.04);
+      --stroke: rgba(255,255,255,0.12);
+      --stroke2: rgba(0,242,255,0.18);
+
+      --maxw: 1040px;
+      --padX: clamp(16px, 4vw, 28px);
+      --rad: 18px;
+
+      --shadow: 0 18px 54px rgba(0,0,0,.55);
+      --shadow2: 0 10px 28px rgba(0,0,0,.40);
+
+      --serif: "Cormorant Garamond", ui-serif, Georgia, "Times New Roman", serif;
+      --display: "Cinzel", ui-serif, Georgia, serif;
+      --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    *{ box-sizing:border-box; margin:0; padding:0; }
+    html,body{ height:100%; }
+    body{
+      background: var(--void);
+      color: var(--paper);
+      font-family: var(--serif);
+      overflow-x:hidden;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: geometricPrecision;
+    }
+
+    /* Background */
+    #bg{
+      position: fixed;
+      inset: 0;
+      z-index: -3;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(ellipse at 50% 90%, rgba(123,44,191,.18) 0%, rgba(0,0,0,0) 55%),
+                  radial-gradient(ellipse at 30% 20%, rgba(0,242,255,.10) 0%, rgba(0,0,0,0) 40%),
+                  linear-gradient(180deg, #000 0%, #07070b 100%);
+    }
+
+    /* CRT + scanlines */
+    .scanlines, .vignette, .noise{
+      position: fixed; inset: 0;
+      pointer-events: none;
+    }
+    .scanlines{
+      z-index: -1;
+      opacity: .35;
+      background: repeating-linear-gradient(
+        0deg,
+        rgba(255,255,255,0.00),
+        rgba(255,255,255,0.00) 2px,
+        rgba(0,0,0,0.18) 2px,
+        rgba(0,0,0,0.18) 4px
+      );
+      mix-blend-mode: overlay;
+    }
+    .vignette{
+      z-index: -1;
+      background: radial-gradient(1200px 700px at 50% 40%, rgba(0,0,0,0) 40%, rgba(0,0,0,0.78) 100%);
+      opacity: .9;
+    }
+    .noise{
+      z-index: -2;
+      opacity: .05;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23n)' opacity='.55'/%3E%3C/svg%3E");
+      background-size: 240px 240px;
+      mix-blend-mode: overlay;
+    }
+
+    a,button{ color: inherit; }
+    button{
+      font: inherit;
+      border: 1px solid rgba(255,255,255,0.18);
+      background: transparent;
+      cursor: pointer;
+      transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease, background-color .18s ease;
+    }
+    button:hover{
+      transform: translateY(-1px);
+      border-color: rgba(0,242,255,0.55);
+      box-shadow: 0 0 0 6px rgba(0,242,255,0.07), 0 18px 44px rgba(0,0,0,0.55);
+    }
+    button:active{ transform: translateY(0px) scale(.99); }
+    button:disabled{ opacity:.55; cursor:not-allowed; box-shadow:none; transform:none; }
+
+    :focus-visible{ outline: 2px solid rgba(0,242,255,0.7); outline-offset: 3px; }
+
+    /* Layout shell */
+    .shell{
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+    }
+    .wrap{
+      width: 100%;
+      max-width: var(--maxw);
+      padding: 0 var(--padX);
+    }
+
+    /* Boot */
+    #boot{
+      position: fixed; inset: 0;
+      z-index: 1000;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background: rgba(0,0,0,.82);
+      backdrop-filter: blur(10px);
+      transition: opacity .6s ease, visibility .6s ease;
+    }
+    #boot.hidden{ opacity:0; visibility:hidden; pointer-events:none; }
+    .bootCard{
+      width: min(860px, calc(100vw - 2*var(--padX)));
+      border-radius: calc(var(--rad) + 10px);
+      border: 1px solid rgba(255,255,255,0.12);
+      background: linear-gradient(145deg, rgba(255,255,255,0.07), rgba(255,255,255,0.03));
+      box-shadow: var(--shadow);
+      padding: clamp(18px, 3.6vw, 28px);
+      position: relative;
+      overflow:hidden;
+    }
+    .bootHdr{
+      display:flex; justify-content:space-between; gap:14px; align-items:flex-start;
+      margin-bottom: 14px;
+    }
+    .bootTag{
+      font-family: var(--mono);
+      font-size: 12px;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: rgba(0,242,255,.88);
+      opacity:.95;
+      padding: 8px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(0,242,255,.24);
+      background: rgba(0,242,255,.06);
+      white-space: nowrap;
+    }
+    .bootTitle{
+      font-family: var(--display);
+      letter-spacing: .18em;
+      text-transform: uppercase;
+      font-size: clamp(20px, 3.8vw, 34px);
+      line-height: 1.18;
+    }
+    .bootSub{
+      color: rgba(234,234,246,.78);
+      line-height: 1.85;
+      font-size: 14.8px;
+      max-width: 72ch;
+      margin-top: 10px;
+    }
+    .bootPanel{
+      margin-top: 16px;
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: var(--rad);
+      background: rgba(0,0,0,0.20);
+      padding: 14px;
+    }
+    .bar{
+      height: 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.10);
+      overflow:hidden;
+      border: 1px solid rgba(255,255,255,0.10);
+    }
+    .bar > i{
+      display:block;
+      height:100%;
+      width:0%;
+      background: linear-gradient(90deg, rgba(123,44,191,.85), rgba(0,242,255,.85));
+      transition: width .22s ease;
+      box-shadow: 0 0 18px rgba(0,242,255,0.12);
+    }
+    .bootMeta{
+      margin-top: 10px;
+      display:flex; justify-content:space-between; gap:10px;
+      font-family: var(--mono);
+      font-size: 12px;
+      color: rgba(234,234,246,.72);
+    }
+    .bootWarn{
+      margin-top: 10px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px dashed rgba(255,255,255,.18);
+      color: rgba(234,234,246,.70);
+      line-height: 1.6;
+      font-size: 12.8px;
+      display:none;
+    }
+    .bootWarn strong{ color: rgba(0,242,255,.9); font-weight: 700; }
+    .bootActions{
+      margin-top: 14px;
+      display:flex; gap:10px; flex-wrap: wrap;
+      align-items:center;
+      justify-content:flex-end;
+    }
+    .btnPill{
+      border-radius: 999px;
+      padding: 12px 16px;
+      font-family: var(--mono);
+      font-size: 12px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+
+    /* Hub */
+    header.hdr{
+      padding: clamp(72px, 10vh, 110px) 0 24px;
+      text-align:center;
+    }
+    .kicker{
+      font-family: var(--mono);
+      letter-spacing: .34em;
+      text-transform: uppercase;
+      font-size: 12px;
+      color: rgba(0,242,255,.78);
+      margin-bottom: 10px;
+    }
+    .hTitle{
+      font-family: var(--display);
+      font-size: clamp(34px, 6vw, 62px);
+      letter-spacing: .10em;
+      text-transform: uppercase;
+      line-height: 1.08;
+      margin-bottom: 12px;
+    }
+    .hTitle .accent{
+      background: linear-gradient(90deg, rgba(0,242,255,.95), rgba(123,44,191,.92));
+      -webkit-background-clip: text;
+      color: transparent;
+    }
+    .hSub{
+      max-width: 78ch;
+      margin: 0 auto;
+      color: rgba(234,234,246,.82);
+      line-height: 1.9;
+      font-size: 15.6px;
+    }
+
+    .grid{
+      display:grid;
+      gap: 16px;
+      grid-template-columns: 1.2fr .8fr;
+      align-items:start;
+      padding: 22px 0 70px;
+    }
+    @media (max-width: 980px){
+      .grid{ grid-template-columns: 1fr; }
+    }
+
+    .card{
+      border-radius: calc(var(--rad) + 10px);
+      border: 1px solid rgba(255,255,255,0.12);
+      background: linear-gradient(145deg, rgba(255,255,255,0.07), rgba(255,255,255,0.03));
+      box-shadow: var(--shadow2);
+      overflow:hidden;
+    }
+    .cardPad{ padding: clamp(16px, 3vw, 24px); }
+
+    /* VHS deck */
+    .deckTop{
+      display:flex; justify-content:space-between; gap: 10px; align-items:flex-start;
+      margin-bottom: 12px;
+    }
+    .deckLabel{
+      font-family: var(--mono);
+      font-size: 12px;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+      color: rgba(234,234,246,.70);
+    }
+    .signal{
+      font-family: var(--mono);
+      font-size: 12px;
+      color: rgba(234,234,246,.70);
+      display:flex; gap: 8px; align-items:center;
+    }
+    .sigDot{
+      width: 8px; height: 8px; border-radius: 50%;
+      background: rgba(0,242,255,.8);
+      box-shadow: 0 0 14px rgba(0,242,255,.35);
+      animation: pulse 2.2s ease-in-out infinite;
+    }
+    @keyframes pulse{
+      0%,100%{ opacity:.9; transform: scale(1); }
+      50%{ opacity:.45; transform: scale(.85); }
+    }
+
+    .tapes{
+      display:grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }
+    @media (max-width: 620px){
+      .tapes{ grid-template-columns: 1fr; }
+    }
+    .tape{
+      text-align:left;
+      border-radius: 14px;
+      padding: 14px 14px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(0,0,0,0.18);
+      position: relative;
+      overflow:hidden;
+    }
+    .tape:hover{ border-color: rgba(0,242,255,.35); }
+    .tape::before{
+      content:"";
+      position:absolute;
+      inset:-40px;
+      background: radial-gradient(220px 140px at 12% 0%, rgba(255,215,0,.08), transparent 60%);
+      opacity:.9;
+      pointer-events:none;
+    }
+    .tapeId{
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+      color: rgba(0,242,255,.78);
+      margin-bottom: 6px;
+      position: relative;
+      z-index: 1;
+    }
+    .tapeTitle{
+      font-family: var(--display);
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      font-size: 14px;
+      margin-bottom: 6px;
+      position: relative;
+      z-index: 1;
+    }
+    .tapeDesc{
+      color: rgba(234,234,246,.78);
+      font-size: 14px;
+      line-height: 1.7;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Side panel: audio + status */
+    .miniTitle{
+      font-family: var(--mono);
+      font-size: 12px;
+      letter-spacing: .22em;
+      text-transform: uppercase;
+      color: rgba(234,234,246,.70);
+      margin-bottom: 10px;
+    }
+    .audioBox{
+      border-radius: var(--rad);
+      border: 1px solid rgba(0,242,255,0.18);
+      background: rgba(0,0,0,0.20);
+      padding: 14px;
+    }
+    .trackName{
+      font-family: var(--display);
+      letter-spacing: .10em;
+      text-transform: uppercase;
+      font-size: 13px;
+      color: rgba(234,234,246,.92);
+      margin-bottom: 6px;
+      line-height: 1.2;
+    }
+    .trackMeta{
+      font-family: var(--mono);
+      font-size: 12px;
+      color: rgba(234,234,246,.72);
+      line-height: 1.55;
+      margin-bottom: 12px;
+    }
+    .controls{
+      display:flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items:center;
+      margin-bottom: 10px;
+    }
+    .controls button{
+      border-radius: 999px;
+      padding: 10px 12px;
+      font-family: var(--mono);
+      font-size: 12px;
+      letter-spacing: .10em;
+      text-transform: uppercase;
+    }
+    .pill{
+      padding: 9px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.14);
+      background: rgba(255,255,255,0.04);
+      font-family: var(--mono);
+      font-size: 12px;
+      color: rgba(234,234,246,.72);
+    }
+    .viz{
+      height: 72px;
+      border-radius: var(--rad);
+      border: 1px solid rgba(255,255,255,0.10);
+     
