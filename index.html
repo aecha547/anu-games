@@ -5,905 +5,1618 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>ANUSHRI_ARCHIVE.vhs</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=VT323&family=Cormorant+Garamond:ital,wght@0,600;1,600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
 
         :root {
-            --plastic: #111;
-            --plastic-lit: #222;
-            --crt-bg: #050505;
-            --phosphor: #4af626; /* Classic Green */
+            --phosphor: #4af626;
             --phosphor-dim: #1e5c12;
             --phosphor-bright: #afffa1;
-            --alert: #ff3333;
             --gold: #ffb84d;
-            --tape-plastic: #1a1a1a;
         }
 
-        * { box-sizing: border-box; user-select: none; -webkit-user-drag: none; }
-        
+        * { box-sizing: border-box; user-select: none; -webkit-user-drag: none; margin: 0; padding: 0; }
+
         body {
-            background: #080808;
+            background: #060606;
             height: 100vh;
-            margin: 0;
             overflow: hidden;
             font-family: 'VT323', monospace;
             display: flex;
             align-items: center;
             justify-content: center;
             color: var(--phosphor);
-            perspective: 1200px;
         }
 
-        /* --- THE VCR STATION (LAYOUT) --- */
+        /* --- BOOT OVERLAY --- */
+        #boot-overlay {
+            position: fixed; inset: 0; z-index: 9999;
+            background: #000;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            cursor: pointer;
+            transition: opacity 0.8s;
+        }
+        #boot-overlay.hidden { opacity: 0; pointer-events: none; }
+        #boot-overlay h1 {
+            font-size: 3rem; color: var(--phosphor);
+            text-shadow: 0 0 20px var(--phosphor), 0 0 40px var(--phosphor-dim);
+            animation: flicker 3s infinite;
+        }
+        #boot-overlay p { color: #555; font-size: 1.2rem; margin-top: 20px; animation: blink 1.5s infinite; }
+
+        @keyframes flicker {
+            0%, 100% { opacity: 1; }
+            92% { opacity: 1; }
+            93% { opacity: 0.3; }
+            94% { opacity: 1; }
+            96% { opacity: 0.7; }
+            97% { opacity: 1; }
+        }
+        @keyframes blink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 5px rgba(74,246,38,0.3); }
+            50% { box-shadow: 0 0 15px rgba(74,246,38,0.6), 0 0 30px rgba(74,246,38,0.2); }
+        }
+
+        /* --- LAYOUT --- */
         #station {
             display: grid;
             grid-template-columns: 1fr 300px;
             grid-template-rows: 1fr 140px;
-            gap: 20px;
+            gap: 16px;
             width: 95vw;
             max-width: 1200px;
-            height: 85vh;
-            max-height: 800px;
+            height: 88vh;
+            max-height: 820px;
         }
 
-        /* --- THE TV SET --- */
+        /* --- TV UNIT --- */
         .tv-unit {
             grid-column: 1;
             grid-row: 1 / span 2;
-            background: var(--plastic);
-            border-radius: 20px;
-            border: 4px solid #333;
-            box-shadow: 
-                inset 0 0 40px #000,
-                0 0 50px rgba(0,0,0,0.8);
+            background: linear-gradient(145deg, #1a1a1a, #0d0d0d);
+            border-radius: 24px;
+            border: 3px solid #2a2a2a;
+            box-shadow: inset 0 0 60px #000, 0 10px 60px rgba(0,0,0,0.9);
             position: relative;
             display: flex;
             flex-direction: column;
-            padding: 30px;
-            transform-style: preserve-3d;
+            padding: 28px;
         }
 
         .screen-bezel {
             flex: 1;
             background: #000;
-            border-radius: 60% 60% 4% 4% / 4% 4% 4% 4%; /* Subtle curve */
+            border-radius: 12px;
             position: relative;
             overflow: hidden;
-            border: 2px solid #222;
-            box-shadow: inset 0 0 20px rgba(255,255,255,0.05);
+            border: 3px solid #1a1a1a;
+            box-shadow: inset 0 0 30px rgba(0,0,0,0.9), 0 0 2px rgba(74,246,38,0.1);
         }
 
         canvas#crt {
             display: block;
             width: 100%;
             height: 100%;
-            opacity: 0.9;
-            filter: contrast(1.2) brightness(1.1);
         }
 
-        /* --- POST PROCESSING OVERLAYS --- */
         .scanlines {
             position: absolute; inset: 0; pointer-events: none; z-index: 10;
-            background: linear-gradient(rgba(18,16,16,0) 50%, rgba(0,0,0,0.25) 50%),
-                        linear-gradient(90deg, rgba(255,0,0,0.06), rgba(0,255,0,0.02), rgba(0,0,255,0.06));
-            background-size: 100% 4px, 6px 100%;
-            opacity: 0.6;
+            background: repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 2px,
+                rgba(0,0,0,0.15) 2px,
+                rgba(0,0,0,0.15) 4px
+            );
+            opacity: 0.5;
         }
 
         .vignette {
             position: absolute; inset: 0; pointer-events: none; z-index: 11;
-            background: radial-gradient(circle, transparent 50%, rgba(0,0,0,0.8) 100%);
+            background: radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.85) 100%);
         }
 
         .glass-glare {
             position: absolute; inset: 0; pointer-events: none; z-index: 12;
-            background: linear-gradient(135deg, rgba(255,255,255,0.03) 0%, transparent 40%);
+            background: linear-gradient(135deg, rgba(255,255,255,0.04) 0%, transparent 35%);
         }
 
-        /* --- TAPE RACK (RIGHT SIDE) --- */
-        .tape-rack {
-            grid-column: 2;
-            grid-row: 1;
-            background: #151515;
-            border: 2px solid #333;
-            border-radius: 8px;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            overflow-y: auto;
-            box-shadow: inset 0 0 20px #000;
-        }
-
-        .rack-label {
-            color: #555;
-            text-align: center;
-            border-bottom: 1px solid #333;
-            padding-bottom: 5px;
-            margin-bottom: 10px;
-            letter-spacing: 2px;
-        }
-
-        /* --- THE TAPE OBJECT --- */
-        .vhs-tape {
-            height: 110px;
-            background: var(--tape-plastic);
-            border-radius: 4px;
-            border: 1px solid #333;
-            position: relative;
-            cursor: grab;
-            transition: transform 0.2s, box-shadow 0.2s;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 2px 4px 10px rgba(0,0,0,0.5);
-        }
-        
-        .vhs-tape:active { cursor: grabbing; transform: scale(0.98); }
-        .vhs-tape[draggable="false"] { opacity: 0.5; cursor: default; filter: grayscale(1); }
-
-        /* Tape Windows */
-        .vhs-tape::before {
-            content: ''; position: absolute; top: 15px; left: 10%; width: 80%; height: 35px;
-            background: #222; border-radius: 2px;
-            background-image: 
-                radial-gradient(circle at 20% 50%, #fff 10%, transparent 11%),
-                radial-gradient(circle at 80% 50%, #fff 10%, transparent 11%);
-            background-size: 40px 100%;
-        }
-
-        .tape-label-sticker {
-            background: #eee;
-            color: #000;
-            padding: 4px 10px;
-            margin-top: 45px;
-            width: 85%;
-            text-align: center;
-            font-family: 'Courier New', monospace;
-            font-weight: bold;
-            font-size: 14px;
-            transform: rotate(-1deg);
-            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
-            border-radius: 2px;
-        }
-
-        /* --- THE PLAYER (SLOT) --- */
-        .vcr-player {
-            grid-column: 2;
-            grid-row: 2;
-            background: #1a1a1a;
-            border: 2px solid #333;
-            border-radius: 4px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-            box-shadow: 0 -5px 10px rgba(0,0,0,0.5);
-        }
-
-        .slot-mouth {
-            width: 80%;
-            height: 30px;
-            background: #000;
-            border: 1px solid #444;
-            border-radius: 4px;
-            margin-bottom: 10px;
-            position: relative;
-            overflow: hidden;
-            transition: border-color 0.3s, box-shadow 0.3s;
-        }
-
-        .slot-mouth.drag-over {
-            border-color: var(--phosphor);
-            box-shadow: 0 0 15px var(--phosphor);
-        }
-
-        .slot-flap {
-            width: 100%; height: 100%; background: #222;
-            transform-origin: top; transition: transform 0.3s;
-        }
-        
-        .slot-mouth.inserting .slot-flap { transform: rotateX(-90deg); }
-
-        .led-panel {
-            display: flex; gap: 15px; font-size: 12px; color: #555; text-transform: uppercase;
-        }
-        .led { width: 8px; height: 8px; background: #300; border-radius: 50%; display: inline-block; margin-right: 5px; }
-        .led.on { background: #f00; box-shadow: 0 0 5px #f00; }
-        .led.play { background: #030; }
-        .led.play.active { background: #0f0; box-shadow: 0 0 5px #0f0; }
-
-        .eject-btn {
-            position: absolute; right: 10px; bottom: 10px;
-            padding: 5px 10px; background: #333; border: 1px solid #555; color: #ccc;
-            cursor: pointer; font-family: inherit; font-size: 12px;
-        }
-        .eject-btn:hover { background: #444; color: #fff; }
-
-        /* --- UI OVERLAYS (INSIDE CANVAS) --- */
+        /* --- HUD OVERLAY --- */
         #game-ui {
-            position: absolute; top: 30px; left: 30px; right: 30px; bottom: 30px;
+            position: absolute; top: 20px; left: 20px; right: 20px; bottom: 20px;
             pointer-events: none; z-index: 20;
             display: flex; flex-direction: column; justify-content: space-between;
         }
+
         .channel-id {
-            color: var(--phosphor-dim); font-size: 2rem; opacity: 0.5;
-            text-shadow: 0 0 2px var(--phosphor);
+            color: var(--phosphor-dim); font-size: 1.8rem; opacity: 0.6;
+            text-shadow: 0 0 4px var(--phosphor-dim);
         }
+
         .subtitle-box {
             align-self: center; text-align: center;
             color: var(--phosphor-bright);
-            font-size: 1.5rem;
-            text-shadow: 0 0 8px var(--phosphor);
-            background: rgba(0,0,0,0.6);
-            padding: 10px 20px;
-            opacity: 0; transition: opacity 0.5s;
+            font-size: 1.4rem;
+            text-shadow: 0 0 10px var(--phosphor);
+            background: rgba(0,0,0,0.7);
+            padding: 10px 24px;
+            border-radius: 4px;
+            opacity: 0; transition: opacity 0.4s;
+            max-width: 80%;
         }
-        
+
+        .rec-indicator {
+            position: absolute; top: 20px; right: 20px;
+            color: #f00; font-size: 1.2rem; opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .rec-indicator.on { opacity: 1; animation: blink 1s infinite; }
+
+        /* --- TAPE RACK --- */
+        .tape-rack {
+            grid-column: 2; grid-row: 1;
+            background: linear-gradient(180deg, #141414, #0e0e0e);
+            border: 2px solid #2a2a2a;
+            border-radius: 8px;
+            padding: 16px;
+            display: flex; flex-direction: column;
+            gap: 12px;
+            overflow-y: auto;
+            box-shadow: inset 0 0 25px #000;
+        }
+
+        .tape-rack::-webkit-scrollbar { width: 6px; }
+        .tape-rack::-webkit-scrollbar-track { background: #111; }
+        .tape-rack::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+
+        .rack-label {
+            color: #444; text-align: center;
+            border-bottom: 1px solid #2a2a2a;
+            padding-bottom: 8px; margin-bottom: 4px;
+            letter-spacing: 3px; font-size: 14px;
+        }
+
+        /* --- VHS TAPE --- */
+        .vhs-tape {
+            min-height: 100px;
+            background: linear-gradient(180deg, #222, #181818);
+            border-radius: 5px;
+            border: 1px solid #333;
+            position: relative;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s, border-color 0.3s;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            box-shadow: 2px 4px 12px rgba(0,0,0,0.6);
+            flex-shrink: 0;
+        }
+
+        .vhs-tape:hover {
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 2px 6px 20px rgba(0,0,0,0.8);
+            border-color: #555;
+        }
+        .vhs-tape:active { transform: scale(0.97); }
+        .vhs-tape.selected {
+            border-color: var(--phosphor);
+            animation: pulse-glow 1.5s infinite;
+        }
+        .vhs-tape.completed {
+            border-color: #444;
+        }
+        .vhs-tape.completed::after {
+            content: '✓ VIEWED';
+            position: absolute; bottom: 4px; right: 8px;
+            font-size: 10px; color: var(--phosphor-dim);
+        }
+        .vhs-tape.playing { display: none; }
+
+        .tape-window {
+            position: absolute; top: 12px; left: 12%; width: 76%; height: 30px;
+            background: #111; border-radius: 3px; overflow: hidden;
+            border: 1px solid #2a2a2a;
+        }
+        .tape-reel {
+            position: absolute; top: 50%; width: 18px; height: 18px;
+            border: 2px solid #444; border-radius: 50%;
+            transform: translateY(-50%);
+        }
+        .tape-reel.left { left: 15%; }
+        .tape-reel.right { right: 15%; }
+        .tape-reel::after {
+            content: ''; position: absolute; inset: 4px;
+            border: 1px solid #333; border-radius: 50%;
+        }
+
+        .tape-label-sticker {
+            background: #f0eee8;
+            color: #111;
+            padding: 4px 10px;
+            margin-top: 32px;
+            width: 82%;
+            text-align: center;
+            font-family: 'VT323', monospace;
+            font-weight: bold;
+            font-size: 13px;
+            transform: rotate(-0.5deg);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+            border-radius: 2px;
+            line-height: 1.3;
+        }
+
+        /* --- VCR PLAYER --- */
+        .vcr-player {
+            grid-column: 2; grid-row: 2;
+            background: linear-gradient(180deg, #1c1c1c, #141414);
+            border: 2px solid #2a2a2a;
+            border-radius: 6px;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            position: relative;
+            box-shadow: 0 -4px 15px rgba(0,0,0,0.5);
+            gap: 8px;
+            padding: 10px;
+        }
+
+        .slot-mouth {
+            width: 82%; height: 26px;
+            background: #050505;
+            border: 1px solid #3a3a3a;
+            border-radius: 4px;
+            position: relative;
+            overflow: hidden;
+            transition: border-color 0.3s, box-shadow 0.3s;
+            cursor: pointer;
+        }
+        .slot-mouth.drag-over, .slot-mouth.ready {
+            border-color: var(--phosphor);
+            box-shadow: 0 0 12px var(--phosphor-dim);
+        }
+        .slot-flap {
+            width: 100%; height: 100%;
+            background: linear-gradient(180deg, #2a2a2a, #1a1a1a);
+            transform-origin: top; transition: transform 0.4s ease-in-out;
+        }
+        .slot-mouth.inserting .slot-flap { transform: rotateX(-90deg); }
+
+        .led-panel {
+            display: flex; gap: 18px; font-size: 11px;
+            color: #444; text-transform: uppercase; letter-spacing: 1px;
+        }
+        .led {
+            width: 7px; height: 7px; border-radius: 50%;
+            display: inline-block; margin-right: 4px;
+            vertical-align: middle;
+            transition: all 0.3s;
+        }
+        .led.pwr { background: #600; }
+        .led.pwr.on { background: #f44; box-shadow: 0 0 6px #f44; }
+        .led.play { background: #040; }
+        .led.play.on { background: #4f4; box-shadow: 0 0 6px #4f4; }
+
+        .vcr-brand {
+            font-size: 10px; color: #333; letter-spacing: 4px;
+        }
+
+        .eject-btn {
+            position: absolute; right: 8px; bottom: 8px;
+            padding: 4px 12px;
+            background: #2a2a2a; border: 1px solid #444;
+            color: #888; cursor: pointer;
+            font-family: inherit; font-size: 11px;
+            border-radius: 3px;
+            transition: all 0.2s;
+        }
+        .eject-btn:hover { background: #3a3a3a; color: #fff; border-color: #666; }
+        .eject-btn:active { transform: scale(0.95); }
+
+        .hint-text {
+            position: absolute; bottom: -22px; left: 0; right: 0;
+            text-align: center; font-size: 11px; color: #333;
+            transition: opacity 0.3s;
+        }
+
         /* --- MOBILE --- */
         @media (max-width: 900px) {
-            #station { grid-template-columns: 1fr; grid-template-rows: 1fr 120px 200px; height: 100vh; }
-            .tv-unit { grid-column: 1; grid-row: 1; }
+            #station {
+                grid-template-columns: 1fr;
+                grid-template-rows: 1fr 100px 180px;
+                height: 100vh; width: 100vw;
+                gap: 8px; padding: 8px;
+            }
+            .tv-unit { grid-column: 1; grid-row: 1; padding: 12px; border-radius: 12px; }
             .vcr-player { grid-column: 1; grid-row: 2; }
-            .tape-rack { grid-column: 1; grid-row: 3; flex-direction: row; overflow-x: auto; }
-            .vhs-tape { min-width: 140px; height: 90px; }
+            .tape-rack {
+                grid-column: 1; grid-row: 3;
+                flex-direction: row; overflow-x: auto; overflow-y: hidden;
+                padding: 10px;
+            }
+            .vhs-tape { min-width: 130px; min-height: 80px; }
+            .tape-window { top: 8px; height: 24px; }
+            .tape-label-sticker { margin-top: 26px; font-size: 11px; }
+            .subtitle-box { font-size: 1.1rem !important; }
+        }
+
+        @media (max-width: 500px) {
+            .channel-id { font-size: 1.2rem; }
+            .subtitle-box { font-size: 1rem !important; padding: 6px 12px; }
         }
     </style>
 </head>
 <body>
 
+<!-- BOOT SCREEN -->
+<div id="boot-overlay">
+    <h1>ANUSHRI_ARCHIVE</h1>
+    <p>[ CLICK TO POWER ON ]</p>
+</div>
+
 <div id="station">
-    
-    <!-- TV UNIT -->
+    <!-- TV -->
     <div class="tv-unit">
         <div class="screen-bezel" id="tv-screen">
             <canvas id="crt"></canvas>
             <div class="scanlines"></div>
             <div class="vignette"></div>
             <div class="glass-glare"></div>
-            
             <div id="game-ui">
-                <div class="channel-id" id="channel-disp">AV-1</div>
+                <div>
+                    <div class="channel-id" id="channel-disp">AV-1</div>
+                    <div class="rec-indicator" id="rec-ind">● REC</div>
+                </div>
                 <div class="subtitle-box" id="subs"></div>
             </div>
         </div>
     </div>
 
     <!-- TAPE RACK -->
-    <div class="tape-rack">
-        <div class="rack-label">ARCHIVE // ANUSHRI</div>
-        
-        <div class="vhs-tape" id="tape1" draggable="true" data-id="1">
-            <div class="tape-label-sticker">TAPE 01: THE HALLWAY</div>
-        </div>
-        
-        <div class="vhs-tape" id="tape2" draggable="true" data-id="2">
-            <div class="tape-label-sticker" style="color:#a00">TAPE 02: THE CURVE</div>
-        </div>
-        
-        <div class="vhs-tape" id="tape3" draggable="true" data-id="3">
-            <div class="tape-label-sticker" style="font-style:italic">TAPE 03: SIGNAL LOST</div>
+    <div class="tape-rack" id="tape-rack">
+        <div class="rack-label">ARCHIVE ▪ ANUSHRI</div>
+
+        <div class="vhs-tape" id="tape1" data-id="1" draggable="true">
+            <div class="tape-window"><div class="tape-reel left"></div><div class="tape-reel right"></div></div>
+            <div class="tape-label-sticker">TAPE 01<br>THE HALLWAY</div>
         </div>
 
-        <div class="vhs-tape" id="tape4" draggable="false" data-id="4" style="display:none">
-            <div class="tape-label-sticker" style="background:gold; color:black">TAPE 04: RECORD</div>
+        <div class="vhs-tape" id="tape2" data-id="2" draggable="true">
+            <div class="tape-window"><div class="tape-reel left"></div><div class="tape-reel right"></div></div>
+            <div class="tape-label-sticker" style="color:#a00">TAPE 02<br>THE CURVE</div>
+        </div>
+
+        <div class="vhs-tape" id="tape3" data-id="3" draggable="true">
+            <div class="tape-window"><div class="tape-reel left"></div><div class="tape-reel right"></div></div>
+            <div class="tape-label-sticker" style="font-style:italic">TAPE 03<br>SIGNAL LOST</div>
+        </div>
+
+        <div class="vhs-tape" id="tape4" data-id="4" style="display:none">
+            <div class="tape-window"><div class="tape-reel left"></div><div class="tape-reel right"></div></div>
+            <div class="tape-label-sticker" style="background:#ffd700;color:#000;font-weight:bold">TAPE 04<br>★ RECORD ★</div>
         </div>
     </div>
 
     <!-- VCR PLAYER -->
     <div class="vcr-player" id="vcr">
         <div class="led-panel">
-            <div><span class="led on"></span> PWR</div>
+            <div><span class="led pwr on" id="led-pwr"></span> PWR</div>
             <div><span class="led play" id="led-play"></span> PLAY</div>
         </div>
-        
         <div class="slot-mouth" id="slot">
             <div class="slot-flap"></div>
         </div>
-        
-        <div style="margin-top:10px; font-size:12px; color:#444">AUTO-TRACKING SYSTEM</div>
-        <button class="eject-btn" onclick="Game.eject()">EJECT</button>
+        <div class="vcr-brand">AUTO-TRACKING SYSTEM</div>
+        <button class="eject-btn" id="eject-btn">⏏ EJECT</button>
+        <div class="hint-text" id="hint">Select a tape, then click here</div>
     </div>
-
 </div>
 
 <script>
-/**
- * ANUSHRI ARCHIVE - AUDIO ENGINE (Procedural Web Audio API)
- * No external files. Pure synthesis.
- */
+/* ============================================================
+   ANUSHRI_ARCHIVE.vhs — Complete Rewrite
+   All errors fixed. Enhanced experience.
+   ============================================================ */
+
+// ─── AUDIO ENGINE ─────────────────────────────────────────
 const AudioSys = {
     ctx: null,
-    masterGain: null,
-    
+    master: null,
+    initialized: false,
+    musicNodes: [],
+    musicTimer: null,
+
     init() {
-        if (!this.ctx) {
+        if (this.initialized) return;
+        try {
             this.ctx = new (window.AudioContext || window.webkitAudioContext)();
-            this.masterGain = this.ctx.createGain();
-            this.masterGain.gain.value = 0.3;
-            this.masterGain.connect(this.ctx.destination);
+            this.master = this.ctx.createGain();
+            this.master.gain.value = 0.25;
+            this.master.connect(this.ctx.destination);
+            this.initialized = true;
+        } catch (e) {
+            console.warn('Web Audio not available');
         }
-        if (this.ctx.state === 'suspended') this.ctx.resume();
     },
 
-    playNoise(duration = 0.5, type = 'brown') {
-        if (!this.ctx) return;
-        const bufferSize = this.ctx.sampleRate * duration;
-        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
-        const data = buffer.getChannelData(0);
-        for (let i = 0; i < bufferSize; i++) {
-            data[i] = (Math.random() * 2 - 1) * (type==='white'?0.5:0.8);
+    resume() {
+        if (this.ctx && this.ctx.state === 'suspended') {
+            this.ctx.resume();
         }
-        const noise = this.ctx.createBufferSource();
-        noise.buffer = buffer;
-        
-        // Filter for "VHS Hum" (Brown noiseish)
-        const filter = this.ctx.createBiquadFilter();
-        filter.type = 'lowpass';
-        filter.frequency.value = type === 'brown' ? 400 : 2000;
-        
-        noise.connect(filter);
-        filter.connect(this.masterGain);
-        noise.start();
     },
 
-    playTone(freq, type, duration, vol=0.1) {
+    playTone(freq, type = 'sine', duration = 0.3, vol = 0.1) {
         if (!this.ctx) return;
+        this.resume();
+        const now = this.ctx.currentTime;
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
         osc.type = type;
-        osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
-        gain.gain.setValueAtTime(vol, this.ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + duration);
+        osc.frequency.setValueAtTime(freq, now);
+        gain.gain.setValueAtTime(Math.min(vol, 0.5), now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
         osc.connect(gain);
-        gain.connect(this.masterGain);
-        osc.start();
-        osc.stop(this.ctx.currentTime + duration);
+        gain.connect(this.master);
+        osc.start(now);
+        osc.stop(now + duration);
+    },
+
+    playNoise(duration = 0.3, lowpass = 800, vol = 0.15) {
+        if (!this.ctx) return;
+        this.resume();
+        const sr = this.ctx.sampleRate;
+        const len = sr * duration;
+        const buf = this.ctx.createBuffer(1, len, sr);
+        const data = buf.getChannelData(0);
+        let last = 0;
+        for (let i = 0; i < len; i++) {
+            const white = Math.random() * 2 - 1;
+            last = (last + (0.02 * white)) / 1.02; // Brown-ish
+            data[i] = last * 3.5;
+        }
+        const src = this.ctx.createBufferSource();
+        src.buffer = buf;
+        const filt = this.ctx.createBiquadFilter();
+        filt.type = 'lowpass';
+        filt.frequency.value = lowpass;
+        const gain = this.ctx.createGain();
+        gain.gain.value = vol;
+        src.connect(filt);
+        filt.connect(gain);
+        gain.connect(this.master);
+        src.start();
     },
 
     playClunk() {
-        this.init();
-        this.playNoise(0.2, 'brown');
-        this.playTone(100, 'square', 0.1, 0.4);
-        setTimeout(() => this.playTone(60, 'sawtooth', 0.3, 0.4), 100);
+        this.playNoise(0.15, 300, 0.4);
+        this.playTone(80, 'square', 0.08, 0.3);
+        setTimeout(() => this.playTone(50, 'sawtooth', 0.15, 0.25), 80);
     },
 
-    // Procedural Music: Simple ambient loop
-    musicInterval: null,
-    startAmbience(mood) {
-        if(this.musicInterval) clearInterval(this.musicInterval);
-        
-        if(mood === 'sad') {
-            // Slow, melancholic sine waves
-            this.musicInterval = setInterval(() => {
-                const notes = [220, 261, 329, 392]; // Am7
-                const note = notes[Math.floor(Math.random()*notes.length)];
-                this.playTone(note, 'sine', 2.0, 0.05);
-            }, 3000);
-        } else if (mood === 'tense') {
-            // Fast, low square waves
-            this.musicInterval = setInterval(() => {
-                this.playTone(110, 'sawtooth', 0.1, 0.05);
-                setTimeout(() => this.playTone(115, 'sawtooth', 0.1, 0.05), 200);
-            }, 500);
-        } else if (mood === 'hope') {
-            // Bright triangles
-            this.musicInterval = setInterval(() => {
-                const notes = [440, 554, 659, 880]; // A major
-                const note = notes[Math.floor(Math.random()*notes.length)];
-                this.playTone(note, 'triangle', 1.5, 0.05);
-            }, 2000);
-        }
+    playBeep(high = false) {
+        this.playTone(high ? 800 : 400, 'square', 0.05, 0.08);
     },
-    
+
+    playHit() {
+        this.playTone(90, 'sawtooth', 0.1, 0.2);
+        this.playNoise(0.05, 2000, 0.1);
+    },
+
+    playSuccess() {
+        [440, 554, 659, 880].forEach((f, i) => {
+            setTimeout(() => this.playTone(f, 'triangle', 0.4, 0.1), i * 120);
+        });
+    },
+
+    startAmbience(mood) {
+        this.stopMusic();
+        const intervals = [];
+
+        if (mood === 'sad') {
+            const notes = [220, 261.6, 293.7, 329.6, 392];
+            intervals.push(setInterval(() => {
+                const n = notes[Math.floor(Math.random() * notes.length)];
+                this.playTone(n, 'sine', 2.5, 0.04);
+                if (Math.random() > 0.6) this.playTone(n * 0.5, 'sine', 3, 0.02);
+            }, 2500));
+        } else if (mood === 'tense') {
+            intervals.push(setInterval(() => {
+                this.playTone(110, 'sawtooth', 0.08, 0.04);
+                setTimeout(() => this.playTone(116.5, 'sawtooth', 0.08, 0.04), 150);
+            }, 400));
+            intervals.push(setInterval(() => {
+                this.playTone(55, 'sine', 0.5, 0.06);
+            }, 2000));
+        } else if (mood === 'hope') {
+            const notes = [440, 554, 659, 880, 1108];
+            intervals.push(setInterval(() => {
+                const n = notes[Math.floor(Math.random() * notes.length)];
+                this.playTone(n, 'triangle', 2, 0.04);
+                this.playTone(n * 0.5, 'sine', 2.5, 0.02);
+            }, 1800));
+        } else if (mood === 'love') {
+            const chords = [[262, 330, 392], [220, 277, 330], [247, 311, 370], [262, 330, 392]];
+            let ci = 0;
+            intervals.push(setInterval(() => {
+                const chord = chords[ci % chords.length];
+                chord.forEach(f => this.playTone(f, 'sine', 2.5, 0.03));
+                ci++;
+            }, 3000));
+        }
+
+        this.musicNodes = intervals;
+    },
+
     stopMusic() {
-        if(this.musicInterval) clearInterval(this.musicInterval);
+        this.musicNodes.forEach(id => clearInterval(id));
+        this.musicNodes = [];
     }
 };
 
-/**
- * TEXT ENGINE (Typewriter with nuance)
- */
+// ─── TEXT / SUBTITLE ENGINE ───────────────────────────────
 const TextSys = {
     el: document.getElementById('subs'),
     queue: [],
     busy: false,
-    
-    show(text, duration = 2000) {
-        this.queue.push({text, duration});
-        if(!this.busy) this.process();
+    timeoutId: null,
+
+    show(text, duration = 2500) {
+        this.queue.push({ text, duration });
+        if (!this.busy) this._process();
     },
 
-    process() {
-        if(this.queue.length === 0) {
-            this.el.style.opacity = 0;
+    _process() {
+        if (this.queue.length === 0) {
+            this.el.style.opacity = '0';
             this.busy = false;
             return;
         }
-
         this.busy = true;
         const item = this.queue.shift();
-        this.el.innerText = item.text;
-        this.el.style.opacity = 1;
-        
-        // Dynamic "Speaking" sound
-        const beepType = item.text.includes("GUIDE") ? 'square' : 'sine';
-        const pitch = item.text.includes("GUIDE") ? 150 : 400;
-        AudioSys.playTone(pitch, beepType, 0.1, 0.05);
+        this.el.textContent = '';
+        this.el.style.opacity = '1';
 
-        setTimeout(() => {
-            this.process();
+        // Typewriter effect
+        let i = 0;
+        const typeSpeed = Math.max(20, Math.min(50, item.duration / item.text.length / 2));
+        const typeInterval = setInterval(() => {
+            if (i < item.text.length) {
+                this.el.textContent += item.text[i];
+                if (i % 3 === 0) AudioSys.playTone(
+                    item.text.includes('GUIDE') ? 180 : 500,
+                    'square', 0.02, 0.03
+                );
+                i++;
+            } else {
+                clearInterval(typeInterval);
+            }
+        }, typeSpeed);
+
+        this.timeoutId = setTimeout(() => {
+            clearInterval(typeInterval);
+            this._process();
         }, item.duration);
     },
-    
+
     clear() {
+        if (this.timeoutId) clearTimeout(this.timeoutId);
         this.queue = [];
-        this.el.style.opacity = 0;
+        this.el.style.opacity = '0';
         this.busy = false;
     }
 };
 
-/**
- * GAME ENGINE (Canvas & Logic)
- */
+// ─── INPUT SYSTEM (Mouse + Touch unified) ─────────────────
+const Input = {
+    x: 0,
+    y: 0,
+    canvasX: 0,
+    canvasY: 0,
+    clicked: false,
+    _consumeClick() {
+        const v = this.clicked;
+        this.clicked = false;
+        return v;
+    },
+    _update(clientX, clientY) {
+        this.x = clientX;
+        this.y = clientY;
+        const rect = Game.canvas.getBoundingClientRect();
+        this.canvasX = ((clientX - rect.left) / rect.width) * Game.width;
+        this.canvasY = ((clientY - rect.top) / rect.height) * Game.height;
+    }
+};
+
+// Mouse
+window.addEventListener('mousemove', e => Input._update(e.clientX, e.clientY));
+document.getElementById('crt').addEventListener('mousedown', e => {
+    e.preventDefault();
+    Input.clicked = true;
+    Input._update(e.clientX, e.clientY);
+});
+
+// Touch
+document.getElementById('crt').addEventListener('touchstart', e => {
+    e.preventDefault();
+    const t = e.touches[0];
+    Input.clicked = true;
+    Input._update(t.clientX, t.clientY);
+}, { passive: false });
+document.getElementById('crt').addEventListener('touchmove', e => {
+    e.preventDefault();
+    const t = e.touches[0];
+    Input._update(t.clientX, t.clientY);
+}, { passive: false });
+
+// ─── VFX SYSTEM ───────────────────────────────────────────
+const VFX = {
+    shake: { intensity: 0, decay: 0.9 },
+    particles: [],
+    transition: { active: false, progress: 0, type: 'none' },
+
+    addShake(intensity = 5) {
+        this.shake.intensity = Math.max(this.shake.intensity, intensity);
+    },
+
+    addParticle(x, y, color = '#fff', count = 5) {
+        for (let i = 0; i < count; i++) {
+            this.particles.push({
+                x, y,
+                vx: (Math.random() - 0.5) * 4,
+                vy: (Math.random() - 0.5) * 4 - 2,
+                life: 1,
+                decay: 0.01 + Math.random() * 0.02,
+                size: 2 + Math.random() * 3,
+                color
+            });
+        }
+    },
+
+    update() {
+        // Shake
+        this.shake.intensity *= this.shake.decay;
+        if (this.shake.intensity < 0.1) this.shake.intensity = 0;
+
+        // Particles
+        this.particles = this.particles.filter(p => {
+            p.x += p.vx;
+            p.y += p.vy;
+            p.vy += 0.05;
+            p.life -= p.decay;
+            return p.life > 0;
+        });
+
+        // Transition
+        if (this.transition.active) {
+            this.transition.progress += 0.02;
+            if (this.transition.progress >= 1) {
+                this.transition.active = false;
+            }
+        }
+    },
+
+    drawParticles(ctx) {
+        this.particles.forEach(p => {
+            ctx.globalAlpha = p.life;
+            ctx.fillStyle = p.color;
+            ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
+        });
+        ctx.globalAlpha = 1;
+    },
+
+    getShakeOffset() {
+        if (this.shake.intensity < 0.1) return { x: 0, y: 0 };
+        return {
+            x: (Math.random() - 0.5) * this.shake.intensity * 2,
+            y: (Math.random() - 0.5) * this.shake.intensity * 2
+        };
+    },
+
+    startTransition(type = 'fadeIn') {
+        this.transition = { active: true, progress: 0, type };
+    }
+};
+
+// ─── LEVEL DEFINITIONS ────────────────────────────────────
+const Levels = {
+    progress: {
+        tape1_done: false,
+        tape2_done: false,
+        tape2_hits: 0,
+        tape3_done: false,
+        tape4_done: false
+    },
+
+    // --- TAPE 1: THE HALLWAY ---
+    t1: {
+        playerX: 60,
+        peers: [],
+        doorX: 0,
+        doorGlow: 0,
+        corridor: [],
+        done: false,
+        narrativeStep: 0
+    },
+
+    initTape1(w, h) {
+        this.t1.done = false;
+        this.t1.playerX = 60;
+        this.t1.doorX = w * 1.2;
+        this.t1.narrativeStep = 0;
+        this.t1.peers = [];
+        for (let i = 0; i < 6; i++) {
+            this.t1.peers.push({
+                x: 200 + i * 180,
+                h: 40 + Math.random() * 30,
+                speed: 1.5 + Math.random() * 2,
+                opacity: 0.6 + Math.random() * 0.4
+            });
+        }
+        AudioSys.startAmbience('sad');
+        setTimeout(() => TextSys.show("GUIDE: Walk forward. Just keep moving.", 3000), 1500);
+        setTimeout(() => TextSys.show("GUIDE: Move your cursor gently. Don't rush.", 4000), 5000);
+    },
+
+    updateTape1(w, h) {
+        if (this.t1.done) return;
+
+        const mouseRatio = Math.max(0, Math.min(1, Input.canvasX / w));
+        const speed = mouseRatio * 2;
+
+        // If mouse is too far right (rushing), door recedes
+        if (mouseRatio > 0.75) {
+            this.t1.doorX += 1.5;
+            if (Game.frame % 120 === 0 && this.t1.narrativeStep < 1) {
+                TextSys.show("ANUSHRI: They're all faster than me...", 2000);
+                this.t1.narrativeStep = 1;
+            }
+        } else {
+            // Door slowly comes closer when not rushing
+            this.t1.doorX -= 0.3;
+        }
+
+        this.t1.playerX += speed;
+        this.t1.doorGlow = Math.sin(Game.frame * 0.05) * 0.3 + 0.7;
+
+        // Peers drift
+        this.t1.peers.forEach(p => {
+            p.x -= p.speed;
+            if (p.x < -50) p.x = w + 50 + Math.random() * 100;
+        });
+
+        // Narrative beats
+        if (this.t1.playerX > w * 0.3 && this.t1.narrativeStep < 2) {
+            TextSys.show("GUIDE: See? Steady wins.", 2000);
+            this.t1.narrativeStep = 2;
+        }
+
+        // Win condition
+        if (this.t1.playerX >= this.t1.doorX - 30) {
+            this.t1.done = true;
+            this.progress.tape1_done = true;
+            AudioSys.playSuccess();
+            VFX.addParticle(w / 2, h / 2, '#fff', 30);
+            TextSys.show("GUIDE: You made it. Not by running — by enduring.", 4000);
+            Game.scheduleEject(4500);
+        }
+    },
+
+    drawTape1(ctx, w, h) {
+        // Background gradient — dark corridor
+        const grad = ctx.createLinearGradient(0, 0, w, 0);
+        grad.addColorStop(0, '#0a0a12');
+        grad.addColorStop(1, '#0a1a0a');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, w, h);
+
+        // Floor
+        ctx.fillStyle = '#151520';
+        ctx.fillRect(0, h - 60, w, 60);
+        ctx.strokeStyle = '#222';
+        ctx.lineWidth = 1;
+        for (let lx = 0; lx < w; lx += 80) {
+            ctx.beginPath();
+            ctx.moveTo(lx, h - 60);
+            ctx.lineTo(lx, h);
+            ctx.stroke();
+        }
+
+        // Ceiling line
+        ctx.strokeStyle = '#1a1a2a';
+        ctx.beginPath();
+        ctx.moveTo(0, 40);
+        ctx.lineTo(w, 40);
+        ctx.stroke();
+
+        // Peer silhouettes
+        this.t1.peers.forEach(p => {
+            ctx.globalAlpha = p.opacity * 0.7;
+            ctx.fillStyle = '#0a0a15';
+            // Body
+            ctx.fillRect(p.x - 8, h - 60 - p.h, 16, p.h);
+            // Head
+            ctx.beginPath();
+            ctx.arc(p.x, h - 60 - p.h - 8, 8, 0, Math.PI * 2);
+            ctx.fill();
+        });
+        ctx.globalAlpha = 1;
+
+        // Door (glowing exit)
+        const dx = this.t1.doorX;
+        const glow = this.t1.doorGlow;
+        ctx.fillStyle = `rgba(255, 255, 200, ${glow * 0.3})`;
+        ctx.fillRect(dx - 30, h - 140, 60, 80);
+        ctx.shadowColor = '#ffffaa';
+        ctx.shadowBlur = 20 * glow;
+        ctx.fillStyle = `rgba(255, 255, 240, ${glow})`;
+        ctx.fillRect(dx - 20, h - 130, 40, 70);
+        ctx.shadowBlur = 0;
+
+        // Player
+        this._drawAnushri(ctx, this.t1.playerX, h - 80, '#fff');
+
+        // Distance indicator
+        const dist = Math.max(0, this.t1.doorX - this.t1.playerX);
+        ctx.fillStyle = 'rgba(255,255,255,0.3)';
+        ctx.font = '16px VT323';
+        ctx.textAlign = 'right';
+        ctx.fillText(`${Math.floor(dist)}m to door`, w - 20, 30);
+        ctx.textAlign = 'start';
+    },
+
+    // --- TAPE 2: THE CURVE ---
+    t2: {
+        bullets: [],
+        timer: 0,
+        maxTime: 900, // 15 seconds at 60fps
+        done: false,
+        playerX: 0,
+        shakeFrame: 0
+    },
+
+    initTape2(w, h) {
+        this.t2.done = false;
+        this.t2.bullets = [];
+        this.t2.timer = this.t2.maxTime;
+        this.t2.playerX = w / 2;
+        this.progress.tape2_hits = 0;
+        AudioSys.startAmbience('tense');
+        setTimeout(() => TextSys.show("GUIDE: The Bell Curve. Grades are falling.", 3000), 1000);
+        setTimeout(() => TextSys.show("GUIDE: Move to dodge. Just survive.", 3000), 4500);
+    },
+
+    updateTape2(w, h) {
+        if (this.t2.done) return;
+
+        // Player follows mouse/touch smoothly
+        this.t2.playerX += (Input.canvasX - this.t2.playerX) * 0.12;
+        this.t2.playerX = Math.max(20, Math.min(w - 20, this.t2.playerX));
+
+        // Spawn grades
+        const spawnRate = Math.max(4, 12 - Math.floor((this.t2.maxTime - this.t2.timer) / 100));
+        if (Game.frame % spawnRate === 0) {
+            const labels = ['C-', 'D', 'F', '42', '55', '38', 'D+', 'FAIL', '61', 'C'];
+            this.t2.bullets.push({
+                x: Math.random() * (w - 40) + 20,
+                y: -20,
+                label: labels[Math.floor(Math.random() * labels.length)],
+                speed: 2.5 + Math.random() * 3,
+                size: 14 + Math.random() * 8,
+                hit: false
+            });
+        }
+
+        // Update bullets
+        const playerY = h - 90;
+        for (let i = this.t2.bullets.length - 1; i >= 0; i--) {
+            const b = this.t2.bullets[i];
+            b.y += b.speed;
+
+            // Collision
+            if (!b.hit && Math.abs(b.x - this.t2.playerX) < 22 && Math.abs(b.y - playerY) < 22) {
+                b.hit = true;
+                this.progress.tape2_hits++;
+                VFX.addShake(6);
+                AudioSys.playHit();
+                VFX.addParticle(b.x, b.y, '#f44', 8);
+            }
+
+            // Remove off-screen
+            if (b.y > h + 30) {
+                this.t2.bullets.splice(i, 1);
+            }
+        }
+
+        this.t2.timer--;
+
+        // Narrative
+        if (this.t2.timer === Math.floor(this.t2.maxTime * 0.5)) {
+            TextSys.show("GUIDE: Halfway. Keep going.", 2000);
+        }
+
+        if (this.t2.timer <= 0) {
+            this.t2.done = true;
+            this.progress.tape2_done = true;
+            AudioSys.playSuccess();
+            const hits = this.progress.tape2_hits;
+            const msg = hits === 0
+                ? "GUIDE: Untouched. Incredible."
+                : `GUIDE: ${hits} hit${hits > 1 ? 's' : ''}. But you're still standing.`;
+            TextSys.show(msg, 4000);
+            Game.scheduleEject(4500);
+        }
+    },
+
+    drawTape2(ctx, w, h) {
+        // Dark red background
+        ctx.fillStyle = '#0a0000';
+        ctx.fillRect(0, 0, w, h);
+
+        // Bell curve in background
+        ctx.strokeStyle = 'rgba(255, 50, 50, 0.15)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        for (let x = 0; x < w; x += 2) {
+            const nx = (x / w - 0.5) * 6;
+            const bellY = Math.exp(-nx * nx / 2) * h * 0.6;
+            if (x === 0) ctx.moveTo(x, h - bellY);
+            else ctx.lineTo(x, h - bellY);
+        }
+        ctx.stroke();
+
+        // Bullets
+        ctx.textAlign = 'center';
+        this.t2.bullets.forEach(b => {
+            if (b.hit) return;
+            ctx.font = `${b.size}px VT323`;
+            ctx.fillStyle = b.label === 'F' || b.label === 'FAIL' ? '#ff3333' : '#884444';
+            ctx.shadowColor = '#f00';
+            ctx.shadowBlur = b.label === 'F' ? 8 : 0;
+            ctx.fillText(b.label, b.x, b.y);
+            ctx.shadowBlur = 0;
+        });
+        ctx.textAlign = 'start';
+
+        // Player
+        this._drawAnushri(ctx, this.t2.playerX, h - 90, '#ff6666');
+
+        // Timer bar
+        const pct = Math.max(0, this.t2.timer / this.t2.maxTime);
+        ctx.fillStyle = '#300';
+        ctx.fillRect(20, h - 20, w - 40, 8);
+        ctx.fillStyle = pct > 0.3 ? '#f44' : '#f00';
+        ctx.fillRect(20, h - 20, (w - 40) * pct, 8);
+
+        // HUD
+        ctx.fillStyle = '#f88';
+        ctx.font = '18px VT323';
+        ctx.fillText(`SURVIVE: ${Math.ceil(this.t2.timer / 60)}s`, 20, 30);
+        ctx.fillText(`HITS: ${this.progress.tape2_hits}`, 20, 52);
+    },
+
+    // --- TAPE 3: SIGNAL LOST ---
+    t3: {
+        noiseLevel: 1.0,
+        totalClicks: 0,
+        done: false,
+        message: "I AM SUFFICIENT",
+        revealPhrases: [
+            "I AM SUFFICIENT",
+            "I DON'T NEED PERMISSION",
+            "I FIXED THIS MYSELF",
+            "I AM ENOUGH"
+        ],
+        currentPhrase: 0
+    },
+
+    initTape3(w, h) {
+        this.t3.done = false;
+        this.t3.noiseLevel = 1.0;
+        this.t3.totalClicks = 0;
+        this.t3.currentPhrase = 0;
+        this.t3.message = this.t3.revealPhrases[0];
+        AudioSys.stopMusic();
+        AudioSys.playNoise(1.0, 3000, 0.2);
+        setTimeout(() => TextSys.show("SIGNAL LOST — TRACKING ERROR", 2500), 500);
+        setTimeout(() => TextSys.show("MANUAL INTERVENTION REQUIRED", 2500), 3500);
+        setTimeout(() => TextSys.show("CLICK THE SCREEN TO ADJUST TRACKING", 3000), 6500);
+    },
+
+    updateTape3(w, h) {
+        if (this.t3.done) return;
+
+        if (Input._consumeClick()) {
+            this.t3.totalClicks++;
+            this.t3.noiseLevel = Math.max(0, this.t3.noiseLevel - 0.08);
+            AudioSys.playTone(200 + this.t3.totalClicks * 30, 'sine', 0.08, 0.06);
+            VFX.addParticle(Input.canvasX, Input.canvasY, '#4af626', 3);
+
+            // Phase transitions
+            if (this.t3.noiseLevel < 0.7 && this.t3.currentPhrase === 0) {
+                this.t3.currentPhrase = 1;
+                this.t3.message = this.t3.revealPhrases[1];
+            }
+            if (this.t3.noiseLevel < 0.4 && this.t3.currentPhrase === 1) {
+                this.t3.currentPhrase = 2;
+                this.t3.message = this.t3.revealPhrases[2];
+            }
+            if (this.t3.noiseLevel < 0.15 && this.t3.currentPhrase === 2) {
+                this.t3.currentPhrase = 3;
+                this.t3.message = this.t3.revealPhrases[3];
+            }
+        }
+
+        // Noise creeps back very slowly (beatable)
+        if (this.t3.noiseLevel < 1.0) {
+            this.t3.noiseLevel += 0.002;
+        }
+
+        // Win
+        if (this.t3.noiseLevel <= 0.02 && !this.t3.done) {
+            this.t3.done = true;
+            this.progress.tape3_done = true;
+            AudioSys.playSuccess();
+            TextSys.show("ANUSHRI: I fixed it. I didn't need the Guide.", 4000);
+            Game.scheduleEject(5000);
+        }
+    },
+
+    drawTape3(ctx, w, h) {
+        // Hidden message
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, w, h);
+
+        // Draw the revealed text behind noise
+        const alpha = Math.max(0, 1 - this.t3.noiseLevel);
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = '#fff';
+        ctx.font = `${Math.min(w / 10, 48)}px VT323`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.shadowColor = '#4af626';
+        ctx.shadowBlur = 20 * alpha;
+        ctx.fillText(this.t3.message, w / 2, h / 2);
+        ctx.shadowBlur = 0;
+        ctx.globalAlpha = 1;
+
+        // Static overlay
+        if (this.t3.noiseLevel > 0.01) {
+            const imgData = ctx.getImageData(0, 0, w, h);
+            const d = imgData.data;
+            const nl = this.t3.noiseLevel;
+            for (let i = 0; i < d.length; i += 4) {
+                if (Math.random() < nl) {
+                    const v = Math.random() * 200;
+                    d[i] = d[i + 1] = d[i + 2] = v;
+                    d[i + 3] = 255;
+                }
+            }
+            ctx.putImageData(imgData, 0, 0);
+
+            // VHS tracking bars
+            if (nl > 0.3) {
+                const barY = (Math.sin(Game.frame * 0.03) * 0.5 + 0.5) * h;
+                ctx.fillStyle = `rgba(0,0,0,${nl * 0.8})`;
+                ctx.fillRect(0, barY, w, 30 * nl);
+            }
+        }
+
+        // Instructions
+        if (this.t3.noiseLevel > 0.3) {
+            ctx.fillStyle = `rgba(255, 80, 80, ${0.5 + Math.sin(Game.frame * 0.1) * 0.3})`;
+            ctx.font = '18px VT323';
+            ctx.fillText('[ CLICK TO ADJUST TRACKING ]', w / 2, h - 40);
+        }
+
+        // Progress bar
+        const pct = 1 - this.t3.noiseLevel;
+        ctx.fillStyle = '#222';
+        ctx.fillRect(w * 0.1, h - 15, w * 0.8, 6);
+        ctx.fillStyle = '#4af626';
+        ctx.fillRect(w * 0.1, h - 15, w * 0.8 * pct, 6);
+
+        ctx.textAlign = 'start';
+        ctx.textBaseline = 'alphabetic';
+    },
+
+    // --- TAPE 4: RECORD (FINALE) ---
+    t4: {
+        step: 0,
+        floatingHearts: [],
+        done: false
+    },
+
+    initTape4(w, h) {
+        this.t4.step = 0;
+        this.t4.done = false;
+        this.t4.floatingHearts = [];
+        for (let i = 0; i < 30; i++) {
+            this.t4.floatingHearts.push({
+                x: Math.random() * w,
+                y: Math.random() * h,
+                size: 3 + Math.random() * 6,
+                speed: 0.3 + Math.random() * 0.8,
+                drift: (Math.random() - 0.5) * 0.5,
+                opacity: 0.2 + Math.random() * 0.5,
+                phase: Math.random() * Math.PI * 2
+            });
+        }
+        AudioSys.startAmbience('love');
+        document.getElementById('rec-ind').classList.add('on');
+    },
+
+    updateTape4(w, h) {
+        if (this.t4.done) return;
+
+        // Narrative beats based on frame
+        const beats = [
+            [90,   "DADDY: Happy Birthday, Anushri.", 3500],
+            [300,  "DADDY: You thought you were falling behind.", 3500],
+            [500,  "DADDY: But I was watching the whole time.", 3500],
+            [700,  "DADDY: And this is what I saw:", 3000],
+            [850,  `THE HALLWAY: You walked through it.`, 3000],
+            [1050, `THE CURVE: ${this.progress.tape2_hits} hits. You never quit.`, 3500],
+            [1250, "THE SIGNAL: You fixed it yourself.", 3000],
+            [1450, "DADDY: You didn't need me to tell you.", 3500],
+            [1650, "DADDY: You already knew.", 3000],
+            [1850, "You are sufficient. You are enough.", 4000],
+            [2100, "I will always be DADDY. ♥", 5000],
+        ];
+
+        beats.forEach(([frame, text, dur]) => {
+            if (Game.frame === frame) {
+                TextSys.show(text, dur);
+                if (frame >= 1850) AudioSys.playSuccess();
+            }
+        });
+
+        // Hearts float
+        this.t4.floatingHearts.forEach(h_obj => {
+            h_obj.y -= h_obj.speed;
+            h_obj.x += Math.sin(Game.frame * 0.02 + h_obj.phase) * h_obj.drift;
+            if (h_obj.y < -20) {
+                h_obj.y = h + 20;
+                h_obj.x = Math.random() * w;
+            }
+        });
+
+        if (Game.frame > 2600 && !this.t4.done) {
+            this.t4.done = true;
+            this.progress.tape4_done = true;
+            document.getElementById('rec-ind').classList.remove('on');
+            Game.scheduleEject(2000);
+        }
+    },
+
+    drawTape4(ctx, w, h) {
+        // Warm gradient
+        const grad = ctx.createRadialGradient(w / 2, h / 2, 50, w / 2, h / 2, Math.max(w, h));
+        grad.addColorStop(0, '#3d2800');
+        grad.addColorStop(0.5, '#1a1000');
+        grad.addColorStop(1, '#0a0500');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, w, h);
+
+        // Floating hearts
+        this.t4.floatingHearts.forEach(fh => {
+            ctx.globalAlpha = fh.opacity;
+            ctx.fillStyle = '#ffb84d';
+            this._drawHeart(ctx, fh.x, fh.y, fh.size);
+        });
+        ctx.globalAlpha = 1;
+
+        // Central glow
+        const pulse = 1 + Math.sin(Game.frame * 0.04) * 0.15;
+        const cx = w / 2, cy = h / 2;
+
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.scale(pulse, pulse);
+
+        // Glow
+        const grd = ctx.createRadialGradient(0, 0, 10, 0, 0, 60);
+        grd.addColorStop(0, 'rgba(255, 184, 77, 0.4)');
+        grd.addColorStop(1, 'rgba(255, 184, 77, 0)');
+        ctx.fillStyle = grd;
+        ctx.beginPath();
+        ctx.arc(0, 0, 60, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Heart
+        ctx.fillStyle = '#ffb84d';
+        ctx.shadowColor = '#ffb84d';
+        ctx.shadowBlur = 25;
+        this._drawHeart(ctx, 0, -5, 20);
+        ctx.shadowBlur = 0;
+
+        ctx.restore();
+
+        // "REC" indicator
+        if (Game.frame % 60 < 40) {
+            ctx.fillStyle = '#f00';
+            ctx.font = '16px VT323';
+            ctx.textAlign = 'left';
+            ctx.fillText('● REC', 15, 25);
+        }
+
+        // Timestamp
+        const sec = Math.floor(Game.frame / 60);
+        const mm = String(Math.floor(sec / 60)).padStart(2, '0');
+        const ss = String(sec % 60).padStart(2, '0');
+        ctx.fillStyle = 'rgba(255,255,255,0.3)';
+        ctx.font = '14px VT323';
+        ctx.textAlign = 'right';
+        ctx.fillText(`${mm}:${ss}`, w - 15, 25);
+        ctx.textAlign = 'start';
+    },
+
+    // ─── SHARED DRAWING HELPERS ─────────────────────────────
+
+    _drawAnushri(ctx, x, y, color = '#fff') {
+        ctx.save();
+        ctx.translate(x, y);
+        const s = 1 + Math.sin(Game.frame * 0.08) * 0.06;
+        ctx.scale(s, s);
+
+        // Soul diamond with glow
+        ctx.fillStyle = color;
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 12;
+        ctx.beginPath();
+        ctx.moveTo(0, -14);
+        ctx.lineTo(10, 0);
+        ctx.lineTo(0, 18);
+        ctx.lineTo(-10, 0);
+        ctx.closePath();
+        ctx.fill();
+
+        // Inner light
+        ctx.fillStyle = 'rgba(255,255,255,0.5)';
+        ctx.shadowBlur = 0;
+        ctx.beginPath();
+        ctx.moveTo(0, -6);
+        ctx.lineTo(4, 0);
+        ctx.lineTo(0, 8);
+        ctx.lineTo(-4, 0);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.restore();
+    },
+
+    _drawHeart(ctx, x, y, size) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.beginPath();
+        ctx.moveTo(0, size * 0.4);
+        ctx.bezierCurveTo(-size, -size * 0.2, -size * 0.5, -size, 0, -size * 0.4);
+        ctx.bezierCurveTo(size * 0.5, -size, size, -size * 0.2, 0, size * 0.4);
+        ctx.fill();
+        ctx.restore();
+    },
+
+    // ─── DISPATCH ───────────────────────────────────────────
+    init(id, w, h) {
+        if (id === 1) this.initTape1(w, h);
+        if (id === 2) this.initTape2(w, h);
+        if (id === 3) this.initTape3(w, h);
+        if (id === 4) this.initTape4(w, h);
+    },
+
+    update(id, w, h) {
+        if (id === 1) this.updateTape1(w, h);
+        if (id === 2) this.updateTape2(w, h);
+        if (id === 3) this.updateTape3(w, h);
+        if (id === 4) this.updateTape4(w, h);
+    },
+
+    draw(id, ctx, w, h) {
+        if (id === 1) this.drawTape1(ctx, w, h);
+        if (id === 2) this.drawTape2(ctx, w, h);
+        if (id === 3) this.drawTape3(ctx, w, h);
+        if (id === 4) this.drawTape4(ctx, w, h);
+    }
+};
+
+// ─── GAME ENGINE ──────────────────────────────────────────
 const Game = {
     canvas: document.getElementById('crt'),
-    ctx: document.getElementById('crt').getContext('2d'),
+    ctx: null,
     width: 0,
     height: 0,
-    state: 'static', // static, play, eject
+    state: 'static',   // 'static' | 'inserting' | 'play'
     activeTape: null,
     frame: 0,
-    
-    // Game State Variables
-    anushri: { x: 50, y: 0, w: 20, h: 20, vy: 0, grounded: false, emotion: 'neutral' },
-    camX: 0,
-    levelData: [],
-    score: 0,
-    
+    ejectTimeout: null,
+    selectedTape: null,
+
     init() {
+        this.ctx = this.canvas.getContext('2d');
         this.resize();
         window.addEventListener('resize', () => this.resize());
         this.loop();
-        
-        // Static Noise Loop
-        setInterval(() => {
-            if(this.state === 'static') this.drawStatic();
-        }, 50);
     },
 
     resize() {
         const rect = this.canvas.parentElement.getBoundingClientRect();
-        this.width = this.canvas.width = rect.width;
-        this.height = this.canvas.height = rect.height;
+        // Use device pixel ratio for sharp rendering
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        this.width = this.canvas.width = Math.floor(rect.width * dpr);
+        this.height = this.canvas.height = Math.floor(rect.height * dpr);
+        this.canvas.style.width = rect.width + 'px';
+        this.canvas.style.height = rect.height + 'px';
+    },
+
+    selectTape(id) {
+        if (this.state !== 'static') return;
+
+        // Deselect previous
+        document.querySelectorAll('.vhs-tape').forEach(t => t.classList.remove('selected'));
+
+        if (this.selectedTape === id) {
+            // Double-click = insert
+            this.insertTape(id);
+            this.selectedTape = null;
+            return;
+        }
+
+        this.selectedTape = id;
+        const tapeEl = document.getElementById(`tape${id}`);
+        if (tapeEl) tapeEl.classList.add('selected');
+
+        // Highlight slot
+        document.getElementById('slot').classList.add('ready');
+        document.getElementById('hint').textContent = 'Click here to insert tape';
+        AudioSys.playBeep();
     },
 
     insertTape(id) {
-        if(this.state === 'play') return;
-        
+        if (this.state !== 'static') return;
+
+        AudioSys.init();
+        AudioSys.resume();
         AudioSys.playClunk();
-        document.getElementById('slot').classList.add('inserting');
-        document.getElementById('led-play').classList.add('active');
-        
-        // Disable tape drag
-        document.getElementById(`tape${id}`).style.display = 'none';
+
+        this.state = 'inserting';
+        this.selectedTape = null;
+
+        const slot = document.getElementById('slot');
+        slot.classList.add('inserting');
+        slot.classList.remove('ready', 'drag-over');
+        document.getElementById('hint').style.opacity = '0';
+        document.querySelectorAll('.vhs-tape').forEach(t => t.classList.remove('selected'));
+
+        // Hide tape from rack
+        const tapeEl = document.getElementById(`tape${id}`);
+        if (tapeEl) tapeEl.classList.add('playing');
 
         setTimeout(() => {
             this.state = 'play';
             this.activeTape = parseInt(id);
-            this.resetLevel();
-            document.getElementById('channel-disp').innerText = `PLAY: TAPE 0${id}`;
-            document.getElementById('slot').classList.remove('inserting');
-        }, 1500);
+            this.frame = 0;
+
+            document.getElementById('led-play').classList.add('on');
+            document.getElementById('channel-disp').textContent = `▶ TAPE 0${id}`;
+            slot.classList.remove('inserting');
+
+            this.resize(); // Ensure dimensions are fresh
+            Levels.init(this.activeTape, this.width, this.height);
+            VFX.startTransition('fadeIn');
+        }, 1200);
+    },
+
+    scheduleEject(delay = 3000) {
+        // Clear any previous scheduled eject
+        if (this.ejectTimeout) clearTimeout(this.ejectTimeout);
+        this.ejectTimeout = setTimeout(() => this.eject(), delay);
     },
 
     eject() {
-        if(!this.activeTape) return;
+        if (!this.activeTape && this.state === 'static') return;
+        if (this.ejectTimeout) { clearTimeout(this.ejectTimeout); this.ejectTimeout = null; }
+
         AudioSys.playClunk();
         AudioSys.stopMusic();
-        this.state = 'static';
-        document.getElementById('led-play').classList.remove('active');
-        document.getElementById('channel-disp').innerText = "AV-1";
         TextSys.clear();
-        
-        // Return tape
-        const tape = document.getElementById(`tape${this.activeTape}`);
-        tape.style.display = 'flex';
-        tape.style.opacity = '1';
+
+        const tapeId = this.activeTape;
+
+        this.state = 'static';
         this.activeTape = null;
-        
-        // Check win condition
-        if(Levels.progress.tape3_done) {
-            document.getElementById('tape4').style.display = 'flex';
+        this.frame = 0;
+
+        document.getElementById('led-play').classList.remove('on');
+        document.getElementById('rec-ind').classList.remove('on');
+        document.getElementById('channel-disp').textContent = 'AV-1';
+        document.getElementById('hint').style.opacity = '1';
+        document.getElementById('hint').textContent = 'Select a tape, then click here';
+
+        // Return tape to rack with completion marker
+        if (tapeId) {
+            const tapeEl = document.getElementById(`tape${tapeId}`);
+            if (tapeEl) {
+                tapeEl.classList.remove('playing');
+                if (Levels.progress[`tape${tapeId}_done`]) {
+                    tapeEl.classList.add('completed');
+                }
+            }
+        }
+
+        // Reveal tape 4 if tape 3 done
+        if (Levels.progress.tape3_done) {
+            const t4 = document.getElementById('tape4');
+            if (t4.style.display === 'none') {
+                t4.style.display = 'flex';
+                t4.setAttribute('draggable', 'true');
+                setupTapeInteraction(t4);
+                setTimeout(() => {
+                    TextSys.show("NEW TAPE FOUND IN ARCHIVE", 3000);
+                    AudioSys.playBeep(true);
+                }, 1500);
+            }
         }
     },
 
-    resetLevel() {
-        this.frame = 0;
-        this.anushri = { x: 50, y: this.height - 100, w: 20, h: 20, vy: 0, grounded: false };
-        this.camX = 0;
-        Levels.init(this.activeTape);
-    },
-
     loop() {
-        if(this.state === 'play') {
-            this.update();
-            this.draw();
+        if (this.state === 'play' && this.activeTape) {
+            this.frame++;
+            VFX.update();
+            Levels.update(this.activeTape, this.width, this.height);
+            this.drawGame();
+        } else {
+            this.drawStatic();
         }
         requestAnimationFrame(() => this.loop());
     },
 
-    update() {
-        Levels.update(this.activeTape);
-        this.frame++;
-    },
+    drawGame() {
+        const ctx = this.ctx;
+        const w = this.width;
+        const h = this.height;
 
-    draw() {
+        ctx.save();
+
+        // Screen shake
+        const shake = VFX.getShakeOffset();
+        ctx.translate(shake.x, shake.y);
+
         // Clear
-        this.ctx.fillStyle = "#050505";
-        this.ctx.fillRect(0, 0, this.width, this.height);
-        
-        Levels.draw(this.activeTape, this.ctx, this.width, this.height);
-        
-        // VHS Tracking Lines (Glitch)
-        if(Math.random() > 0.98) {
-            const y = Math.random() * this.height;
-            this.ctx.fillStyle = "rgba(255,255,255,0.1)";
-            this.ctx.fillRect(0, y, this.width, 10);
+        ctx.fillStyle = '#050505';
+        ctx.fillRect(-10, -10, w + 20, h + 20);
+
+        // Draw active level
+        Levels.draw(this.activeTape, ctx, w, h);
+
+        // Particles
+        VFX.drawParticles(ctx);
+
+        // VHS tracking glitch
+        if (Math.random() > 0.97) {
+            const gy = Math.random() * h;
+            ctx.fillStyle = 'rgba(255,255,255,0.06)';
+            ctx.fillRect(-10, gy, w + 20, 3 + Math.random() * 8);
         }
+
+        // Color fringing (chromatic aberration hint)
+        if (Math.random() > 0.99) {
+            ctx.globalCompositeOperation = 'lighter';
+            ctx.fillStyle = 'rgba(255,0,0,0.02)';
+            ctx.fillRect(2, 0, w, h);
+            ctx.fillStyle = 'rgba(0,0,255,0.02)';
+            ctx.fillRect(-2, 0, w, h);
+            ctx.globalCompositeOperation = 'source-over';
+        }
+
+        // Fade-in transition
+        if (VFX.transition.active && VFX.transition.type === 'fadeIn') {
+            ctx.fillStyle = `rgba(0,0,0,${1 - VFX.transition.progress})`;
+            ctx.fillRect(-10, -10, w + 20, h + 20);
+        }
+
+        ctx.restore();
     },
 
     drawStatic() {
         const w = this.width;
         const h = this.height;
-        const idata = this.ctx.createImageData(w, h);
-        const buffer32 = new Uint32Array(idata.data.buffer);
-        const len = buffer32.length;
-        
-        for (let i = 0; i < len; i++) {
-            if (Math.random() < 0.1) buffer32[i] = 0xff111111; // Dark noise
-            else buffer32[i] = 0xff000000; // Black
-        }
-        this.ctx.putImageData(idata, 0, 0);
-        
-        // Render Text "NO SIGNAL"
-        this.ctx.fillStyle = "#1e5c12";
-        this.ctx.font = "30px 'VT323'";
-        this.ctx.textAlign = "center";
-        this.ctx.fillText("NO SIGNAL", w/2, h/2);
-    }
-};
+        const ctx = this.ctx;
 
-/**
- * LEVELS & LOGIC
- */
-const Levels = {
-    progress: { tape1_done: false, tape2_hits: 0, tape3_done: false },
-    guideCursor: { x: 0, y: 0, visible: true },
-    
-    // Tape 1: The Hallway (Walking Sim)
-    t1: { peers: [], doorX: 800 },
-
-    // Tape 2: The Curve (Bullet Hell)
-    t2: { bullets: [], timer: 1000 },
-    
-    // Tape 3: Signal Lost (Interactive)
-    t3: { noiseLevel: 1.0, clicks: 0 },
-
-    init(id) {
-        if(id === 1) {
-            AudioSys.startAmbience('sad');
-            this.t1.peers = Array(5).fill(0).map((_,i) => ({x: 200 + i*150, h: 60, speed: 2 + Math.random()}));
-            this.t1.doorX = 800;
-            TextSys.show("GUIDE: Move forward. Don't let them intimidate you.", 3000);
-        }
-        if(id === 2) {
-            AudioSys.startAmbience('tense');
-            this.t2.bullets = [];
-            this.t2.timer = 1200; // 20 seconds approx
-            Game.anushri.x = Game.width/2;
-            TextSys.show("GUIDE: It's the Bell Curve. Just survive.", 3000);
-        }
-        if(id === 3) {
-            AudioSys.stopMusic(); // Silence
-            AudioSys.playNoise(1.0, 'white');
-            this.t3.noiseLevel = 1.0;
-            this.t3.clicks = 0;
-            this.guideCursor.visible = false; // Daddy is gone
-            TextSys.show("SIGNAL LOST. TRACKING ERROR.", 2000);
-            TextSys.show("MANUAL INTERVENTION REQUIRED.", 2000);
-        }
-        if(id === 4) {
-            AudioSys.startAmbience('hope');
-            Game.anushri.x = Game.width/2;
-            Game.anushri.y = Game.height/2;
-            TextSys.show("PLAYING RECORDING...", 3000);
-        }
-    },
-
-    update(id) {
-        if(id === 1) this.updateTape1();
-        if(id === 2) this.updateTape2();
-        if(id === 3) this.updateTape3();
-        if(id === 4) this.updateTape4();
-    },
-
-    // --- TAPE 1 LOGIC ---
-    updateTape1() {
-        // Player moves right automatically but slowly
-        const speed = Mouse.x > Game.width/2 ? 1 : 0;
-        Game.anushri.x += speed;
-        
-        // Door logic: If you move too fast (Mouse far right), door runs away
-        if(Mouse.x > Game.width * 0.8) {
-            this.t1.doorX += 3; // Running away
-            if(Game.frame % 60 === 0) TextSys.show("ANUSHRI: They are so fast...", 1000);
-        } else if (speed > 0) {
-            // Walking slow catches the door
-        }
-
-        // Peers (Parallax)
-        this.t1.peers.forEach(p => {
-            p.x -= p.speed;
-            if(p.x < -50) p.x = Game.width + 50;
-        });
-
-        // Win
-        if(Game.anushri.x > this.t1.doorX - 50) {
-            TextSys.show("GUIDE: You made it. Not by running, but by enduring.", 3000);
-            this.progress.tape1_done = true;
-            setTimeout(() => Game.eject(), 4000);
-        }
-    },
-
-    drawTape1(ctx, w, h) {
-        // Floor
-        ctx.fillStyle = '#222';
-        ctx.fillRect(0, h-50, w, 50);
-        
-        // Peers (Silhouettes)
-        ctx.fillStyle = '#111';
-        this.t1.peers.forEach(p => {
-            ctx.fillRect(p.x, h-50-p.h, 30, p.h);
-        });
-
-        // Door
-        ctx.fillStyle = '#fff';
-        ctx.fillRect(this.t1.doorX, h-120, 60, 70);
-
-        // Player (White Heart/Shape)
-        this.drawPlayer(ctx, Game.anushri.x, h-70);
-    },
-
-    // --- TAPE 2 LOGIC ---
-    updateTape2() {
-        // Player movement (Mouse follow)
-        Game.anushri.x += (Mouse.x - Game.anushri.x) * 0.1;
-        
-        // Spawn Grades (Bullets)
-        if(Game.frame % 10 === 0) {
-            this.t2.bullets.push({
-                x: Math.random() * Game.width, 
-                y: -20, 
-                val: Math.random() > 0.8 ? "F" : Math.floor(Math.random()*90),
-                speed: 3 + Math.random()*2
-            });
-        }
-
-        // Update Bullets
-        this.t2.bullets.forEach((b, i) => {
-            b.y += b.speed;
-            // Collision
-            if(Math.abs(b.x - Game.anushri.x) < 20 && Math.abs(b.y - (Game.height-100)) < 20) {
-                this.t2.bullets.splice(i, 1);
-                this.progress.tape2_hits++;
-                AudioSys.playTone(100, 'sawtooth', 0.1); // Hit sound
-                // Shake screen
-                ctx.save();
-                ctx.translate(Math.random()*5, Math.random()*5);
-                ctx.restore();
-            }
-        });
-
-        this.t2.timer--;
-        if(this.t2.timer <= 0) {
-            TextSys.show(`GUIDE: ${this.progress.tape2_hits} hits. But you're still standing.`, 3000);
-            setTimeout(() => Game.eject(), 4000);
-        }
-    },
-
-    drawTape2(ctx, w, h) {
-        // Matrix Background
-        ctx.fillStyle = `rgba(20, 0, 0, 0.1)`;
-        ctx.fillRect(0,0,w,h);
-        
-        // Bullets
-        ctx.font = "20px 'VT323'";
-        this.t2.bullets.forEach(b => {
-            ctx.fillStyle = b.val === "F" ? "#f00" : "#555";
-            ctx.fillText(b.val, b.x, b.y);
-        });
-
-        // Player
-        this.drawPlayer(ctx, Game.anushri.x, h-100, '#f00');
-        
-        // Timer
-        ctx.fillStyle = "#fff";
-        ctx.fillText(`SURVIVE: ${Math.floor(this.t2.timer/60)}`, 50, 50);
-    },
-
-    // --- TAPE 3 LOGIC ---
-    updateTape3() {
-        // The Pivot: Click to clear static
-        if(Mouse.clicked) {
-            this.t3.clicks++;
-            this.t3.noiseLevel -= 0.1;
-            Mouse.clicked = false;
-            AudioSys.playTone(200 + (this.t3.clicks*50), 'sine', 0.1);
-            
-            if(this.t3.noiseLevel <= 0) {
-                this.progress.tape3_done = true;
-                TextSys.show("ANUSHRI: I fixed it. I didn't need the Guide.", 3000);
-                setTimeout(() => Game.eject(), 4000);
+        // Efficient static noise
+        const imgData = ctx.createImageData(w, h);
+        const buf32 = new Uint32Array(imgData.data.buffer);
+        for (let i = 0; i < buf32.length; i++) {
+            if (Math.random() < 0.08) {
+                const v = Math.floor(Math.random() * 40);
+                buf32[i] = (255 << 24) | (v << 16) | (v << 8) | v;
+            } else {
+                buf32[i] = 0xff000000;
             }
         }
-        
-        // Noise creeps back
-        if(this.t3.noiseLevel < 1.0 && Game.frame % 20 === 0) {
-            this.t3.noiseLevel += 0.01;
-        }
-    },
+        ctx.putImageData(imgData, 0, 0);
 
-    drawTape3(ctx, w, h) {
-        // Draw image hidden behind static
-        ctx.fillStyle = "#fff";
-        ctx.font = "40px 'VT323'";
-        ctx.textAlign = "center";
-        ctx.fillText("I AM SUFFICIENT", w/2, h/2);
-
-        // Static Overlay
-        const idata = ctx.getImageData(0,0,w,h);
-        const data = idata.data;
-        for(let i=0; i<data.length; i+=4) {
-            if(Math.random() < this.t3.noiseLevel) {
-                data[i] = data[i+1] = data[i+2] = Math.random()*255;
-            }
-        }
-        ctx.putImageData(idata, 0, 0);
-        
-        if(this.t3.noiseLevel > 0.5) {
-            ctx.fillStyle = "red";
-            ctx.font = "20px 'VT323'";
-            ctx.fillText("CLICK SCREEN TO ADJUST TRACKING", w/2, h-50);
-        }
-    },
-
-    // --- TAPE 4 LOGIC ---
-    updateTape4() {
-        if(Game.frame === 100) TextSys.show("DADDY: Happy Birthday, Anushri.", 3000);
-        if(Game.frame === 300) TextSys.show("DADDY: You thought you were failing.", 3000);
-        if(Game.frame === 500) TextSys.show("DADDY: But I was watching.", 3000);
-        if(Game.frame === 700) TextSys.show("DADDY: And this is what I saw.", 3000);
-        
-        if(Game.frame === 900) {
-            // The Punchline: Showing the player's own stats
-            TextSys.show(`HITS TAKEN: ${this.progress.tape2_hits}. TIMES YOU QUIT: 0.`, 4000);
-        }
-        
-        if(Game.frame === 1200) {
-            TextSys.show("I will always be DADDY.", 5000);
-        }
-    },
-
-    drawTape4(ctx, w, h) {
-        // Warm/Golden Aesthetic
-        const grad = ctx.createLinearGradient(0,0,0,h);
-        grad.addColorStop(0, "#332200");
-        grad.addColorStop(1, "#664400");
-        ctx.fillStyle = grad;
-        ctx.fillRect(0,0,w,h);
-        
-        // Floating Heart
-        const scale = 1 + Math.sin(Game.frame * 0.05) * 0.1;
-        ctx.save();
-        ctx.translate(w/2, h/2);
-        ctx.scale(scale, scale);
-        
-        ctx.beginPath();
-        ctx.fillStyle = "#ffb84d";
-        ctx.arc(0, 0, 40, 0, Math.PI*2);
-        ctx.fill();
-        ctx.restore();
-    },
-
-    // Helper: Draw Protagonist
-    drawPlayer(ctx, x, y, color='#fff') {
-        ctx.save();
-        ctx.translate(x, y);
-        // Breathing animation
-        const s = 1 + Math.sin(Game.frame * 0.1) * 0.05;
-        ctx.scale(s, s);
-        
-        ctx.fillStyle = color;
-        ctx.beginPath();
-        // Simple geometric "Soul" shape
-        ctx.moveTo(0, -10);
-        ctx.lineTo(10, 0);
-        ctx.lineTo(0, 15);
-        ctx.lineTo(-10, 0);
-        ctx.closePath();
-        ctx.fill();
-        
-        // Glow
-        ctx.shadowColor = color;
-        ctx.shadowBlur = 10;
-        ctx.stroke();
+        // "NO SIGNAL" text
+        ctx.fillStyle = '#1e5c12';
+        ctx.font = `${Math.min(w / 15, 36)}px VT323`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.shadowColor = '#1e5c12';
+        ctx.shadowBlur = 8;
+        ctx.fillText('NO SIGNAL', w / 2, h / 2);
         ctx.shadowBlur = 0;
-        ctx.restore();
-    },
-
-    draw(id, ctx, w, h) {
-        if(id === 1) this.drawTape1(ctx, w, h);
-        if(id === 2) this.drawTape2(ctx, w, h);
-        if(id === 3) this.drawTape3(ctx, w, h);
-        if(id === 4) this.drawTape4(ctx, w, h);
+        ctx.textAlign = 'start';
+        ctx.textBaseline = 'alphabetic';
     }
 };
 
-/**
- * INPUT HANDLING
- */
-const Mouse = { x: 0, y: 0, clicked: false };
+// ─── TAPE INTERACTION SETUP ───────────────────────────────
+function setupTapeInteraction(tapeEl) {
+    // Click/Tap to select
+    tapeEl.addEventListener('click', (e) => {
+        e.preventDefault();
+        Game.selectTape(tapeEl.dataset.id);
+    });
+    tapeEl.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        Game.selectTape(tapeEl.dataset.id);
+    });
 
-window.addEventListener('mousemove', e => {
-    const rect = document.getElementById('crt').getBoundingClientRect();
-    Mouse.x = e.clientX - rect.left;
-    Mouse.y = e.clientY - rect.top;
+    // Drag support (desktop)
+    tapeEl.setAttribute('draggable', 'true');
+    tapeEl.addEventListener('dragstart', (e) => {
+        e.dataTransfer.setData('text/plain', tapeEl.dataset.id);
+        e.dataTransfer.effectAllowed = 'move';
+        tapeEl.style.opacity = '0.5';
+    });
+    tapeEl.addEventListener('dragend', () => {
+        tapeEl.style.opacity = '1';
+    });
+}
+
+// Setup all initial tapes
+document.querySelectorAll('.vhs-tape').forEach(tape => {
+    if (tape.style.display !== 'none') {
+        setupTapeInteraction(tape);
+    }
 });
 
-document.getElementById('crt').addEventListener('mousedown', () => {
-    Mouse.clicked = true;
-});
-
-/**
- * DRAG AND DROP SYSTEM
- */
-const tapes = document.querySelectorAll('.vhs-tape[draggable="true"]');
+// Slot interactions
 const slot = document.getElementById('slot');
-
-tapes.forEach(tape => {
-    tape.addEventListener('dragstart', (e) => {
-        e.dataTransfer.setData('text/plain', tape.dataset.id);
-        tape.style.opacity = '0.5';
-    });
-    
-    tape.addEventListener('dragend', () => {
-        tape.style.opacity = '1';
-    });
-});
-
-slot.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    slot.classList.add('drag-over');
-});
-
-slot.addEventListener('dragleave', () => {
-    slot.classList.remove('drag-over');
-});
-
+slot.addEventListener('dragover', (e) => { e.preventDefault(); slot.classList.add('drag-over'); });
+slot.addEventListener('dragleave', () => slot.classList.remove('drag-over'));
 slot.addEventListener('drop', (e) => {
     e.preventDefault();
     slot.classList.remove('drag-over');
     const id = e.dataTransfer.getData('text/plain');
-    if(id) Game.insertTape(id);
+    if (id) Game.insertTape(id);
 });
 
-// START
-AudioSys.init();
-Game.init();
+// Click slot to insert selected tape
+slot.addEventListener('click', () => {
+    if (Game.selectedTape) {
+        Game.insertTape(Game.selectedTape);
+    }
+});
 
+// Eject button
+document.getElementById('eject-btn').addEventListener('click', () => Game.eject());
+
+// ─── BOOT SEQUENCE ────────────────────────────────────────
+const bootOverlay = document.getElementById('boot-overlay');
+function boot() {
+    AudioSys.init();
+    AudioSys.resume();
+    AudioSys.playNoise(0.3, 500, 0.2);
+    AudioSys.playTone(200, 'square', 0.1, 0.1);
+    bootOverlay.classList.add('hidden');
+    setTimeout(() => bootOverlay.remove(), 1000);
+    Game.init();
+}
+bootOverlay.addEventListener('click', boot);
+bootOverlay.addEventListener('touchend', (e) => { e.preventDefault(); boot(); });
+
+// Keyboard: Escape to eject
+window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') Game.eject();
+    if (e.key === ' ') { e.preventDefault(); Input.clicked = true; }
+});
 </script>
 </body>
 </html>
