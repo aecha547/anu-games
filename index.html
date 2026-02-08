@@ -1,582 +1,736 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>ANUSHRI_ARCHIVE.vhs</title>
-<style>
-@import url('https://fonts.googleapis.com/css2?family=VT323&family=Caveat:wght@400;600&family=Cormorant+Garamond:ital,wght@0,600;1,600&display=swap');
-:root{
---bg:#050505;--phosphor:#4af626;--phosphor-dim:#1e5c12;--phosphor-bright:#afffa1;
---amber:#ffb84d;--gold:#d4af37;--red:#cc4444;--blue:#5588bb;--cyan:#00d4aa;
---warm:#ffeedd;--dim:#555;--white:#d4d4d4;
---font-crt:'VT323',monospace;--font-hand:'Caveat',cursive;
---font-serif:'Cormorant Garamond',serif;
-}
-*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none}
-html,body{height:100%;overflow:hidden;background:#060606;font-family:var(--font-crt);color:var(--phosphor);cursor:crosshair}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ANUSHRI_ARCHIVE.vhs // SYSTEM_READY</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=VT323&family=Caveat:wght@600&family=Share+Tech+Mono&display=swap');
 
-/* ═══ BOOT OVERLAY ═══ */
-#boot-overlay{
-position:fixed;inset:0;z-index:9999;background:#000;
-display:flex;flex-direction:column;align-items:center;justify-content:center;
-cursor:pointer;transition:opacity .8s;
-}
-#boot-overlay.hidden{opacity:0;pointer-events:none}
-#boot-overlay h1{
-font-family:var(--font-serif);font-size:clamp(3.5rem,8vw,5.5rem);font-weight:600;
-color:var(--phosphor);letter-spacing:-2px;position:relative;
-text-shadow:0 0 25px var(--phosphor),0 0 60px var(--phosphor-dim);
-animation:titleFlicker 2.8s infinite;
-}
-#boot-overlay h1::after{
-content:'ARCHIVE';position:absolute;bottom:-26px;left:50%;transform:translateX(-50%);
-font-family:var(--font-crt);font-size:clamp(1rem,2.5vw,1.6rem);font-weight:400;
-letter-spacing:8px;color:var(--phosphor-dim);opacity:.7;
-}
-.boot-prompt{color:#444;font-size:1.3rem;margin-top:50px;animation:pulse 2s infinite;letter-spacing:2px}
-.boot-sub{color:var(--phosphor-dim);font-size:.85rem;margin-top:14px;opacity:.4}
-@keyframes titleFlicker{0%,18%,22%,25%,53%,56%,100%{opacity:1}20%,24%,55%{opacity:.65;text-shadow:none}}
-@keyframes pulse{0%,100%{opacity:.3}50%{opacity:1}}
-@keyframes blink{50%{opacity:0}}
+        :root {
+            --bg-dark: #050505;
+            --chassis: #1a1a1a;
+            --chassis-highlight: #2a2a2a;
+            --phosphor-main: #39ff14; /* Classic Terminal Green */
+            --phosphor-dim: #1b5e12;
+            --phosphor-bright: #afffa1;
+            --alert: #ff3333;
+            --amber: #ffb84d;
+            --crt-curvature: 3px;
+            --font-ui: 'Share Tech Mono', monospace;
+            --font-crt: 'VT323', monospace;
+            --font-hand: 'Caveat', cursive;
+        }
 
-/* ═══ STATION LAYOUT ═══ */
-#station{
-display:grid;grid-template-columns:1fr 280px;grid-template-rows:1fr auto;
-gap:16px;width:95vw;max-width:1200px;height:90vh;max-height:820px;
-margin:auto;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
-}
+        * { box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
+        
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            background-color: #020202;
+            overflow: hidden;
+            font-family: var(--font-ui);
+            color: var(--phosphor-main);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
 
-/* ═══ TV UNIT ═══ */
-.tv-unit{
-grid-column:1;grid-row:1/span 2;
-background:linear-gradient(145deg,#1a1a1a,#0e0e0e);
-border-radius:22px;border:2px solid #252525;
-box-shadow:inset 0 0 50px #000,0 12px 60px rgba(0,0,0,.9);
-position:relative;display:flex;flex-direction:column;padding:22px;
-}
-.screen-bezel{
-flex:1;background:#000;border-radius:12px;position:relative;overflow:hidden;
-border:2px solid #181818;
-box-shadow:inset 0 0 35px rgba(0,0,0,.95),0 0 15px rgba(74,246,38,.06);
-}
-/* CRT Canvas */
-canvas#crt{display:block;width:100%;height:100%;position:absolute;inset:0;z-index:5}
-/* Scanlines */
-.scanlines{position:absolute;inset:0;pointer-events:none;z-index:10;
-background:repeating-linear-gradient(0deg,transparent,transparent 1.5px,rgba(0,0,0,.15) 1.5px,rgba(0,0,0,.15) 3px);opacity:.5}
-/* Vignette */
-.vignette{position:absolute;inset:0;pointer-events:none;z-index:11;
-background:radial-gradient(ellipse at center,transparent 50%,rgba(0,0,0,.85) 100%)}
-/* Glass glare */
-.glass-glare{position:absolute;inset:0;pointer-events:none;z-index:12;
-background:linear-gradient(135deg,rgba(255,255,255,.04) 0%,transparent 40%);opacity:.7}
-/* Screen content */
-#screen{position:absolute;inset:0;z-index:20;display:flex;flex-direction:column;
-justify-content:center;align-items:center;padding:24px;pointer-events:none}
-/* Screen glow */
-.screen-glow{position:absolute;inset:-12px;z-index:-1;border-radius:20px;
-background:radial-gradient(ellipse,rgba(74,246,38,.03) 0%,transparent 70%);
-pointer-events:none;transition:background 1s}
+        /* ═══ BOOT OVERLAY ═══ */
+        #boot-layer {
+            position: fixed; inset: 0; z-index: 9999;
+            background: #000;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            cursor: pointer; transition: opacity 0.8s ease-out;
+        }
+        #boot-layer.off { opacity: 0; pointer-events: none; }
+        
+        .boot-glitch {
+            font-size: clamp(3rem, 8vw, 6rem);
+            font-family: var(--font-crt);
+            position: relative;
+            color: var(--phosphor-main);
+            text-shadow: 2px 0 var(--alert), -2px 0 blue;
+            animation: glitch-skew 1s infinite linear alternate-reverse;
+        }
+        .boot-glitch::before, .boot-glitch::after {
+            content: attr(data-text); position: absolute; left: 0; top: 0; width: 100%;
+            opacity: 0.8; background: #000;
+        }
+        .boot-glitch::before {
+            color: #ff00c1; clip-path: polygon(0 0, 100% 0, 100% 33%, 0 33%);
+            animation: glitch-anim 2s infinite linear alternate-reverse;
+        }
+        .boot-glitch::after {
+            color: #00fff9; clip-path: polygon(0 67%, 100% 67%, 100% 100%, 0 100%);
+            animation: glitch-anim 1.5s infinite linear alternate-reverse;
+        }
+        .boot-sub { margin-top: 2rem; opacity: 0.5; letter-spacing: 2px; animation: blink 1s infinite; }
 
-/* HUD overlays on screen */
-.channel-id{position:absolute;top:18px;left:20px;font-size:1.8rem;color:var(--phosphor-dim);
-opacity:.5;text-shadow:0 0 5px var(--phosphor-dim);letter-spacing:2px;z-index:25}
-.rec-ind{position:absolute;top:18px;right:20px;font-size:1.1rem;color:var(--red);
-opacity:0;transition:opacity .3s;z-index:25}
-.rec-ind.on{opacity:1;animation:blink .8s infinite}
-.screen-msg{font-size:clamp(1.2rem,3vw,2rem);color:var(--phosphor-dim);
-text-shadow:0 0 8px var(--phosphor-dim);letter-spacing:3px;text-align:center}
-.screen-sub{font-size:1rem;color:rgba(74,246,38,.3);margin-top:8px}
+        /* ═══ MAIN LAYOUT ═══ */
+        #station {
+            display: grid;
+            grid-template-columns: 1fr 300px;
+            gap: 20px;
+            width: 95vw; max-width: 1400px;
+            height: 85vh; max-height: 800px;
+            perspective: 1000px;
+            opacity: 0; transition: opacity 1s;
+        }
 
-/* Boot text on screen */
-.boot-text{
-width:85%;text-align:left;color:var(--phosphor);
-font-size:clamp(13px,2vw,17px);line-height:1.8;
-text-shadow:0 0 5px rgba(74,246,38,.15);white-space:pre-wrap;
-}
-.boot-text .cursor{display:inline-block;width:8px;height:1.1em;background:var(--phosphor);
-vertical-align:text-bottom;margin-left:2px;animation:blink 1s step-end infinite}
+        /* ═══ TV UNIT ═══ */
+        .tv-casing {
+            background: #111;
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 
+                inset 0 0 40px #000,
+                0 0 0 2px #222,
+                0 20px 50px rgba(0,0,0,0.8);
+            display: flex; flex-direction: column;
+            position: relative;
+        }
+        
+        .screen-bezel {
+            flex: 1;
+            background: #000;
+            border-radius: 60px / 20px; /* Curvature */
+            border: 1px solid #333;
+            box-shadow: inset 0 0 20px rgba(255,255,255,0.05);
+            position: relative;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
 
-/* Subtitle overlay */
-.subtitle-box{
-position:absolute;bottom:20px;left:50%;transform:translateX(-50%);
-text-align:center;color:var(--phosphor-bright);font-size:clamp(1rem,2vw,1.4rem);
-text-shadow:0 0 10px var(--phosphor);
-background:rgba(5,15,5,.8);padding:10px 22px;border-radius:4px;
-border:1px solid rgba(74,246,38,.2);
-max-width:85%;line-height:1.4;z-index:25;
-opacity:0;transition:opacity .4s,transform .3s;transform:translateX(-50%) translateY(6px);
-}
-.subtitle-box.vis{opacity:1;transform:translateX(-50%) translateY(0)}
+        /* CRT Effects */
+        .crt-overlay {
+            position: absolute; inset: 0; pointer-events: none; z-index: 100;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            background-size: 100% 2px, 3px 100%;
+            border-radius: 60px / 20px;
+        }
+        .crt-scanline {
+            position: absolute; top: 0; left: 0; width: 100%; height: 5px;
+            background: rgba(255,255,255,0.1);
+            opacity: 0.4;
+            animation: scanline 6s linear infinite;
+            pointer-events: none; z-index: 101;
+        }
+        
+        /* Screen Content */
+        #crt-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+        
+        #screen-content {
+            position: absolute; inset: 20px; z-index: 50;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            text-align: center;
+            font-family: var(--font-crt);
+            color: var(--phosphor-main);
+            text-shadow: 0 0 4px var(--phosphor-dim), 2px 0 rgba(255,0,0,0.3), -2px 0 rgba(0,0,255,0.3);
+            font-size: 1.2rem;
+            overflow: hidden;
+        }
 
-/* TV Controls */
-.tv-controls{
-display:flex;align-items:center;justify-content:space-between;
-padding:10px 16px;margin-top:8px;
-}
-.power-section{display:flex;align-items:center;gap:6px}
-.led{width:8px;height:8px;border-radius:50%;transition:all .25s;
-box-shadow:inset 0 0 3px rgba(0,0,0,.7)}
-.led.pwr{background:#500}
-.led.pwr.on{background:#f44;box-shadow:0 0 6px rgba(255,68,68,.5)}
-.led.play{background:#030;margin-left:12px}
-.led.play.on{background:#4f4;box-shadow:0 0 6px rgba(68,255,68,.5)}
-.ctrl-label{font-size:10px;letter-spacing:.2em;color:#444;text-transform:uppercase;margin-left:4px}
+        /* Screen Elements */
+        .channel { position: absolute; top: 20px; right: 30px; font-size: 2rem; opacity: 0.6; }
+        .rec-dot { 
+            position: absolute; top: 25px; left: 30px; 
+            color: var(--alert); display: flex; align-items: center; gap: 8px;
+            opacity: 0; transition: opacity 0.3s;
+        }
+        .rec-dot.active { opacity: 1; }
+        .rec-dot span { width: 12px; height: 12px; border-radius: 50%; background: var(--alert); box-shadow: 0 0 8px var(--alert); animation: blink 1s steps(2) infinite; }
 
-/* Tape Slot */
-.tape-slot{
-width:180px;height:22px;background:#050505;
-border:1.5px solid #333;border-radius:3px;
-box-shadow:inset 0 2px 8px rgba(0,0,0,.9);
-position:relative;overflow:hidden;transition:all .3s;
-display:flex;align-items:center;justify-content:center;
-}
-.slot-label{font-size:10px;letter-spacing:.15em;color:#333;transition:color .3s}
-.tape-slot.active{border-color:var(--phosphor);
-box-shadow:inset 0 2px 8px rgba(0,0,0,.9),0 0 12px rgba(74,246,38,.15)}
-.tape-slot.active .slot-label{color:var(--phosphor)}
-/* Slot flap */
-.slot-flap{position:absolute;inset:0;background:linear-gradient(180deg,#222,#151515);
-transform-origin:top;transition:transform .45s cubic-bezier(.68,-.55,.265,1.55);
-border-bottom:1px solid #333}
-.tape-slot.inserting .slot-flap{transform:rotateX(-95deg)}
+        /* Control Panel */
+        .controls {
+            height: 80px;
+            background: #161616;
+            border-top: 2px solid #000;
+            border-radius: 4px;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 24px;
+        }
+        
+        .slot-container {
+            width: 240px; height: 36px;
+            background: #0a0a0a;
+            border: 1px solid #333;
+            border-bottom: 1px solid #444;
+            border-radius: 4px;
+            position: relative;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: inset 0 4px 10px #000;
+            transition: all 0.3s;
+        }
+        .slot-container.drag-over { border-color: var(--phosphor-main); box-shadow: 0 0 15px var(--phosphor-dim); }
+        .slot-door {
+            position: absolute; inset: 2px; background: #1a1a1a;
+            transform-origin: top; transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            border-bottom: 1px solid #333;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.7rem; letter-spacing: 2px; color: #555;
+        }
+        .slot-container.inserting .slot-door { transform: rotateX(-90deg); }
+        
+        .btn-group { display: flex; gap: 12px; }
+        .led { width: 8px; height: 8px; border-radius: 50%; background: #300; transition: background 0.2s; box-shadow: inset 0 0 2px rgba(0,0,0,0.8); }
+        .led.on { background: #f00; box-shadow: 0 0 8px #f00; }
+        .led.play { background: #030; }
+        .led.play.on { background: #0f0; box-shadow: 0 0 8px #0f0; }
 
-.brand-label{font-size:11px;letter-spacing:.3em;color:#2a2a2a;text-transform:uppercase}
-.eject-btn{
-padding:4px 14px;background:linear-gradient(180deg,#252525,#1a1a1a);
-border:1.5px solid #3a3a3a;color:#888;cursor:pointer;font-family:var(--font-crt);
-font-size:11px;border-radius:3px;letter-spacing:1px;transition:all .2s;
-box-shadow:0 2px 0 rgba(0,0,0,.4);
-}
-.eject-btn:hover{background:#2a2a2a;color:#ccc;border-color:#555}
-.eject-btn:active{transform:translateY(1px);box-shadow:0 1px 0 rgba(0,0,0,.5)}
+        .btn-eject {
+            background: linear-gradient(#2a2a2a, #1a1a1a);
+            border: 1px solid #333; color: #aaa;
+            padding: 6px 16px; font-family: var(--font-ui); font-size: 0.8rem;
+            cursor: pointer; border-radius: 2px;
+            box-shadow: 0 2px 0 #000;
+        }
+        .btn-eject:active { transform: translateY(2px); box-shadow: none; }
 
-/* ═══ TAPE RACK ═══ */
-.tape-rack{
-grid-column:2;grid-row:1/span 2;
-background:linear-gradient(180deg,#131313,#0a0a0a);
-border:2px solid #252525;border-radius:10px;
-padding:16px;display:flex;flex-direction:column;gap:14px;
-overflow-y:auto;box-shadow:inset 0 0 25px #000;
-scrollbar-width:thin;scrollbar-color:#2a2a2a #0a0a0a;
-}
-.tape-rack::-webkit-scrollbar{width:4px}
-.tape-rack::-webkit-scrollbar-thumb{background:#2a2a2a;border-radius:2px}
-.rack-header{
-color:#444;text-align:center;border-bottom:1px solid #222;
-padding-bottom:10px;margin-bottom:4px;letter-spacing:4px;font-size:12px;
-}
+        /* ═══ TAPE RACK ═══ */
+        .rack {
+            background: linear-gradient(135deg, #111, #080808);
+            border: 2px solid #222; border-radius: 12px;
+            padding: 20px;
+            display: flex; flex-direction: column; gap: 15px;
+            overflow-y: auto;
+            box-shadow: inset 0 0 30px rgba(0,0,0,0.9);
+        }
+        .rack-title { text-align: center; color: #444; border-bottom: 1px solid #222; padding-bottom: 10px; margin-bottom: 5px; font-size: 0.8rem; letter-spacing: 0.2rem; }
 
-/* ═══ VHS TAPE ═══ */
-.vhs-tape{
-min-height:100px;background:linear-gradient(180deg,#1e1e1e,#141414);
-border-radius:5px;border:1.5px solid #333;position:relative;cursor:pointer;
-transition:all .25s cubic-bezier(.175,.885,.32,1.275);
-display:flex;flex-direction:column;align-items:center;justify-content:center;
-box-shadow:3px 5px 14px rgba(0,0,0,.6),inset 0 -3px 8px rgba(0,0,0,.3);
-flex-shrink:0;
-}
-.vhs-tape:hover{transform:translateY(-3px) scale(1.02);
-box-shadow:4px 8px 22px rgba(0,0,0,.8);border-color:#4a4a4a;z-index:10}
-.vhs-tape:active{transform:scale(.97)}
-.vhs-tape.selected{border-color:var(--phosphor);
-animation:glow-pulse 1.8s infinite}
-.vhs-tape.complete::after{content:'✓ PLAYED';position:absolute;bottom:6px;right:8px;
-font-size:10px;color:var(--phosphor-dim);letter-spacing:1px}
-.vhs-tape.locked{opacity:.3;pointer-events:none;cursor:not-allowed}
-@keyframes glow-pulse{0%,100%{box-shadow:0 0 5px rgba(74,246,38,.2)}
-50%{box-shadow:0 0 15px rgba(74,246,38,.5),0 0 30px rgba(74,246,38,.15)}}
+        /* VHS TAPE STYLE */
+        .tape {
+            height: 110px;
+            background: #181818;
+            border-radius: 4px;
+            border: 1px solid #282828;
+            position: relative;
+            cursor: grab;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 2px 4px 10px rgba(0,0,0,0.6);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+        .tape:hover { transform: translateY(-2px); border-color: #444; z-index: 10; }
+        .tape:active { cursor: grabbing; }
+        .tape.inserted { opacity: 0.3; pointer-events: none; filter: grayscale(1); }
+        .tape.locked { opacity: 0.5; pointer-events: none; }
+        .tape.locked::after { content: "🔒"; position: absolute; font-size: 1.5rem; opacity: 0.5; }
+        
+        .tape-window {
+            width: 70%; height: 26px;
+            background: #050505; border: 1px solid #222; border-radius: 2px;
+            margin-bottom: 8px; position: relative;
+            display: flex; justify-content: space-between; align-items: center; padding: 0 10px;
+        }
+        .reel { width: 18px; height: 18px; border-radius: 50%; background: #eee; border: 4px solid #fff; opacity: 0.8; }
+        .tape:hover .reel { animation: spin 2s linear infinite; }
+        
+        .tape-label {
+            width: 85%; padding: 4px; background: #eee; color: #111;
+            font-family: var(--font-hand); font-weight: 700; font-size: 1.1rem;
+            text-align: center; transform: rotate(-1deg);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+        }
+        .tape-label sub { display: block; font-family: sans-serif; font-size: 0.5rem; color: #666; margin-top: -2px; letter-spacing: 1px; }
 
-/* Tape window */
-.tape-window{
-position:absolute;top:12px;left:14%;width:72%;height:28px;
-background:#080808;border-radius:3px;border:1.5px solid #252525;
-display:flex;align-items:center;justify-content:space-around;
-padding:0 12px;overflow:hidden;
-box-shadow:inset 0 0 6px rgba(0,0,0,.7);
-}
-.reel{width:16px;height:16px;border:2px solid #3a3a3a;border-radius:50%;
-background:#0a0a0a;position:relative;box-shadow:inset 0 0 4px rgba(0,0,0,.8)}
-.reel::after{content:'';position:absolute;inset:3px;border:1.5px solid #2a2a2a;
-border-radius:50%;background:#060606}
-.tape-strip{width:28px;height:1px;background:#2a2a2a}
-.vhs-tape:hover .reel{border-color:#555;animation:spin 1.5s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
+        /* DRAGGING GHOST */
+        .tape-ghost {
+            position: fixed; pointer-events: none; z-index: 10000;
+            width: 240px; height: 130px;
+            opacity: 0.9;
+            filter: drop-shadow(0 20px 30px rgba(0,0,0,0.8));
+            transform: rotate(-5deg);
+        }
 
-/* Tape label sticker */
-.tape-label{
-background:#f0e8d8;color:#1a1a1a;padding:4px 10px;margin-top:32px;
-width:80%;text-align:center;font-family:var(--font-hand);font-weight:600;
-font-size:13px;transform:rotate(-.5deg);
-box-shadow:0 2px 4px rgba(0,0,0,.3);border-radius:2px;line-height:1.25;
-position:relative;z-index:2;
-}
-.tape-status{font-family:var(--font-crt);font-size:9px;color:#888;
-letter-spacing:.1em;margin-top:2px;display:block}
-.tape-color{position:absolute;top:12px;right:8px;width:5px;height:5px;border-radius:50%}
+        /* ═══ ANIMATIONS ═══ */
+        @keyframes scanline { 0% { top: -10%; } 100% { top: 110%; } }
+        @keyframes glitch-anim { 0% { clip-path: polygon(0 2%, 100% 2%, 100% 5%, 0 5%); } 100% { clip-path: polygon(0 92%, 100% 92%, 100% 100%, 0 100%); } }
+        @keyframes glitch-skew { 0% { transform: skew(0deg); } 20% { transform: skew(-2deg); } 40% { transform: skew(2deg); } 100% { transform: skew(0deg); } }
+        @keyframes blink { 50% { opacity: 0; } }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
 
-/* Ghost tape for drag */
-.tape-ghost{position:fixed;z-index:9999;pointer-events:none;
-opacity:.85;transform:rotate(-3deg) scale(1.05);
-filter:drop-shadow(0 8px 24px rgba(0,0,0,.7))}
-
-/* ═══ LOADING ═══ */
-.load-display{text-align:center}
-.load-title{font-size:15px;color:var(--phosphor);margin-bottom:10px;letter-spacing:.12em}
-.load-bar{width:240px;height:7px;border:1px solid var(--phosphor);border-radius:3px;overflow:hidden;margin:0 auto}
-.load-fill{height:100%;background:var(--phosphor);width:0%;transition:width .08s linear;
-border-radius:3px;box-shadow:0 0 5px var(--phosphor)}
-
-/* ═══ FINAL MESSAGE ═══ */
-.final-display{text-align:center;max-width:480px}
-.final-display p{
-font-family:var(--font-serif);font-size:clamp(14px,2vw,17px);
-line-height:2;color:var(--warm);opacity:0;transform:translateY(10px);
-transition:all .8s ease;margin-bottom:4px;
-}
-.final-display p.show{opacity:1;transform:translateY(0)}
-.final-display .gold{color:var(--gold);font-weight:600;text-shadow:0 0 10px rgba(212,175,55,.3)}
-.final-display .hl{color:var(--phosphor)}
-
-/* ═══ AUDIO BTN ═══ */
-.audio-btn{position:fixed;top:10px;right:10px;z-index:200;
-background:rgba(0,0,0,.7);border:1px solid #333;border-radius:3px;
-color:#555;font-family:var(--font-crt);font-size:12px;
-padding:4px 10px;cursor:pointer;transition:all .2s}
-.audio-btn:hover,.audio-btn.on{color:var(--phosphor);border-color:var(--phosphor)}
-
-/* ═══ RESPONSIVE ═══ */
-@media(max-width:900px){
-#station{grid-template-columns:1fr;grid-template-rows:1fr auto auto;
-width:96vw;height:auto;max-height:none;position:relative;top:auto;left:auto;
-transform:none;padding:8px;gap:10px;margin:8px auto}
-.tv-unit{min-height:50vh;border-radius:14px;padding:14px}
-.tape-rack{flex-direction:row;overflow-x:auto;overflow-y:hidden;
-padding:12px;gap:10px;border-radius:8px;max-height:130px}
-.vhs-tape{min-width:140px;min-height:90px;flex-shrink:0}
-.tape-label{font-size:11px;margin-top:28px}
-}
-@media(max-width:500px){
-.channel-id{font-size:1.3rem}
-.subtitle-box{font-size:1rem!important;padding:8px 14px;max-width:92%}
-}
-</style>
+        /* RESPONSIVE */
+        @media (max-width: 900px) {
+            #station { grid-template-columns: 1fr; grid-template-rows: auto 160px; height: auto; }
+            .rack { flex-direction: row; overflow-x: auto; overflow-y: hidden; }
+            .tape { min-width: 160px; }
+        }
+        
+        /* CONTENT CLASSES */
+        .console-text { text-align: left; width: 90%; line-height: 1.4; white-space: pre-wrap; }
+        .hl { color: var(--phosphor-bright); text-shadow: 0 0 10px var(--phosphor-bright); }
+        .err { color: var(--alert); }
+        .cursor { display: inline-block; width: 0.6em; height: 1.2em; background: var(--phosphor-main); animation: blink 1s step-end infinite; vertical-align: bottom; }
+        
+        /* Final Scene */
+        .final-msg { font-size: 1.4rem; font-family: var(--font-hand); color: #fff; text-shadow: 0 0 15px #fff; opacity: 0; transform: translateY(20px); transition: 1s; }
+        .final-msg.show { opacity: 1; transform: translateY(0); }
+    </style>
 </head>
 <body>
 
-<!-- BOOT OVERLAY -->
-<div id="boot-overlay">
-<h1>ANUSHRI</h1>
-<p class="boot-prompt">[ CLICK TO POWER ON ]</p>
-<div class="boot-sub">SYSTEM v2.0 // ARCHIVE INTEGRITY: 98.7%</div>
-</div>
+    <div id="boot-layer">
+        <h1 class="boot-glitch" data-text="ANUSHRI">ANUSHRI</h1>
+        <div class="boot-sub">[ TOUCH TO INITIALIZE SYSTEM ]</div>
+    </div>
 
-<button class="audio-btn" id="audio-btn">♪ OFF</button>
+    <div id="station">
+        <!-- TV UNIT -->
+        <div class="tv-casing">
+            <div class="screen-bezel">
+                <canvas id="crt-canvas"></canvas>
+                <div class="crt-overlay"></div>
+                <div class="crt-scanline"></div>
+                <div id="screen-content">
+                    <div class="channel">AV-1</div>
+                    <div class="rec-dot" id="rec-dot"><span></span> REC</div>
+                    <div id="osd">NO SIGNAL</div>
+                </div>
+            </div>
+            
+            <div class="controls">
+                <div class="power-group btn-group">
+                    <div style="text-align:center">
+                        <div class="led" id="led-pwr"></div>
+                        <span style="font-size:9px;color:#444;display:block;margin-top:4px">PWR</span>
+                    </div>
+                    <div style="text-align:center">
+                        <div class="led play" id="led-play"></div>
+                        <span style="font-size:9px;color:#444;display:block;margin-top:4px">RUN</span>
+                    </div>
+                </div>
 
-<!-- STATION -->
-<div id="station" style="display:none">
-<div class="tv-unit">
-<div class="screen-glow" id="screen-glow"></div>
-<div class="screen-bezel" id="screen-bezel">
-<canvas id="crt"></canvas>
-<div class="scanlines"></div>
-<div class="vignette"></div>
-<div class="glass-glare"></div>
-<div class="channel-id" id="channel-disp">AV-1</div>
-<div class="rec-ind" id="rec-ind">● REC</div>
-<div id="screen"></div>
-<div class="subtitle-box" id="subs"></div>
-</div>
-<div class="tv-controls">
-<div class="power-section">
-<div class="led pwr" id="led-pwr"></div><span class="ctrl-label">PWR</span>
-<div class="led play" id="led-play"></div><span class="ctrl-label">PLAY</span>
-</div>
-<div class="tape-slot" id="tape-slot">
-<div class="slot-flap"></div>
-<span class="slot-label" id="slot-label">▶ INSERT</span>
-</div>
-<button class="eject-btn" id="eject-btn">⏏ EJECT</button>
-<span class="brand-label">ANUSHRI</span>
-</div>
-</div>
-<div class="tape-rack" id="tape-rack">
-<div class="rack-header">ARCHIVE ▪ PERSONAL</div>
-</div>
-</div>
+                <div class="slot-container" id="tape-slot">
+                    <div class="slot-door">INSERT TAPE</div>
+                </div>
+
+                <button class="btn-eject" id="btn-eject">⏏ EJECT</button>
+            </div>
+        </div>
+
+        <!-- TAPE RACK -->
+        <div class="rack" id="tape-rack">
+            <div class="rack-title">ARCHIVE STORAGE</div>
+            <!-- Tapes generated by JS -->
+        </div>
+    </div>
 
 <script>
-'use strict';
-const $=id=>document.getElementById(id);
-const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+/**
+ * ANUSHRI ARCHIVE v2.0 - Core System
+ * Simulating analog hardware in a digital environment.
+ */
 
-/* ═══ STATE ═══ */
-const State={
-  KEY:'anushri_archive_v2',
-  get(){try{return JSON.parse(localStorage.getItem(this.KEY))||{}}catch{return{}}},
-  set(k,v){const s=this.get();s[k]=v;try{localStorage.setItem(this.KEY,JSON.stringify(s))}catch{}},
-  isDone(t){const s=this.get();return !!(s[t]&&(s[t]===true||s[t].complete))},
-  allDone(){return['tape1','tape2','tape3'].every(t=>this.isDone(t))},
-};
+// ═══ AUDIO ENGINE (Web Audio API) ═══
+const AudioSys = (() => {
+    let ctx, master;
+    let isMuted = false;
 
-/* ═══ STATIC NOISE (Canvas) ═══ */
-const Static=(()=>{
-  const c=$('crt'),ctx=c.getContext('2d');let w=0,h=0,intensity=.1;
-  const resize=()=>{const r=c.parentElement.getBoundingClientRect();const d=Math.min(devicePixelRatio||1,2);w=c.width=Math.floor(r.width*d);h=c.height=Math.floor(r.height*d);c.style.width=r.width+'px';c.style.height=r.height+'px'};
-  const draw=()=>{if(!w)return;const img=ctx.createImageData(w,h);const d=img.data;for(let i=0;i<d.length;i+=4){if(Math.random()<intensity){const v=Math.floor(Math.random()*50);d[i]=v;d[i+1]=v*1.2;d[i+2]=v*.8;d[i+3]=255}else{d[i]=d[i+1]=d[i+2]=5;d[i+3]=255}}ctx.putImageData(img,0,0);
-  // Occasional horizontal tear
-  if(Math.random()>.97){const y=Math.random()*h;ctx.fillStyle=`rgba(74,246,38,${.03+Math.random()*.05})`;ctx.fillRect(0,y,w,2+Math.random()*5)}
-  requestAnimationFrame(draw)};
-  window.addEventListener('resize',resize);
-  return{init(){resize();draw()},setIntensity(v){intensity=v},burst(dur=400){const old=intensity;intensity=.5;setTimeout(()=>intensity=old,dur)}};
+    const init = () => {
+        if (ctx) return;
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        ctx = new AudioContext();
+        master = ctx.createGain();
+        master.gain.value = 0.3;
+        master.connect(ctx.destination);
+    };
+
+    // Generic Oscillator Note
+    const playTone = (freq, type, dur, vol = 0.1) => {
+        if (!ctx) return;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, ctx.currentTime);
+        gain.gain.setValueAtTime(vol, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + dur);
+        osc.connect(gain);
+        gain.connect(master);
+        osc.start();
+        osc.stop(ctx.currentTime + dur);
+    };
+
+    // Noise Generator (Static)
+    const playNoise = (dur, vol = 0.05) => {
+        if (!ctx) return;
+        const bufferSize = ctx.sampleRate * dur;
+        const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+        
+        const noise = ctx.createBufferSource();
+        noise.buffer = buffer;
+        const gain = ctx.createGain();
+        gain.gain.setValueAtTime(vol, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + dur);
+        noise.connect(gain);
+        gain.connect(master);
+        noise.start();
+    };
+
+    // Complex Sounds
+    const sounds = {
+        boot: () => {
+            playTone(110, 'square', 0.5, 0.2);
+            setTimeout(() => playTone(220, 'sine', 0.8, 0.2), 100);
+            playNoise(0.5, 0.2);
+        },
+        click: () => playTone(800, 'triangle', 0.05, 0.05),
+        mechInsert: () => {
+            playNoise(0.4, 0.3); // Slide
+            setTimeout(() => playTone(60, 'sawtooth', 0.2, 0.4), 300); // Clunk
+            setTimeout(() => playTone(150, 'square', 0.1, 0.2), 500); // Lock
+        },
+        motor: () => {
+            // Constant hum loop
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.frequency.value = 40;
+            osc.type = 'sawtooth';
+            gain.gain.value = 0.05;
+            osc.connect(gain);
+            gain.connect(master);
+            osc.start();
+            gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 2); // Fade out after 2s for effect
+            osc.stop(ctx.currentTime + 2.1);
+        },
+        eject: () => {
+             playTone(400, 'sine', 0.3, 0.2);
+             playNoise(0.5, 0.2);
+        }
+    };
+
+    return { init, play: (name) => sounds[name] && sounds[name](), playTone, playNoise };
 })();
 
-/* ═══ SYNTH ═══ */
-const Synth=(()=>{
-  let ctx=null,master=null,muted=true,drones=[];
-  const init=()=>{if(ctx)return;ctx=new(window.AudioContext||window.webkitAudioContext)();master=ctx.createGain();master.gain.value=0;master.connect(ctx.destination)};
-  const resume=()=>{if(ctx&&ctx.state==='suspended')ctx.resume()};
-  const setMuted=m=>{muted=m;if(!ctx)return;master.gain.cancelScheduledValues(ctx.currentTime);master.gain.setValueAtTime(master.gain.value,ctx.currentTime);master.gain.linearRampToValueAtTime(m?0:.4,ctx.currentTime+.3)};
-  const note=(f,dur,type='triangle',vol=.1,atk=.01)=>{if(!ctx)return;const o=ctx.createOscillator(),g=ctx.createGain();o.type=type;o.frequency.value=f;g.gain.setValueAtTime(.001,ctx.currentTime);g.gain.linearRampToValueAtTime(vol,ctx.currentTime+atk);g.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+dur);o.connect(g);g.connect(master);o.start();o.stop(ctx.currentTime+dur+.05)};
-  const noiseBurst=(dur=.15,vol=.08)=>{if(!ctx)return;const sz=Math.floor(ctx.sampleRate*dur),buf=ctx.createBuffer(1,sz,ctx.sampleRate),d=buf.getChannelData(0);for(let i=0;i<sz;i++)d[i]=Math.random()*2-1;const s=ctx.createBufferSource();s.buffer=buf;const g=ctx.createGain();g.gain.setValueAtTime(vol,ctx.currentTime);g.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+dur);s.connect(g);g.connect(master);s.start()};
-  const powerOn=()=>{noiseBurst(.35,.2);note(220,'square',.12,.15);setTimeout(()=>note(55,'sawtooth',.15,.1),80)};
-  const mechClunk=()=>{note(80,.2,'square',.15);noiseBurst(.06,.12);setTimeout(()=>note(50,'sawtooth',.15,.1),60)};
-  const snap=()=>{note(800,.05,'sine',.12);setTimeout(()=>note(200,.05,'sine',.08),30)};
-  const motor=(dur=1)=>{if(!ctx)return;const o=ctx.createOscillator(),g=ctx.createGain(),lfo=ctx.createOscillator(),lg=ctx.createGain();o.type='sawtooth';o.frequency.value=60;lfo.type='sine';lfo.frequency.value=3;lg.gain.value=2;lfo.connect(lg);lg.connect(o.frequency);g.gain.setValueAtTime(.04,ctx.currentTime);g.gain.linearRampToValueAtTime(0,ctx.currentTime+dur);o.connect(g);g.connect(master);o.start();lfo.start();o.stop(ctx.currentTime+dur);lfo.stop(ctx.currentTime+dur)};
-  const typeClick=()=>note(1600+Math.random()*500,.012,'square',.02);
-  const beep=()=>note(450,.06,'square',.06);
-  const success=()=>{[440,554,659,880].forEach((f,i)=>setTimeout(()=>note(f,'triangle',.4,.08),i*120))};
-  const startAmbient=()=>{if(!ctx)return;
-    const h=ctx.createOscillator(),hg=ctx.createGain();h.type='sine';h.frequency.value=60;hg.gain.value=.01;h.connect(hg);hg.connect(master);h.start();drones.push(h);
-    const p=ctx.createOscillator(),pf=ctx.createBiquadFilter(),pg=ctx.createGain();p.type='sawtooth';p.frequency.value=110;pf.type='lowpass';pf.frequency.value=250;pg.gain.value=.015;p.connect(pf);pf.connect(pg);pg.connect(master);p.start();drones.push(p);
-    const sz=ctx.sampleRate*2,buf=ctx.createBuffer(1,sz,ctx.sampleRate),d=buf.getChannelData(0);for(let i=0;i<sz;i++)d[i]=Math.random()*2-1;const ns=ctx.createBufferSource();ns.buffer=buf;ns.loop=true;const nf=ctx.createBiquadFilter();nf.type='highpass';nf.frequency.value=4000;const ng=ctx.createGain();ng.gain.value=.005;ns.connect(nf);nf.connect(ng);ng.connect(master);ns.start()};
-  let arpId=null;
-  const startArp=()=>{const notes=[220,261.63,329.63,440,329.63,261.63];let i=0;arpId=setInterval(()=>{note(notes[i%notes.length],1.2,'triangle',.025,.02);i++},850)};
-  const stopArp=()=>{if(arpId){clearInterval(arpId);arpId=null}};
-  return{init,resume,setMuted,note,noiseBurst,powerOn,mechClunk,snap,motor,typeClick,beep,success,startAmbient,startArp,stopArp};
+// ═══ CRT VISUALS (Canvas) ═══
+const CRT = (() => {
+    const canvas = document.getElementById('crt-canvas');
+    const ctx = canvas.getContext('2d');
+    let width, height;
+    let mode = 'static'; // static, play, off
+    let animationId;
+
+    const resize = () => {
+        const rect = canvas.parentElement.getBoundingClientRect();
+        width = canvas.width = rect.width;
+        height = canvas.height = rect.height;
+    };
+    window.addEventListener('resize', resize);
+
+    const drawStatic = () => {
+        const idata = ctx.createImageData(width, height);
+        const data = idata.data;
+        for (let i = 0; i < data.length; i += 4) {
+            const c = Math.random() * 20; // Dark static
+            data[i] = c; data[i+1] = c; data[i+2] = c; data[i+3] = 255;
+        }
+        ctx.putImageData(idata, 0, 0);
+        
+        // Random Horizontal Tear
+        if (Math.random() > 0.95) {
+            const y = Math.random() * height;
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+            ctx.fillRect(0, y, width, Math.random() * 10);
+        }
+    };
+
+    const loop = () => {
+        if (mode === 'static') drawStatic();
+        else if (mode === 'off') {
+             ctx.fillStyle = '#000'; ctx.fillRect(0,0,width,height);
+        }
+        animationId = requestAnimationFrame(loop);
+    };
+
+    return {
+        init: () => { resize(); loop(); },
+        setMode: (m) => mode = m,
+        flash: () => {
+            ctx.fillStyle = '#fff'; ctx.fillRect(0,0,width,height);
+            setTimeout(() => mode = 'static', 50);
+        }
+    };
 })();
 
-/* ═══ AUDIO TOGGLE ═══ */
-const audioBtn=$('audio-btn');let audioOn=false;
-audioBtn.addEventListener('click',()=>{Synth.init();Synth.resume();audioOn=!audioOn;Synth.setMuted(!audioOn);audioBtn.textContent=audioOn?'♪ ON':'♪ OFF';audioBtn.classList.toggle('on',audioOn)});
-
-/* ═══ TYPEWRITER ═══ */
-let typeAbort=false;
-const typewrite=async(el,text,speed=25)=>{typeAbort=false;el.innerHTML='';for(let i=0;i<text.length;i++){if(typeAbort){el.innerHTML=text;return}if(text[i]==='<'){const j=text.indexOf('>',i);el.innerHTML+=text.substring(i,j+1);i=j}else{el.innerHTML+=text[i];Synth.typeClick()}await sleep(speed)}};
-
-/* ═══ SUBTITLE ═══ */
-const Subs=(()=>{const el=$('subs');let tid=null;return{
-  show(t,dur=3000){el.textContent=t;el.classList.add('vis');if(tid)clearTimeout(tid);tid=setTimeout(()=>{el.classList.remove('vis');tid=null},dur)},
-  hide(){el.classList.remove('vis');if(tid){clearTimeout(tid);tid=null}}
-}})();
-
-/* ═══ SCREEN MANAGER ═══ */
-const Screen=(()=>{
-  const el=$('screen');
-  const clear=()=>{el.innerHTML=''};
-
-  const showNoSignal=()=>{
-    clear();el.innerHTML='<div class="screen-msg">NO SIGNAL</div>';
-    $('channel-disp').textContent='AV-1';
-  };
-
-  const showBoot=async()=>{
-    clear();
-    const div=document.createElement('div');div.className='boot-text';el.appendChild(div);
-    const lines=['> ANUSHRI TAPE ARCHIVE v2.0','> INITIALIZING MEMORY SUBSYSTEM...','> CALIBRATING TRACKING...','> 4 RECORDINGS FOUND','> WARNING: SOME TAPES CONTAIN DISTORTION','> THIS IS EXPECTED.','','> READY.'];
-    for(const line of lines){await typewrite(div,div.textContent+line+'\n',18);await sleep(200)}
-    div.innerHTML+=`<span class="cursor"></span>`;
-    await sleep(1000);
-    div.style.opacity='0';div.style.transition='opacity .5s';
-    await sleep(500);
-  };
-
-  const showLoading=async(name)=>{
-    clear();Static.burst(500);
-    const d=document.createElement('div');d.className='load-display';
-    d.innerHTML=`<div class="load-title">▶ PLAYING: ${name}</div><div class="load-bar"><div class="load-fill" id="load-fill"></div></div>`;
-    el.appendChild(d);
-    const fill=$('load-fill');let w=0;
-    await new Promise(r=>{const iv=setInterval(()=>{w+=Math.random()*6+2;fill.style.width=Math.min(w,100)+'%';if(w>=100){clearInterval(iv);r()}},50)});
-    await sleep(300);
-  };
-
-  const showFinal=async()=>{
-    clear();
-    const d=document.createElement('div');d.className='final-display';el.appendChild(d);
-    $('screen-glow').style.background='radial-gradient(ellipse,rgba(212,175,55,.06) 0%,transparent 70%)';
-    Synth.stopArp();
-    const melody=[261.63,329.63,392,523.25,392,329.63,261.63,329.63,392,523.25];
-    melody.forEach((f,i)=>setTimeout(()=>Synth.note(f,1.5,'sine',.035,.05),i*600));
-    const lines=['You played every tape.','You faced the hallway. You fixed the signal.','You looked into the static and found yourself.','','The bravest recording in this archive','was never made by me.','','It was made by <span class="hl">you</span>,','at 2am,','when you told yourself to keep going.','','Happy Birthday, <span class="gold">Anushri</span>.','','I will always be <span class="gold">DADDY</span>.'];
-    for(const line of lines){const p=document.createElement('p');p.innerHTML=line||'&nbsp;';d.appendChild(p);await sleep(80);p.classList.add('show');await sleep(500)}
-  };
-
-  return{clear,showNoSignal,showBoot,showLoading,showFinal};
-})();
-
-/* ═══ TAPE SHELF ═══ */
-const TAPES=[
-  {id:'tape1',title:'SIDE A: The Weight',color:'var(--red)',file:'tape1.html'},
-  {id:'tape2',title:'TRACKING: Distortion',color:'var(--blue)',file:'tape2.html'},
-  {id:'tape3',title:'PLAY: The Static',color:'var(--cyan)',file:'tape3.html'},
-  {id:'tape4',title:'RECORD: For You',color:'var(--gold)',file:'tape4.html',final:true},
+// ═══ TAPE LOGIC ═══
+const Tapes = [
+    { id: 't1', label: 'Side A: The Weight', sub: 'July 2003', type: 'text', data: [
+        "> LOG: 07-2003",
+        "> SUBJECT: FIRST MEMORY",
+        "",
+        "The air was heavy that summer.",
+        "I remember the smell of ozone and wet pavement.",
+        "",
+        "You were small.",
+        "Smaller than I thought a person could be.",
+        "",
+        "I held you and promised:",
+        "\"I will catch everything that falls.\"",
+        "",
+        "> DATA CORRUPTION DETECTED...",
+        "> END OF TAPE."
+    ]},
+    { id: 't2', label: 'TRACKING: Distortion', sub: 'Visual Test', type: 'glitch', duration: 5000 },
+    { id: 't3', label: 'PLAY: Static', sub: 'White Noise', type: 'noise', duration: 4000 },
+    { id: 't4', label: 'FINAL: For You', sub: 'Do Not Delete', type: 'final', locked: true }
 ];
 
-let selectedTape=null,dragState=null;
-
-function buildShelf(){
-  const rack=$('tape-rack');
-  // Keep header
-  const header=rack.querySelector('.rack-header');
-  rack.innerHTML='';if(header)rack.appendChild(header);
-
-  TAPES.forEach(t=>{
-    const done=State.isDone(t.id);
-    const locked=t.final&&!State.allDone();
-    const tape=document.createElement('div');
-    tape.className='vhs-tape'+(done?' complete':'')+(locked?' locked':'');
-    tape.dataset.id=t.id;tape.dataset.file=t.file;tape.dataset.title=t.title;
-    tape.innerHTML=`
-      <div class="tape-color" style="background:${t.color}"></div>
-      <div class="tape-window"><div class="reel"></div><div class="tape-strip"></div><div class="reel"></div></div>
-      <div class="tape-label">${t.title}<span class="tape-status">${locked?'LOCKED':done?'✓ PLAYED':'NEW'}</span></div>`;
-    if(!locked){
-      // Click to select, double-click/slot-click to insert
-      tape.addEventListener('click',()=>selectTape(t,tape));
-      tape.addEventListener('dblclick',()=>insertTape(t));
-      // Drag
-      tape.addEventListener('mousedown',e=>startDrag(e,tape,t));
-      tape.addEventListener('touchstart',e=>startDrag(e,tape,t),{passive:false});
+const State = {
+    inserted: null,
+    played: new Set(),
+    unlockFinal: function() {
+        if (this.played.has('t1') && this.played.has('t2') && this.played.has('t3')) {
+            document.querySelector('[data-id="t4"]').classList.remove('locked');
+            return true;
+        }
+        return false;
     }
-    rack.appendChild(tape);
-  });
+};
+
+// ═══ UI CONTROLLER ═══
+const UI = (() => {
+    const screen = document.getElementById('screen-content');
+    const osd = document.getElementById('osd');
+    const slot = document.getElementById('tape-slot');
+    const rack = document.getElementById('tape-rack');
+    
+    // Typewriter effect
+    const type = async (lines, speed = 30) => {
+        osd.innerHTML = '<div class="console-text"></div>';
+        const container = osd.querySelector('.console-text');
+        
+        for (let line of lines) {
+            const p = document.createElement('div');
+            container.appendChild(p);
+            let text = line;
+            
+            for (let i = 0; i < text.length; i++) {
+                p.innerHTML += text[i];
+                AudioSys.playTone(800 + Math.random()*200, 'square', 0.02, 0.05); // blip
+                await new Promise(r => setTimeout(r, speed));
+            }
+            await new Promise(r => setTimeout(r, 150));
+        }
+        container.innerHTML += '<span class="cursor"></span>';
+    };
+
+    const renderRack = () => {
+        rack.innerHTML = '<div class="rack-title">ARCHIVE STORAGE</div>';
+        Tapes.forEach(t => {
+            const el = document.createElement('div');
+            el.className = `tape ${t.locked ? 'locked' : ''}`;
+            el.dataset.id = t.id;
+            el.innerHTML = `
+                <div class="tape-window"><div class="reel"></div><div class="reel"></div></div>
+                <div class="tape-label">${t.label}<sub>${t.sub}</sub></div>
+            `;
+            
+            // Interaction
+            if (!t.locked) {
+                el.addEventListener('mousedown', (e) => startDrag(e, t, el));
+                el.addEventListener('touchstart', (e) => startDrag(e, t, el), {passive: false});
+            }
+            rack.appendChild(el);
+        });
+    };
+
+    return { type, renderRack };
+})();
+
+// ═══ DRAG & DROP SYSTEM ═══
+let dragItem = null;
+let ghost = null;
+
+function startDrag(e, tapeData, originalEl) {
+    if (State.inserted) return; // Slot full
+    
+    e.preventDefault();
+    const touch = e.touches ? e.touches[0] : e;
+    
+    // Create Ghost
+    ghost = originalEl.cloneNode(true);
+    ghost.classList.add('tape-ghost');
+    ghost.style.width = originalEl.offsetWidth + 'px';
+    document.body.appendChild(ghost);
+    
+    dragItem = { 
+        data: tapeData, 
+        el: originalEl,
+        offsetX: touch.clientX - originalEl.getBoundingClientRect().left,
+        offsetY: touch.clientY - originalEl.getBoundingClientRect().top
+    };
+    
+    originalEl.style.opacity = 0;
+    moveDrag(e);
 }
 
-function selectTape(t,el){
-  document.querySelectorAll('.vhs-tape').forEach(x=>x.classList.remove('selected'));
-  if(selectedTape===t.id){insertTape(t);selectedTape=null;return}
-  selectedTape=t.id;el.classList.add('selected');
-  $('tape-slot').classList.add('active');$('slot-label').textContent='▶ CLICK TO INSERT';
-  Synth.beep();Subs.show('Selected: '+t.title,2000);
+function moveDrag(e) {
+    if (!dragItem) return;
+    const touch = e.touches ? e.touches[0] : e;
+    const x = touch.clientX - dragItem.offsetX;
+    const y = touch.clientY - dragItem.offsetY;
+    
+    ghost.style.left = x + 'px';
+    ghost.style.top = y + 'px';
+    
+    // Tilt effect based on movement could go here
+    
+    // Check slot intersection
+    const slot = document.getElementById('tape-slot').getBoundingClientRect();
+    const gRect = ghost.getBoundingClientRect();
+    
+    const overlap = !(gRect.right < slot.left || gRect.left > slot.right || gRect.bottom < slot.top || gRect.top > slot.bottom);
+    
+    const slotEl = document.getElementById('tape-slot');
+    if (overlap) slotEl.classList.add('drag-over');
+    else slotEl.classList.remove('drag-over');
 }
 
-// Slot click
-$('tape-slot').addEventListener('click',()=>{
-  if(!selectedTape)return;
-  const t=TAPES.find(x=>x.id===selectedTape);if(t)insertTape(t);
-});
-
-// Eject
-$('eject-btn').addEventListener('click',()=>{
-  Subs.show('No tape inserted.',1500);
-});
-
-// Drag system
-function startDrag(e,el,tape){
-  e.preventDefault();const rect=el.getBoundingClientRect();
-  const cx=e.clientX||e.touches?.[0]?.clientX||0;const cy=e.clientY||e.touches?.[0]?.clientY||0;
-  const ghost=el.cloneNode(true);ghost.className='vhs-tape tape-ghost';
-  ghost.style.width=rect.width+'px';ghost.style.height=rect.height+'px';
-  ghost.style.left=rect.left+'px';ghost.style.top=rect.top+'px';
-  document.body.appendChild(ghost);el.style.opacity='.25';
-  dragState={el,tape,ghost,ox:cx-rect.left,oy:cy-rect.top};
-}
-document.addEventListener('mousemove',e=>{if(!dragState)return;e.preventDefault();
-  const cx=e.clientX||0,cy=e.clientY||0;
-  dragState.ghost.style.left=(cx-dragState.ox)+'px';dragState.ghost.style.top=(cy-dragState.oy)+'px';
-  const sr=$('tape-slot').getBoundingClientRect(),gr=dragState.ghost.getBoundingClientRect();
-  const over=!(gr.right<sr.left||gr.left>sr.right||gr.bottom<sr.top-30||gr.top>sr.bottom+30);
-  $('tape-slot').classList.toggle('active',over);
-});
-document.addEventListener('mouseup',()=>{if(!dragState)return;
-  const sr=$('tape-slot').getBoundingClientRect(),gr=dragState.ghost.getBoundingClientRect();
-  const over=!(gr.right<sr.left||gr.left>sr.right||gr.bottom<sr.top-30||gr.top>sr.bottom+30);
-  dragState.ghost.remove();dragState.el.style.opacity='1';$('tape-slot').classList.remove('active');
-  if(over)insertTape(dragState.tape);dragState=null;
-});
-document.addEventListener('touchmove',e=>{if(!dragState)return;e.preventDefault();
-  const cx=e.touches[0].clientX,cy=e.touches[0].clientY;
-  dragState.ghost.style.left=(cx-dragState.ox)+'px';dragState.ghost.style.top=(cy-dragState.oy)+'px';
-  const sr=$('tape-slot').getBoundingClientRect(),gr=dragState.ghost.getBoundingClientRect();
-  $('tape-slot').classList.toggle('active',!(gr.right<sr.left||gr.left>sr.right||gr.bottom<sr.top-30||gr.top>sr.bottom+30));
-},{passive:false});
-document.addEventListener('touchend',()=>{if(!dragState)return;
-  const sr=$('tape-slot').getBoundingClientRect(),gr=dragState.ghost.getBoundingClientRect();
-  const over=!(gr.right<sr.left||gr.left>sr.right||gr.bottom<sr.top-30||gr.top>sr.bottom+30);
-  dragState.ghost.remove();dragState.el.style.opacity='1';$('tape-slot').classList.remove('active');
-  if(over)insertTape(dragState.tape);dragState=null;
-});
-
-async function insertTape(tape){
-  Synth.init();Synth.resume();
-  if(!audioOn){audioOn=true;Synth.setMuted(false);audioBtn.textContent='♪ ON';audioBtn.classList.add('on')}
-  Synth.mechClunk();setTimeout(()=>Synth.snap(),200);setTimeout(()=>Synth.motor(1.2),300);
-  Synth.stopArp();Subs.hide();
-  selectedTape=null;
-  document.querySelectorAll('.vhs-tape').forEach(x=>x.classList.remove('selected'));
-
-  // Slot animation
-  const slot=$('tape-slot');slot.classList.add('inserting');
-  $('slot-label').textContent='▶ LOADING';
-  $('led-play').classList.add('on');
-  $('channel-disp').textContent='▶ TAPE';
-  $('rec-ind').classList.add('on');
-
-  Static.burst(600);
-  await sleep(600);
-  slot.classList.remove('inserting');
-
-  await Screen.showLoading(tape.title);
-  window.location.href=tape.file;
+function endDrag(e) {
+    if (!dragItem) return;
+    
+    const slotEl = document.getElementById('tape-slot');
+    const wasOver = slotEl.classList.contains('drag-over');
+    
+    if (wasOver) {
+        insertTape(dragItem.data);
+    } else {
+        dragItem.el.style.opacity = 1;
+    }
+    
+    ghost.remove();
+    slotEl.classList.remove('drag-over');
+    dragItem = null;
 }
 
-/* ═══ BOOT SEQUENCE ═══ */
-const bootOverlay=$('boot-overlay');
+document.addEventListener('mousemove', moveDrag);
+document.addEventListener('touchmove', moveDrag, {passive: false});
+document.addEventListener('mouseup', endDrag);
+document.addEventListener('touchend', endDrag);
 
-async function boot(){
-  Synth.init();Synth.resume();Synth.powerOn();
-  if(!audioOn){audioOn=true;Synth.setMuted(false);audioBtn.textContent='♪ ON';audioBtn.classList.add('on')}
+// ═══ PLAYER LOGIC ═══
+async function insertTape(tape) {
+    State.inserted = tape;
+    
+    // Hide from rack
+    const tapeEl = document.querySelector(`.tape[data-id="${tape.id}"]`);
+    if(tapeEl) tapeEl.classList.add('inserted');
 
-  bootOverlay.classList.add('hidden');
-  $('station').style.display='grid';
-
-  Static.init();Static.burst(400);
-  $('led-pwr').classList.add('on');
-
-  // If all done including tape4, show final
-  if(State.isDone('tape4')){
-    Synth.startAmbient();
-    await Screen.showFinal();
-    return;
-  }
-
-  // Boot text
-  await Screen.showBoot();
-
-  // Ambient + Arp
-  Synth.startAmbient();Synth.startArp();
-
-  // Show NO SIGNAL + build shelf
-  Screen.showNoSignal();
-  buildShelf();
-  Subs.show('Select a tape from the rack.',3000);
+    // Animation
+    const slot = document.getElementById('tape-slot');
+    slot.classList.add('inserting');
+    document.querySelector('.slot-door').innerText = "LOADING...";
+    
+    AudioSys.play('mechInsert');
+    await new Promise(r => setTimeout(r, 800));
+    
+    slot.classList.remove('inserting');
+    document.querySelector('.slot-door').innerText = "LOADED: " + tape.id;
+    document.getElementById('led-play').classList.add('on');
+    document.getElementById('rec-dot').classList.add('active');
+    
+    playContent(tape);
 }
 
-bootOverlay.addEventListener('click',boot);
-bootOverlay.addEventListener('touchend',e=>{e.preventDefault();boot()});
+async function playContent(tape) {
+    const osd = document.getElementById('osd');
+    osd.innerHTML = '';
+    
+    AudioSys.play('motor');
+    CRT.flash();
+    
+    // Loading header
+    osd.innerHTML = `<div style="margin-bottom:20px; border:1px solid var(--phosphor-main); padding:2px 10px;">PLAY > ${tape.label}</div>`;
+    await new Promise(r => setTimeout(r, 1000));
+    
+    if (tape.type === 'text') {
+        await UI.type(tape.data);
+    } else if (tape.type === 'glitch') {
+        osd.innerHTML += '<div class="boot-glitch" data-text="ERROR">ERROR</div>';
+        AudioSys.playNoise(2, 0.5);
+        await new Promise(r => setTimeout(r, 2000));
+        osd.innerHTML = "TRACKING ADJUSTED.";
+    } else if (tape.type === 'final') {
+        playFinalSequence();
+        return; // Special handling
+    }
+    
+    // Tape Finish
+    await new Promise(r => setTimeout(r, 2000));
+    State.played.add(tape.id);
+    State.unlockFinal();
+    UI.renderRack(); // Re-render to show locked status change if any
+}
 
-/* ═══ KEYBOARD ═══ */
-window.addEventListener('keydown',e=>{
-  if(e.key>='1'&&e.key<='4'&&!selectedTape){
-    const t=TAPES[parseInt(e.key)-1];
-    const el=document.querySelector(`.vhs-tape[data-id="${t.id}"]`);
-    if(el&&!el.classList.contains('locked'))selectTape(t,el);
-  }
-  if(e.key==='Enter'&&selectedTape){
-    const t=TAPES.find(x=>x.id===selectedTape);if(t)insertTape(t);
-  }
+function ejectTape() {
+    if (!State.inserted) return;
+    AudioSys.play('eject');
+    
+    document.getElementById('led-play').classList.remove('on');
+    document.getElementById('rec-dot').classList.remove('active');
+    document.querySelector('.slot-door').innerText = "INSERT TAPE";
+    document.getElementById('osd').innerText = "NO SIGNAL";
+    
+    // Return to rack
+    const tapeEl = document.querySelector(`.tape[data-id="${State.inserted.id}"]`);
+    if(tapeEl) {
+        tapeEl.classList.remove('inserted');
+        tapeEl.style.opacity = 1;
+    }
+    
+    State.inserted = null;
+}
+
+document.getElementById('btn-eject').addEventListener('click', ejectTape);
+
+async function playFinalSequence() {
+    const osd = document.getElementById('osd');
+    osd.innerHTML = '';
+    
+    const melody = [261, 329, 392, 523];
+    melody.forEach((f, i) => setTimeout(() => AudioSys.playTone(f, 'sine', 1, 0.2), i*500));
+    
+    const msgs = [
+        "You fixed the signal.",
+        "You faced the static.",
+        "The bravest recording...",
+        "Was made by YOU.",
+        "Happy Birthday, Anushri."
+    ];
+    
+    for (let m of msgs) {
+        const div = document.createElement('div');
+        div.className = 'final-msg';
+        div.innerText = m;
+        osd.appendChild(div);
+        
+        // Trigger reflow
+        void div.offsetWidth;
+        div.classList.add('show');
+        
+        await new Promise(r => setTimeout(r, 2500));
+        div.style.opacity = 0; // fade out previous
+    }
+    
+    const final = document.createElement('div');
+    final.className = 'final-msg show';
+    final.style.color = 'var(--amber)';
+    final.innerHTML = "ALWAYS PROUD.<br>- DADDY";
+    osd.appendChild(final);
+}
+
+// ═══ BOOT ═══
+document.getElementById('boot-layer').addEventListener('click', () => {
+    AudioSys.init();
+    AudioSys.play('boot');
+    
+    document.getElementById('boot-layer').classList.add('off');
+    document.getElementById('station').style.opacity = 1;
+    
+    CRT.init();
+    document.getElementById('led-pwr').classList.add('on');
+    
+    UI.renderRack();
 });
 </script>
 </body>
