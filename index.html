@@ -1,1013 +1,643 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ANUSHRI_ARCHIVE_REMASTERED</title>
-    <style>
-        /* --- TYPOGRAPHY --- */
-        @import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=VT323&display=swap');
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ANUSHRI: PLAY/REWIND</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=VT323&family=Caveat:wght@400;600&family=Cormorant+Garamond:ital,wght@0,400;1,400&display=swap');
+:root{
+--bg:#030303;--plastic:#1a1a1a;--screen-bg:#050508;
+--phosphor:#a8e6a3;--amber:#ffb000;--gold:#d4af37;
+--red:#cc4444;--blue:#5588bb;--cyan:#00d4aa;
+--dim:#555;--warm:#ffeedd;--white:#d4d4d4;
+--font-crt:'VT323',monospace;--font-hand:'Caveat',cursive;
+--font-serif:'Cormorant Garamond',serif;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;background:var(--bg);font-family:var(--font-crt);color:var(--white);user-select:none}
 
-        :root {
-            --phosphor-main: #33ff00;
-            --phosphor-dim: #1a8000;
-            --phosphor-bloom: #ccffb3;
-            --alert: #ff3333;
-            --gold: #ffcc00;
-            --chassis: #111;
-            --chassis-light: #222;
-            --bg-grain: #050505;
-        }
+/* === LAYOUT === */
+.wrapper{
+width:100%;height:100%;display:flex;flex-direction:column;
+align-items:center;justify-content:center;gap:20px;padding:10px;
+}
 
-        /* --- GLOBAL RESET & AESTHETICS --- */
-        * { box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; cursor: crosshair; }
-        
-        body {
-            background-color: var(--bg-grain);
-            margin: 0;
-            height: 100vh;
-            overflow: hidden;
-            font-family: 'Space Mono', monospace;
-            color: #ccc;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
+/* === TV BODY === */
+.tv-body{
+position:relative;width:min(94vw,760px);
+background:linear-gradient(145deg,#222 0%,#181818 50%,#111 100%);
+border-radius:20px;border:2px solid #2a2a2a;
+box-shadow:0 20px 80px rgba(0,0,0,0.7),inset 0 1px 0 rgba(255,255,255,0.04);
+overflow:hidden;
+}
 
-        /* Film Grain Overlay */
-        body::after {
-            content: "";
-            position: absolute; inset: 0;
-            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.08'/%3E%3C/svg%3E");
-            pointer-events: none;
-            z-index: 9999;
-        }
+/* === TV SCREEN === */
+.tv-screen{
+position:relative;margin:14px 14px 0;aspect-ratio:4/3;
+background:var(--screen-bg);border-radius:10px;overflow:hidden;
+box-shadow:inset 0 0 40px rgba(0,0,0,0.8),0 0 2px rgba(168,230,163,0.05);
+}
+/* Scanlines */
+.tv-screen::before{
+content:'';position:absolute;inset:0;z-index:50;pointer-events:none;
+background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.12) 2px,rgba(0,0,0,0.12) 4px);
+}
+/* Curvature */
+.tv-screen::after{
+content:'';position:absolute;inset:0;z-index:51;pointer-events:none;
+background:radial-gradient(ellipse at center,transparent 58%,rgba(0,0,0,0.55) 100%);
+}
+/* Static canvas */
+#static-canvas{position:absolute;inset:0;z-index:5;opacity:0.07}
+/* Screen content */
+#screen{position:absolute;inset:0;z-index:20;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:24px;overflow:hidden}
 
-        /* --- LAYOUT GRID --- */
-        #workspace {
-            display: grid;
-            grid-template-columns: 1fr 320px;
-            grid-template-rows: 1fr 160px;
-            gap: 24px;
-            width: 96vw;
-            height: 92vh;
-            max-width: 1400px;
-            position: relative;
-        }
+/* === SCREEN GLOW === */
+.screen-glow{
+position:absolute;inset:-15px;z-index:-1;border-radius:20px;
+background:radial-gradient(ellipse,rgba(168,230,163,0.03) 0%,transparent 70%);
+pointer-events:none;transition:background 1s;
+}
 
-        /* --- COMPONENT: THE MONITOR (TV) --- */
-        .monitor-casing {
-            grid-column: 1;
-            grid-row: 1 / span 2;
-            background: #1a1a1a;
-            border-radius: 32px;
-            padding: 32px;
-            box-shadow: 
-                inset 0 0 80px #000,
-                0 20px 50px rgba(0,0,0,0.8),
-                0 0 0 4px #2a2a2a;
-            position: relative;
-            display: flex;
-            flex-direction: column;
-        }
+/* === TV CONTROLS === */
+.tv-controls{
+display:flex;align-items:center;justify-content:space-between;
+padding:10px 18px;background:#111;border-top:1px solid #1a1a1a;
+}
+.power-section{display:flex;align-items:center;gap:6px}
+.power-led{
+width:7px;height:7px;border-radius:50%;background:#1a0000;
+border:1px solid #333;transition:all 0.5s;
+}
+.power-led.on{background:var(--red);box-shadow:0 0 6px var(--red)}
+.ctrl-label{font-size:10px;letter-spacing:0.25em;color:#444;text-transform:uppercase}
+.brand-label{font-size:11px;letter-spacing:0.3em;color:#333;text-transform:uppercase}
 
-        .screen-bezel {
-            flex: 1;
-            background: #000;
-            border-radius: 60% 60% 60% 60% / 10% 10% 10% 10%; /* Subtle CRT curve */
-            border-radius: 16px; /* Modern fallback */
-            position: relative;
-            overflow: hidden;
-            border: 8px solid #0f0f0f;
-            box-shadow: inset 0 0 20px rgba(0,0,0,1);
-        }
+/* Tape Slot */
+.tape-slot{
+width:180px;height:18px;background:#080808;
+border:1px solid #222;border-radius:2px;
+box-shadow:inset 0 2px 6px rgba(0,0,0,0.8);
+display:flex;align-items:center;justify-content:center;
+transition:all 0.3s;position:relative;
+}
+.slot-label{font-size:10px;letter-spacing:0.15em;color:#333;transition:color 0.3s}
+.tape-slot.active{border-color:var(--phosphor);box-shadow:inset 0 2px 6px rgba(0,0,0,0.8),0 0 12px rgba(168,230,163,0.15)}
+.tape-slot.active .slot-label{color:var(--phosphor)}
 
-        canvas#crt-canvas {
-            display: block;
-            width: 100%;
-            height: 100%;
-            filter: contrast(1.1) brightness(1.2) saturate(1.1);
-        }
+/* === TAPE SHELF === */
+.tape-shelf{
+display:flex;gap:16px;flex-wrap:wrap;justify-content:center;
+padding:0 10px;
+}
 
-        /* CRT Effects Layer */
-        .crt-overlay {
-            position: absolute; inset: 0; pointer-events: none;
-            background: 
-                linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
-                linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
-            background-size: 100% 2px, 3px 100%;
-            mix-blend-mode: overlay;
-        }
-        
-        .screen-glare {
-            position: absolute; inset: 0; pointer-events: none;
-            background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.05), transparent 40%);
-        }
+/* === VHS TAPE === */
+.vhs-tape{
+width:150px;height:94px;background:linear-gradient(165deg,#1a1a1a 0%,#111 60%,#0a0a0a 100%);
+border:1.5px solid #2a2a2a;border-radius:5px;position:relative;cursor:grab;
+transition:transform 0.3s cubic-bezier(.17,.67,.35,1.3),box-shadow 0.3s,border-color 0.3s;
+box-shadow:0 4px 12px rgba(0,0,0,0.5);
+}
+.vhs-tape:hover{
+transform:translateY(-6px);border-color:#444;
+box-shadow:0 8px 24px rgba(0,0,0,0.6);
+}
+.vhs-tape:active{cursor:grabbing}
+.vhs-tape.locked{opacity:0.3;cursor:not-allowed;pointer-events:none}
+.vhs-tape.complete .tape-status{color:var(--phosphor)}
 
-        /* --- COMPONENT: TAPE RACK --- */
-        .tape-rack {
-            grid-column: 2;
-            grid-row: 1;
-            background: #111;
-            border: 1px solid #333;
-            border-radius: 8px;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-            box-shadow: inset 0 0 30px #000;
-        }
+/* Tape window */
+.tape-window{
+position:absolute;top:7px;left:16px;right:16px;height:30px;
+background:#060606;border-radius:3px;border:1px solid #1a1a1a;
+display:flex;align-items:center;justify-content:space-around;padding:0 10px;
+overflow:hidden;
+}
+/* Reels */
+.reel{
+width:18px;height:18px;border-radius:50%;
+border:1.5px solid #3a3a3a;background:#0a0a0a;
+position:relative;transition:border-color 0.3s;
+}
+.reel::before,.reel::after{
+content:'';position:absolute;background:#3a3a3a;
+}
+.reel::before{width:1px;height:100%;left:50%;top:0;transform:translateX(-50%)}
+.reel::after{width:100%;height:1px;top:50%;left:0;transform:translateY(-50%)}
+.vhs-tape:hover .reel{border-color:#555;animation:spin 2s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
 
-        .rack-header {
-            color: #555;
-            font-size: 0.8rem;
-            letter-spacing: 2px;
-            text-align: center;
-            border-bottom: 1px solid #222;
-            padding-bottom: 10px;
-            margin-bottom: 10px;
-        }
+/* Tape strip between reels */
+.tape-strip{width:30px;height:1px;background:#333}
 
-        /* --- COMPONENT: PHYSICAL TAPE --- */
-        .tape-obj {
-            width: 100%;
-            height: 100px;
-            background: #222;
-            border-radius: 6px;
-            border: 1px solid #333;
-            position: relative;
-            cursor: grab;
-            touch-action: none; /* Critical for custom drag */
-            transition: box-shadow 0.2s;
-            box-shadow: 2px 4px 10px #000;
-        }
+/* Label */
+.tape-label-area{
+position:absolute;bottom:8px;left:10px;right:10px;
+background:linear-gradient(#f0e8d8,#e8dcc8);
+border-radius:2px;padding:4px 8px;
+box-shadow:0 1px 3px rgba(0,0,0,0.3);
+}
+.tape-title{
+font-family:var(--font-hand);font-size:14px;font-weight:600;
+color:#222;line-height:1;white-space:nowrap;overflow:hidden;
+}
+.tape-status{
+font-family:var(--font-crt);font-size:9px;color:#888;
+letter-spacing:0.1em;margin-top:1px;
+}
+.tape-color{
+position:absolute;top:7px;right:8px;width:6px;height:6px;
+border-radius:50%;
+}
 
-        .tape-obj:hover {
-            border-color: #555;
-            box-shadow: 4px 8px 15px rgba(0,0,0,0.5);
-        }
+/* Ghost tape during drag */
+.tape-ghost{
+position:fixed;z-index:9999;pointer-events:none;
+opacity:0.85;transform:rotate(-3deg) scale(1.05);
+filter:drop-shadow(0 8px 24px rgba(0,0,0,0.7));
+}
 
-        .tape-obj.dragging {
-            cursor: grabbing;
-            z-index: 1000;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.8);
-            transform: scale(1.05);
-        }
-        
-        .tape-obj.in-machine {
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.5s;
-        }
+/* === SCREEN STATES === */
 
-        /* Tape Details */
-        .tape-window {
-            position: absolute; top: 15px; left: 10%; width: 80%; height: 25px;
-            background: #000; border-radius: 2px; border: 1px solid #333;
-            display: flex; justify-content: space-between; padding: 0 15%; align-items: center;
-        }
-        .tape-spool { width: 20px; height: 20px; border-radius: 50%; border: 2px solid #fff; opacity: 0.2; }
-        
-        .tape-label {
-            position: absolute; bottom: 15px; left: 5%; width: 90%;
-            background: #f0f0f0; color: #111;
-            font-family: 'Space Mono', monospace; font-weight: 700; font-size: 0.8rem;
-            padding: 4px 8px; text-align: center;
-            border-radius: 2px;
-            transform: rotate(-0.5deg);
-            box-shadow: 0 1px 2px rgba(0,0,0,0.3);
-        }
+/* Boot */
+.boot-content{
+width:85%;text-align:left;color:var(--phosphor);
+font-size:clamp(14px,2.2vw,18px);line-height:1.8;
+text-shadow:0 0 6px rgba(168,230,163,0.15);
+}
+.boot-content .cursor{
+display:inline-block;width:8px;height:1.1em;background:var(--phosphor);
+vertical-align:text-bottom;margin-left:2px;animation:blink 1s step-end infinite;
+}
+@keyframes blink{50%{opacity:0}}
 
-        /* --- COMPONENT: VCR DECK --- */
-        .vcr-deck {
-            grid-column: 2;
-            grid-row: 2;
-            background: linear-gradient(to bottom, #222, #111);
-            border-radius: 8px;
-            border: 1px solid #333;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-        }
+/* Select screen */
+.select-display{text-align:center}
+.select-display h2{
+font-size:clamp(20px,3.5vw,28px);letter-spacing:0.15em;
+color:var(--phosphor);text-shadow:0 0 10px rgba(168,230,163,0.2);
+margin-bottom:8px;
+}
+.select-display .sub{font-size:14px;color:var(--dim);letter-spacing:0.1em}
+.select-display .rec{
+position:absolute;top:16px;right:20px;font-size:13px;color:var(--red);
+display:flex;align-items:center;gap:6px;
+}
+.select-display .rec-dot{
+width:8px;height:8px;border-radius:50%;background:var(--red);
+animation:blink 1.5s infinite;
+}
+.select-display .date-stamp{
+position:absolute;top:16px;left:20px;font-size:12px;color:var(--dim);
+}
+.select-display .insert-msg{
+margin-top:24px;font-size:15px;color:var(--dim);
+animation:pulse 2.5s ease-in-out infinite;
+}
+@keyframes pulse{0%,100%{opacity:0.4}50%{opacity:0.9}}
 
-        .slot-housing {
-            width: 85%; height: 40px;
-            background: #000;
-            border: 2px solid #333;
-            border-radius: 4px;
-            position: relative;
-            overflow: hidden;
-            transition: all 0.3s;
-        }
+/* Loading */
+.loading-display{text-align:center}
+.loading-display .load-title{font-size:16px;color:var(--phosphor);margin-bottom:12px;letter-spacing:0.15em}
+.load-bar{width:260px;height:8px;border:1px solid var(--phosphor);border-radius:4px;overflow:hidden;margin:0 auto}
+.load-fill{height:100%;background:var(--phosphor);width:0%;transition:width 0.08s linear;border-radius:4px;box-shadow:0 0 6px var(--phosphor)}
 
-        .slot-housing.active {
-            border-color: var(--phosphor-main);
-            box-shadow: 0 0 15px var(--phosphor-dim);
-        }
+/* Final */
+.final-display{text-align:center;max-width:500px}
+.final-display p{
+font-family:var(--font-serif);font-size:clamp(14px,2vw,17px);
+line-height:2;color:var(--warm);opacity:0;transform:translateY(10px);
+transition:all 0.8s ease;margin-bottom:4px;
+}
+.final-display p.show{opacity:1;transform:translateY(0)}
+.final-display .gold{color:var(--gold);font-weight:600;text-shadow:0 0 10px rgba(212,175,55,0.3)}
+.final-display .hl{color:var(--phosphor)}
 
-        .slot-door {
-            width: 100%; height: 100%;
-            background: #1a1a1a;
-            transform-origin: top;
-            transition: transform 0.2s;
-            border-bottom: 1px solid #333;
-        }
+/* === AUDIO TOGGLE === */
+.audio-btn{
+position:fixed;top:10px;right:10px;z-index:200;
+background:rgba(0,0,0,0.7);border:1px solid #333;border-radius:3px;
+color:#555;font-family:var(--font-crt);font-size:12px;
+padding:4px 10px;cursor:pointer;transition:all 0.2s;
+}
+.audio-btn:hover,.audio-btn.on{color:var(--phosphor);border-color:var(--phosphor)}
 
-        .slot-housing.open .slot-door { transform: rotateX(-90deg); }
-
-        .vcr-controls {
-            margin-top: 20px;
-            display: flex;
-            gap: 20px;
-            width: 85%;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .led-indicator {
-            width: 8px; height: 8px; background: #300; border-radius: 50%;
-            box-shadow: inset 0 0 2px #000;
-            transition: background 0.2s;
-        }
-        .led-indicator.on { background: #f00; box-shadow: 0 0 8px #f00; }
-        
-        .counter-display {
-            font-family: 'VT323', monospace;
-            font-size: 1.5rem;
-            color: var(--phosphor-main);
-            text-shadow: 0 0 5px var(--phosphor-dim);
-            background: #000;
-            padding: 2px 8px;
-            border-radius: 2px;
-        }
-
-        .btn-eject {
-            background: #333; color: #fff; border: none;
-            padding: 6px 12px; font-family: 'Space Mono'; font-size: 0.7rem;
-            cursor: pointer; border-radius: 2px;
-            transition: background 0.2s;
-        }
-        .btn-eject:hover { background: #444; }
-
-        /* --- UI OVERLAY (BIOS) --- */
-        #bios-screen {
-            position: fixed; inset: 0; background: #000; z-index: 10000;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            color: var(--phosphor-main);
-            font-family: 'VT323';
-        }
-        
-        .bios-text { font-size: 1.5rem; text-shadow: 0 0 10px var(--phosphor-dim); margin-bottom: 20px; }
-        .blink { animation: blink 1s infinite; }
-        
-        @keyframes blink { 50% { opacity: 0; } }
-
-        @media (max-width: 900px) {
-            #workspace { grid-template-columns: 1fr; grid-template-rows: 1fr 120px 180px; gap: 10px; width: 100vw; height: 100vh; padding: 10px; }
-            .monitor-casing { grid-column: 1; grid-row: 1; padding: 10px; border-radius: 10px; }
-            .vcr-deck { grid-column: 1; grid-row: 2; }
-            .tape-rack { grid-column: 1; grid-row: 3; flex-direction: row; overflow-x: auto; padding: 10px; align-items: center; }
-            .tape-obj { min-width: 140px; height: 90px; }
-        }
-    </style>
+/* === RESPONSIVE === */
+@media(max-width:640px){
+.wrapper{gap:14px;padding:6px}
+.tv-body{border-radius:14px}
+.tv-screen{margin:10px 10px 0}
+.tv-controls{padding:8px 12px}
+.tape-slot{width:140px;height:15px}
+.tape-shelf{gap:10px}
+.vhs-tape{width:130px;height:82px}
+.tape-window{top:5px;left:12px;right:12px;height:26px}
+.reel{width:14px;height:14px}
+.tape-label-area{bottom:6px;left:8px;right:8px;padding:3px 6px}
+.tape-title{font-size:12px}
+}
+</style>
 </head>
 <body>
 
-    <!-- BIOS BOOT SCREEN -->
-    <div id="bios-screen">
-        <div class="bios-text">ANUSHRI_ARCHIVE.SYS LOADING...</div>
-        <div class="bios-text">MEM: 64KB OK</div>
-        <br>
-        <div class="bios-text blink">[ CLICK TO INITIALIZE SYSTEM ]</div>
-    </div>
+<button class="audio-btn" id="audio-btn">♪ OFF</button>
 
-    <!-- MAIN WORKSPACE -->
-    <div id="workspace">
-        
-        <!-- TV -->
-        <div class="monitor-casing">
-            <div class="screen-bezel">
-                <canvas id="crt-canvas"></canvas>
-                <div class="crt-overlay"></div>
-                <div class="screen-glare"></div>
-            </div>
-        </div>
-
-        <!-- TAPE RACK -->
-        <div class="tape-rack" id="rack">
-            <div class="rack-header">ARCHIVE STORAGE</div>
-            <!-- Tapes generated via JS -->
-        </div>
-
-        <!-- VCR -->
-        <div class="vcr-deck" id="vcr-deck">
-            <div class="slot-housing" id="slot">
-                <div class="slot-door"></div>
-            </div>
-            
-            <div class="vcr-controls">
-                <div style="display:flex; align-items:center; gap:8px;">
-                    <div class="led-indicator" id="pwr-led"></div>
-                    <span style="font-size:0.7rem; color:#555">PWR</span>
-                </div>
-                
-                <div class="counter-display" id="counter">00:00:00</div>
-                
-                <button class="btn-eject" id="eject-btn">EJECT</button>
-            </div>
-        </div>
-
-    </div>
+<div class="wrapper">
+<div class="tv-body">
+<div class="screen-glow" id="screen-glow"></div>
+<div class="tv-screen" id="tv-screen">
+<canvas id="static-canvas"></canvas>
+<div id="screen"></div>
+</div>
+<div class="tv-controls">
+<div class="power-section">
+<div class="power-led" id="led"></div>
+<span class="ctrl-label">PWR</span>
+</div>
+<div class="tape-slot" id="tape-slot">
+<span class="slot-label" id="slot-label">▶ INSERT</span>
+</div>
+<span class="brand-label">ANUSHRI</span>
+</div>
+</div>
+<div class="tape-shelf" id="tape-shelf"></div>
+</div>
 
 <script>
-/**
- * ANUSHRI ARCHIVE: REMASTERED
- * A high-fidelity "analog horror" style interactive fiction.
- */
+'use strict';
 
-// --- 1. CORE UTILS & MATH ---
-const MathUtils = {
-    lerp: (start, end, amt) => (1 - amt) * start + amt * end,
-    dist: (x1, y1, x2, y2) => Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2),
-    clamp: (val, min, max) => Math.min(Math.max(val, min), max)
+/* ═══════════════════════════════════════
+   UTILITIES
+   ═══════════════════════════════════════ */
+const $=id=>document.getElementById(id);
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const clamp=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
+
+/* ═══════════════════════════════════════
+   STATE (localStorage)
+   ═══════════════════════════════════════ */
+const State={
+  KEY:'anushri_archive_v2',
+  get(){try{return JSON.parse(localStorage.getItem(this.KEY))||{}}catch{return{}}},
+  set(k,v){const s=this.get();s[k]=v;try{localStorage.setItem(this.KEY,JSON.stringify(s))}catch{}},
+  isDone(t){return!!this.get()[t]},
+  allDone(){return['tape1','tape2','tape3'].every(t=>this.isDone(t))},
 };
 
-// --- 2. AUDIO CONTROLLER (Web Audio API) ---
-const AudioEngine = {
-    ctx: null,
-    master: null,
-    musicNodes: [],
-    
-    init() {
-        if(this.ctx) return;
-        this.ctx = new (window.AudioContext || window.webkitAudioContext)();
-        this.master = this.ctx.createGain();
-        this.master.gain.value = 0.4;
-        this.master.connect(this.ctx.destination);
-    },
+/* ═══════════════════════════════════════
+   STATIC NOISE
+   ═══════════════════════════════════════ */
+const Noise=(()=>{
+  const c=$('static-canvas');const ctx=c.getContext('2d');
+  let w=0,h=0;
+  const resize=()=>{const r=c.parentElement.getBoundingClientRect();w=c.width=Math.ceil(r.width/2);h=c.height=Math.ceil(r.height/2);c.style.width='100%';c.style.height='100%';c.style.imageRendering='pixelated'};
+  const draw=()=>{if(!w)return;const img=ctx.createImageData(w,h);const d=img.data;for(let i=0;i<d.length;i+=4){const v=Math.random()*255;d[i]=d[i+1]=d[i+2]=v;d[i+3]=Math.random()*30}ctx.putImageData(img,0,0);requestAnimationFrame(draw)};
+  window.addEventListener('resize',resize);
+  return{init(){resize();draw()},burst(dur=400){c.style.opacity='0.35';setTimeout(()=>c.style.opacity='0.07',dur)}};
+})();
 
-    playTone(freq, type='sine', dur=0.1, vol=0.1) {
-        if(!this.ctx) return;
-        const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
-        osc.type = type;
-        osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
-        gain.gain.setValueAtTime(vol, this.ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + dur);
-        osc.connect(gain);
-        gain.connect(this.master);
-        osc.start();
-        osc.stop(this.ctx.currentTime + dur);
-    },
+/* ═══════════════════════════════════════
+   PROCEDURAL AUDIO (Synth Engine)
+   ═══════════════════════════════════════ */
+const Synth=(()=>{
+  let ctx=null,master=null,muted=true;
+  let drones=[],arpId=null;
 
-    playNoise(dur=0.2, type='white', vol=0.1) {
-        if(!this.ctx) return;
-        const size = this.ctx.sampleRate * dur;
-        const buf = this.ctx.createBuffer(1, size, this.ctx.sampleRate);
-        const data = buf.getChannelData(0);
-        for(let i=0; i<size; i++) data[i] = Math.random() * 2 - 1;
-        
-        const src = this.ctx.createBufferSource();
-        src.buffer = buf;
-        const gain = this.ctx.createGain();
-        gain.gain.value = vol;
-        
-        // Simple Lowpass for "Brown" noise feel
-        const filter = this.ctx.createBiquadFilter();
-        filter.type = 'lowpass';
-        filter.frequency.value = type === 'brown' ? 400 : 3000;
-        
-        src.connect(filter);
-        filter.connect(gain);
-        gain.connect(this.master);
-        src.start();
-    },
+  const init=()=>{
+    if(ctx)return;
+    ctx=new(window.AudioContext||window.webkitAudioContext)();
+    master=ctx.createGain();master.gain.value=0;master.connect(ctx.destination);
+  };
+  const resume=()=>{if(ctx&&ctx.state==='suspended')ctx.resume()};
+  const setMuted=(m)=>{
+    muted=m;
+    if(!ctx)return;
+    master.gain.cancelScheduledValues(ctx.currentTime);
+    master.gain.setValueAtTime(master.gain.value,ctx.currentTime);
+    master.gain.linearRampToValueAtTime(m?0:0.45,ctx.currentTime+0.3);
+  };
 
-    playClunk() {
-        this.playNoise(0.3, 'brown', 0.5);
-        this.playTone(60, 'square', 0.2, 0.4);
-        setTimeout(() => this.playTone(40, 'sawtooth', 0.4, 0.3), 100);
-    },
+  const note=(freq,dur,type='triangle',vol=0.1,attack=0.01)=>{
+    if(!ctx)return;
+    const o=ctx.createOscillator(),g=ctx.createGain();
+    o.type=type;o.frequency.value=freq;
+    g.gain.setValueAtTime(0.001,ctx.currentTime);
+    g.gain.linearRampToValueAtTime(vol,ctx.currentTime+attack);
+    g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+dur);
+    o.connect(g);g.connect(master);o.start();o.stop(ctx.currentTime+dur+0.05);
+  };
 
-    // Procedural Music Engine
-    startSoundtrack(theme) {
-        this.stopMusic();
-        
-        const now = this.ctx.currentTime;
-        
-        if(theme === 'hallway') {
-            // Sad, slow arpeggio
-            const notes = [220, 261, 329, 392]; // Am7
-            this.musicLoop = setInterval(() => {
-                const n = notes[Math.floor(Math.random() * notes.length)];
-                this.playTone(n, 'sine', 2.0, 0.05);
-                this.playTone(n/2, 'triangle', 2.5, 0.02); // Bass
-            }, 2500);
-        } else if (theme === 'panic') {
-            // Fast, dissonant
-            this.musicLoop = setInterval(() => {
-                const n = 100 + Math.random() * 50;
-                this.playTone(n, 'sawtooth', 0.1, 0.05);
-                if(Math.random()>0.7) this.playNoise(0.05, 'white', 0.1);
-            }, 150);
-        } else if (theme === 'void') {
-            // Drone
-            const osc = this.ctx.createOscillator();
-            const g = this.ctx.createGain();
-            osc.frequency.value = 55;
-            g.gain.value = 0.05;
-            osc.connect(g); g.connect(this.master);
-            osc.start();
-            this.musicNodes.push(osc);
-        } else if (theme === 'hope') {
-            // Major chords
-            const notes = [261, 329, 392, 523]; // C Major
-            this.musicLoop = setInterval(() => {
-                notes.forEach((n,i) => {
-                    setTimeout(() => this.playTone(n, 'sine', 1.5, 0.05), i*200);
-                });
-            }, 4000);
-        }
-    },
+  const noiseBurst=(dur=0.15,vol=0.08)=>{
+    if(!ctx)return;
+    const sz=Math.floor(ctx.sampleRate*dur);
+    const buf=ctx.createBuffer(1,sz,ctx.sampleRate);
+    const d=buf.getChannelData(0);
+    for(let i=0;i<sz;i++)d[i]=(Math.random()*2-1);
+    const s=ctx.createBufferSource();s.buffer=buf;
+    const g=ctx.createGain();g.gain.setValueAtTime(vol,ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+dur);
+    s.connect(g);g.connect(master);s.start();
+  };
 
-    stopMusic() {
-        if(this.musicLoop) clearInterval(this.musicLoop);
-        this.musicNodes.forEach(n => n.stop());
-        this.musicNodes = [];
-    }
+  // SFX
+  const mechClunk=()=>{note(80,0.2,'square',0.15);noiseBurst(0.06,0.12);setTimeout(()=>note(55,0.15,'square',0.1),40)};
+  const typeClick=()=>note(1800+Math.random()*600,0.012,'square',0.025);
+  const selectClick=()=>note(440,0.04,'square',0.04);
+  const confirmSound=()=>{note(440,0.06,'square',0.04);setTimeout(()=>note(660,0.08,'square',0.04),50)};
+
+  // Ambient
+  const startAmbient=()=>{
+    if(!ctx)return;
+    // 60Hz hum
+    const h=ctx.createOscillator(),hg=ctx.createGain();
+    h.type='sine';h.frequency.value=60;hg.gain.value=0.012;
+    h.connect(hg);hg.connect(master);h.start();
+    drones.push({o:h,g:hg});
+    // Pad drone A2
+    const p=ctx.createOscillator(),pf=ctx.createBiquadFilter(),pg=ctx.createGain();
+    p.type='sawtooth';p.frequency.value=110;pf.type='lowpass';pf.frequency.value=280;pg.gain.value=0.018;
+    p.connect(pf);pf.connect(pg);pg.connect(master);p.start();
+    drones.push({o:p,g:pg});
+    // Tape hiss
+    const sz=ctx.sampleRate*2;const buf=ctx.createBuffer(1,sz,ctx.sampleRate);
+    const d=buf.getChannelData(0);for(let i=0;i<sz;i++)d[i]=Math.random()*2-1;
+    const ns=ctx.createBufferSource();ns.buffer=buf;ns.loop=true;
+    const nf=ctx.createBiquadFilter();nf.type='highpass';nf.frequency.value=4000;
+    const ng=ctx.createGain();ng.gain.value=0.006;
+    ns.connect(nf);nf.connect(ng);ng.connect(master);ns.start();
+  };
+
+  // Arpeggio
+  const startArp=()=>{
+    const notes=[220,261.63,329.63,440,329.63,261.63];
+    let i=0;
+    arpId=setInterval(()=>{
+      note(notes[i%notes.length],1.2,'triangle',0.03,0.02);
+      i++;
+    },850);
+  };
+  const stopArp=()=>{if(arpId){clearInterval(arpId);arpId=null}};
+
+  return{init,resume,setMuted,note,noiseBurst,mechClunk,typeClick,selectClick,confirmSound,startAmbient,startArp,stopArp};
+})();
+
+/* ═══════════════════════════════════════
+   AUDIO TOGGLE
+   ═══════════════════════════════════════ */
+const audioBtn=$('audio-btn');
+let audioOn=false;
+audioBtn.addEventListener('click',()=>{
+  Synth.init();Synth.resume();
+  audioOn=!audioOn;
+  Synth.setMuted(!audioOn);
+  audioBtn.textContent=audioOn?'♪ ON':'♪ OFF';
+  audioBtn.classList.toggle('on',audioOn);
+});
+
+/* ═══════════════════════════════════════
+   TYPEWRITER
+   ═══════════════════════════════════════ */
+let typeAbort=false;
+const typewrite=async(el,text,speed=30)=>{
+  typeAbort=false;
+  el.innerHTML='';
+  for(let i=0;i<text.length;i++){
+    if(typeAbort){el.innerHTML=text;return}
+    if(text[i]==='<'){const j=text.indexOf('>',i);el.innerHTML+=text.substring(i,j+1);i=j}
+    else{el.innerHTML+=text[i];Synth.typeClick()}
+    await sleep(speed);
+  }
 };
 
-// --- 3. PHYSICS & INPUT CONTROLLER (Custom Drag) ---
-const Input = {
-    x: 0, y: 0,
-    isDown: false,
-    dragTarget: null,
-    dragOffset: { x:0, y:0 },
-    
-    init() {
-        window.addEventListener('mousedown', e => this.down(e));
-        window.addEventListener('mousemove', e => this.move(e));
-        window.addEventListener('mouseup', e => this.up(e));
-        
-        window.addEventListener('touchstart', e => this.down(e.touches[0]));
-        window.addEventListener('touchmove', e => this.move(e.touches[0]));
-        window.addEventListener('touchend', e => this.up(e));
-    },
+/* ═══════════════════════════════════════
+   SCREEN MANAGER
+   ═══════════════════════════════════════ */
+const Screen=(()=>{
+  const el=$('screen');
+  const clear=()=>{el.innerHTML=''};
 
-    down(e) {
-        this.isDown = true;
-        this.x = e.clientX;
-        this.y = e.clientY;
-        
-        // Check for tape intersection
-        const tapes = document.querySelectorAll('.tape-obj');
-        tapes.forEach(tape => {
-            const rect = tape.getBoundingClientRect();
-            if(this.x >= rect.left && this.x <= rect.right &&
-               this.y >= rect.top && this.y <= rect.bottom && 
-               !tape.classList.contains('in-machine')) {
-                
-                this.dragTarget = tape;
-                this.dragOffset.x = this.x - rect.left;
-                this.dragOffset.y = this.y - rect.top;
-                
-                // Lift
-                tape.style.position = 'fixed';
-                tape.style.width = rect.width + 'px';
-                tape.classList.add('dragging');
-                this.updateDragPos();
-            }
-        });
-        
-        // Also handle clicking on screen for gameplay
-        if(e.target.id === 'crt-canvas') Game.handleInput(true);
-    },
-
-    move(e) {
-        this.x = e.clientX;
-        this.y = e.clientY;
-        if(this.dragTarget) this.updateDragPos();
-        
-        if(!this.isDown) Game.handleMove(this.x, this.y);
-    },
-
-    up(e) {
-        this.isDown = false;
-        
-        if(this.dragTarget) {
-            // Check drop zone (VCR Slot)
-            const slot = document.getElementById('slot').getBoundingClientRect();
-            const tape = this.dragTarget.getBoundingClientRect();
-            
-            // Simple AABB collision
-            if(tape.left < slot.right && tape.right > slot.left &&
-               tape.top < slot.bottom && tape.bottom > slot.top) {
-                // DROP!
-                VCR.insert(this.dragTarget);
-            } else {
-                // Return to rack
-                this.dragTarget.style.position = 'relative';
-                this.dragTarget.style.left = '0';
-                this.dragTarget.style.top = '0';
-                this.dragTarget.style.transform = 'none';
-            }
-            
-            this.dragTarget.classList.remove('dragging');
-            this.dragTarget = null;
-        }
-    },
-
-    updateDragPos() {
-        if(!this.dragTarget) return;
-        this.dragTarget.style.left = (this.x - this.dragOffset.x) + 'px';
-        this.dragTarget.style.top = (this.y - this.dragOffset.y) + 'px';
-        // Add physics tilt based on velocity (simplified)
-        this.dragTarget.style.transform = `rotate(${Math.random()*2-1}deg) scale(1.05)`;
-    }
-};
-
-// --- 4. THE VCR SYSTEM ---
-const VCR = {
-    state: 'idle', // idle, playing, ejected
-    activeTapeId: null,
-    
-    insert(tapeEl) {
-        if(this.state === 'playing') return;
-        
-        AudioEngine.playClunk();
-        this.state = 'loading';
-        
-        // Visuals
-        const slot = document.getElementById('slot');
-        slot.classList.add('open');
-        tapeEl.classList.add('in-machine');
-        
-        setTimeout(() => {
-            slot.classList.remove('open');
-            this.state = 'playing';
-            this.activeTapeId = parseInt(tapeEl.dataset.id);
-            document.getElementById('pwr-led').classList.add('on');
-            Game.loadTape(this.activeTapeId);
-        }, 800);
-    },
-
-    eject() {
-        if(this.state !== 'playing') return;
-        
-        AudioEngine.playClunk();
-        AudioEngine.stopMusic();
-        this.state = 'idle';
-        
-        document.getElementById('pwr-led').classList.remove('on');
-        document.getElementById('slot').classList.add('open');
-        
-        setTimeout(() => {
-            // Bring tape back
-            const tape = document.querySelector(`.tape-obj[data-id="${this.activeTapeId}"]`);
-            if(tape) {
-                tape.classList.remove('in-machine');
-                tape.style.position = 'relative';
-                tape.style.left = '0'; 
-                tape.style.top = '0';
-            }
-            document.getElementById('slot').classList.remove('open');
-            Game.stop();
-            
-            // Unlock Tape 4 check
-            if(Game.progress.tape3) {
-                document.getElementById('tape-4').style.display = 'block';
-            }
-            
-        }, 600);
-    }
-};
-
-// --- 5. RENDER & GAME ENGINE ---
-const Game = {
-    canvas: document.getElementById('crt-canvas'),
-    ctx: document.getElementById('crt-canvas').getContext('2d'),
-    width: 0, height: 0,
-    raf: null,
-    frame: 0,
-    
-    mode: 'static', // static, game
-    level: null,
-    
-    progress: { tape1: false, tape2: false, tape3: false },
-    
-    init() {
-        this.resize();
-        window.addEventListener('resize', () => this.resize());
-        this.loop();
-    },
-
-    resize() {
-        const r = this.canvas.parentElement.getBoundingClientRect();
-        this.canvas.width = r.width;
-        this.canvas.height = r.height;
-        this.width = r.width;
-        this.height = r.height;
-    },
-
-    loadTape(id) {
-        this.mode = 'game';
-        this.frame = 0;
-        
-        if(id === 1) this.level = new Tape1_Hallway(this);
-        if(id === 2) this.level = new Tape2_Curve(this);
-        if(id === 3) this.level = new Tape3_Signal(this);
-        if(id === 4) this.level = new Tape4_Finale(this);
-        
-        this.level.start();
-    },
-
-    stop() {
-        this.mode = 'static';
-        this.level = null;
-    },
-
-    handleInput(click) {
-        if(this.level) this.level.input(click);
-    },
-    
-    handleMove(x, y) {
-        // Convert screen coords to canvas coords
-        const r = this.canvas.getBoundingClientRect();
-        const cx = x - r.left;
-        const cy = y - r.top;
-        if(this.level) this.level.move(cx, cy);
-    },
-
-    loop() {
-        this.ctx.fillStyle = '#000';
-        this.ctx.fillRect(0, 0, this.width, this.height);
-        
-        if(this.mode === 'static') {
-            this.drawStatic();
-        } else if (this.level) {
-            this.level.update();
-            this.level.draw(this.ctx);
-            // CRT Lines
-            this.ctx.fillStyle = `rgba(0, 255, 0, 0.03)`;
-            this.ctx.fillRect(0, (this.frame * 2) % this.height, this.width, 2);
-        }
-
-        // Global vignette
-        const grad = this.ctx.createRadialGradient(this.width/2, this.height/2, this.width/3, this.width/2, this.height/2, this.width);
-        grad.addColorStop(0, 'transparent');
-        grad.addColorStop(1, 'rgba(0,0,0,0.6)');
-        this.ctx.fillStyle = grad;
-        this.ctx.fillRect(0,0,this.width, this.height);
-
-        this.frame++;
-        requestAnimationFrame(() => this.loop());
-    },
-
-    drawStatic() {
-        const img = this.ctx.createImageData(this.width, this.height);
-        const buf = new Uint32Array(img.data.buffer);
-        for(let i=0; i<buf.length; i++) {
-            if(Math.random() < 0.1) buf[i] = 0xff111111; // Dark gray
-            else buf[i] = 0xff000000;
-        }
-        this.ctx.putImageData(img, 0, 0);
-        
-        // Text
-        this.ctx.font = "30px 'VT323'";
-        this.ctx.fillStyle = "#1a8000";
-        this.ctx.textAlign = "center";
-        this.ctx.fillText("NO SIGNAL", this.width/2, this.height/2);
-        
-        // Time
-        const d = new Date();
-        this.ctx.font = "20px 'VT323'";
-        this.ctx.fillText(d.toLocaleTimeString(), this.width - 60, 40);
-    }
-};
-
-// --- 6. LEVEL CLASSES (5 CHAPTERS EACH) ---
-
-class BaseLevel {
-    constructor(game) {
-        this.game = game;
-        this.w = game.width;
-        this.h = game.height;
-        this.chapter = 1;
-        this.timer = 0;
-        this.text = "";
-        this.textAlpha = 0;
-    }
-    showText(str, dur=180) {
-        this.text = str;
-        this.textAlpha = 255;
-        this.textTimer = dur;
-        AudioEngine.playTone(400, 'square', 0.05, 0.05);
-    }
-    drawUI(ctx) {
-        if(this.textAlpha > 0) {
-            ctx.fillStyle = `rgba(0, 0, 0, 0.8)`;
-            ctx.fillRect(20, this.h - 80, this.w - 40, 60);
-            
-            ctx.font = "24px 'Space Mono'";
-            ctx.fillStyle = `rgba(50, 255, 50, ${this.textAlpha/255})`;
-            ctx.textAlign = "center";
-            ctx.fillText(this.text, this.w/2, this.h - 45);
-            
-            this.textAlpha -= 1;
-        }
-        // Scanline
-        ctx.fillStyle = "rgba(255,255,255,0.05)";
-        ctx.fillRect(0, Math.random()*this.h, this.w, 2);
-    }
-}
-
-// === TAPE 1: THE HALLWAY (Anxiety/Stealth) ===
-class Tape1_Hallway extends BaseLevel {
-    start() {
-        this.p = { x: 50, y: this.h - 100 };
-        this.eyes = [];
-        this.doorX = this.w + 500;
-        AudioEngine.startSoundtrack('hallway');
-        this.showText("CH 1: THE WEIGHT. Move slowly.");
-    }
-
-    input(click) {}
-    
-    move(x, y) {
-        // Mechanics: If you move mouse FAST, you slow down.
-        // If you move mouse SLOW, you move fast. (Paradox)
-        const dx = Math.abs(x - this.lastX || x);
-        this.lastX = x;
-        
-        let speed = 0;
-        if(dx < 5) speed = 2; // Slow movement = Fast walk
-        else if (dx > 20) speed = 0.2; // Panic movement = Freeze
-        
-        this.p.x += speed;
-    }
-
-    update() {
-        this.timer++;
-        
-        // Chapter Transitions
-        if(this.chapter === 1 && this.p.x > 300) {
-            this.chapter = 2;
-            this.showText("CH 2: THE GAZE. Don't touch the eyes.");
-            // Spawn Eyes
-            for(let i=0; i<10; i++) this.eyes.push({x: this.w + i*200, y: 100 + Math.random()*200});
-        }
-        
-        // Logic
-        this.p.x = Math.min(this.p.x, this.w/2); // Camera lock logic simulation
-        
-        // Background parallax
-        this.eyes.forEach(e => {
-            e.x -= 2; // Moving left
-            if(Math.abs(e.x - this.p.x) < 30) {
-                // Collision with gaze
-                AudioEngine.playTone(100, 'sawtooth', 0.1, 0.1);
-                this.p.x -= 10; // Push back
-            }
-        });
-
-        // End condition
-        if(this.timer > 1000 && this.chapter < 5) {
-             this.chapter = 5;
-             this.showText("CH 5: THE DOOR. It's locked from the inside.");
-             setTimeout(() => {
-                 Game.progress.tape1 = true;
-                 VCR.eject();
-             }, 4000);
-        }
-    }
-
-    draw(ctx) {
-        // Hallway perspective
-        ctx.fillStyle = "#111";
-        ctx.fillRect(0,0,this.w,this.h);
-        
-        // Floor
-        ctx.strokeStyle = "#333";
-        ctx.beginPath();
-        ctx.moveTo(0, this.h); ctx.lineTo(this.w/2, this.h/2); ctx.lineTo(this.w, this.h);
-        ctx.stroke();
-
-        // Player (Small White Dot)
-        ctx.fillStyle = "#fff";
-        ctx.beginPath(); ctx.arc(this.p.x, this.p.y, 5, 0, Math.PI*2); ctx.fill();
-        
-        // Eyes
-        ctx.fillStyle = "#f00";
-        this.eyes.forEach(e => {
-            ctx.beginPath(); 
-            // Eye shape
-            ctx.ellipse(e.x, e.y, 20, 10, 0, 0, Math.PI*2);
-            ctx.fill();
-        });
-
-        this.drawUI(ctx);
-    }
-}
-
-// === TAPE 2: THE CURVE (Survival) ===
-class Tape2_Curve extends BaseLevel {
-    start() {
-        this.p = { x: this.w/2, y: this.h - 50 };
-        this.bullets = [];
-        this.hits = 0;
-        AudioEngine.startSoundtrack('panic');
-        this.showText("CH 1: THE RAIN. Avoid the grades.");
-    }
-    
-    move(x, y) { this.p.x = x; }
-
-    update() {
-        this.timer++;
-        
-        // Spawn Grades
-        if(this.timer % 10 === 0) {
-            this.bullets.push({
-                x: Math.random() * this.w,
-                y: -20,
-                txt: Math.random()>0.5 ? "F" : "D-",
-                v: 3 + Math.random() * 3
-            });
-        }
-        
-        // Update
-        this.bullets.forEach((b,i) => {
-            b.y += b.v;
-            // Collision
-            if(MathUtils.dist(b.x, b.y, this.p.x, this.p.y) < 20) {
-                this.bullets.splice(i, 1);
-                this.hits++;
-                AudioEngine.playNoise(0.1, 'white', 0.2);
-            }
-        });
-        
-        if(this.timer > 1200) {
-            this.showText(`SURVIVED. HITS: ${this.hits}. You kept standing.`);
-             setTimeout(() => {
-                 Game.progress.tape2 = true;
-                 VCR.eject();
-             }, 4000);
-        }
-    }
-
-    draw(ctx) {
-        // Matrix Rain style
-        ctx.fillStyle = "rgba(0,0,0,0.2)";
-        ctx.fillRect(0,0,this.w,this.h);
-        
-        ctx.font = "20px 'VT323'";
-        this.bullets.forEach(b => {
-            ctx.fillStyle = "#0f0";
-            ctx.fillText(b.txt, b.x, b.y);
-        });
-        
-        // Player
-        ctx.fillStyle = "#fff";
-        ctx.fillRect(this.p.x-10, this.p.y-10, 20, 20);
-        
-        this.drawUI(ctx);
-    }
-}
-
-// === TAPE 3: SIGNAL LOST (Puzzle) ===
-class Tape3_Signal extends BaseLevel {
-    start() {
-        this.noise = 1.0;
-        AudioEngine.startSoundtrack('void');
-        this.showText("CH 1: THE VOID. No Guide detected.");
-    }
-    
-    input(click) {
-        // Mechanic: Click to clear noise
-        if(click) {
-            this.noise -= 0.05;
-            AudioEngine.playTone(200 + (1-this.noise)*500, 'sine', 0.1, 0.1);
-        }
-    }
-
-    update() {
-        this.timer++;
-        // Noise grows back
-        if(this.noise < 1.0) this.noise += 0.002;
-        
-        if(this.noise <= 0.1) {
-             this.showText("SIGNAL RESTORED. I am sufficient.");
-             setTimeout(() => {
-                 Game.progress.tape3 = true;
-                 VCR.eject();
-             }, 4000);
-        }
-    }
-
-    draw(ctx) {
-        // Hidden Image
-        ctx.fillStyle = "#000";
-        ctx.fillRect(0,0,this.w,this.h);
-        
-        ctx.fillStyle = "#fff";
-        ctx.font = "40px 'Space Mono'";
-        ctx.textAlign = "center";
-        ctx.fillText("I AM ENOUGH", this.w/2, this.h/2);
-        
-        // Noise Overlay
-        const img = ctx.getImageData(0,0,this.w,this.h);
-        const data = img.data;
-        for(let i=0; i<data.length; i+=4) {
-            if(Math.random() < this.noise) {
-                data[i] = data[i+1] = data[i+2] = Math.random()*255;
-            }
-        }
-        ctx.putImageData(img, 0, 0);
-        
-        this.drawUI(ctx);
-    }
-}
-
-// === TAPE 4: FINALE (Cinematic) ===
-class Tape4_Finale extends BaseLevel {
-    start() {
-        AudioEngine.startSoundtrack('hope');
-        this.particles = [];
-        for(let i=0; i<100; i++) this.particles.push({
-            x: this.w/2, y: this.h/2,
-            vx: (Math.random()-0.5)*2, vy: (Math.random()-0.5)*2,
-            life: Math.random()
-        });
-    }
-
-    update() {
-        this.timer++;
-        this.particles.forEach(p => {
-            p.x += p.vx; p.y += p.vy;
-            if(p.x<0||p.x>this.w) p.vx*=-1;
-            if(p.y<0||p.y>this.h) p.vy*=-1;
-        });
-        
-        if(this.timer === 100) this.showText("DADDY: Happy Birthday.");
-        if(this.timer === 300) this.showText("You saved yourself.");
-    }
-
-    draw(ctx) {
-        // Gold/Warm
-        const g = ctx.createLinearGradient(0,0,0,this.h);
-        g.addColorStop(0, "#332200");
-        g.addColorStop(1, "#664400");
-        ctx.fillStyle = g;
-        ctx.fillRect(0,0,this.w,this.h);
-        
-        ctx.fillStyle = "#ffcc00";
-        this.particles.forEach(p => {
-            ctx.beginPath(); ctx.arc(p.x, p.y, 2, 0, Math.PI*2); ctx.fill();
-        });
-        
-        this.drawUI(ctx);
-    }
-}
-
-// --- INIT ---
-function BIOS_BOOT() {
-    AudioEngine.init();
-    document.getElementById('bios-screen').style.display = 'none';
-    Input.init();
-    Game.init();
-    
-    // Create tapes
-    const rack = document.getElementById('rack');
-    const tapesData = [
-        {id:1, label:"THE HALLWAY", color:"#fff"},
-        {id:2, label:"THE CURVE", color:"#f00"},
-        {id:3, label:"SIGNAL LOST", color:"#888"},
-        {id:4, label:"RECORD", color:"gold", hidden:true}
+  // BOOT
+  const boot=async()=>{
+    $('led').classList.add('on');
+    clear();
+    const div=document.createElement('div');div.className='boot-content';el.appendChild(div);
+    const lines=[
+      '> ANUSHRI TAPE ARCHIVE v1.0',
+      '> INITIALIZING MEMORY SUBSYSTEM...',
+      '> 4 RECORDINGS FOUND',
+      '> WARNING: SOME TAPES CONTAIN DISTORTION',
+      '> THIS IS EXPECTED.',
+      '',
+      '> [CLICK ANYWHERE TO CONTINUE]'
     ];
-    
-    tapesData.forEach(t => {
-        const div = document.createElement('div');
-        div.className = 'tape-obj';
-        div.dataset.id = t.id;
-        if(t.hidden) { div.id = 'tape-4'; div.style.display='none'; }
-        
-        div.innerHTML = `
-            <div class="tape-window">
-                <div class="tape-spool"></div><div class="tape-spool"></div>
-            </div>
-            <div class="tape-label" style="background:${t.color === 'gold' ? '#ffcc00' : '#f0f0f0'}">${t.label}</div>
-        `;
-        rack.appendChild(div);
+    for(const line of lines){
+      await typewrite(div,div.textContent+line+'\n',20);
+      await sleep(200);
+    }
+    div.innerHTML+=`<span class="cursor"></span>`;
+    return new Promise(r=>{
+      const h=()=>{typeAbort=true;document.removeEventListener('click',h);document.removeEventListener('keydown',h);r()};
+      document.addEventListener('click',h);document.addEventListener('keydown',h);
     });
-    
-    // Eject button logic
-    document.getElementById('eject-btn').onclick = () => VCR.eject();
+  };
+
+  // SELECT
+  const select=()=>{
+    clear();
+    const d=document.createElement('div');d.className='select-display';
+    const now=new Date();
+    const dateStr=now.toLocaleDateString('en-US',{month:'short',day:'2-digit',year:'numeric'}).toUpperCase();
+    d.innerHTML=`
+      <div class="date-stamp">${dateStr}</div>
+      <div class="rec"><div class="rec-dot"></div>REC</div>
+      <h2>ARCHIVE</h2>
+      <div class="sub">ANUSHRI TAPE COLLECTION</div>
+      <div class="insert-msg">↑ DRAG TAPE TO SLOT ↑</div>
+    `;
+    el.appendChild(d);
+    buildTapeShelf();
+  };
+
+  // LOADING
+  const loading=async(tapeName)=>{
+    clear();
+    Noise.burst(500);
+    const d=document.createElement('div');d.className='loading-display';
+    d.innerHTML=`<div class="load-title">PLAYING: ${tapeName}</div><div class="load-bar"><div class="load-fill" id="load-fill"></div></div>`;
+    el.appendChild(d);
+    const fill=$('load-fill');
+    let w=0;
+    await new Promise(r=>{
+      const iv=setInterval(()=>{
+        w+=Math.random()*6+2;
+        fill.style.width=Math.min(w,100)+'%';
+        if(w>=100){clearInterval(iv);r()}
+      },50);
+    });
+    await sleep(300);
+  };
+
+  // FINAL MESSAGE
+  const final=async()=>{
+    clear();
+    const d=document.createElement('div');d.className='final-display';el.appendChild(d);
+    $('screen-glow').style.background='radial-gradient(ellipse,rgba(212,175,55,0.06) 0%,transparent 70%)';
+    Synth.stopArp();
+    // Warm melody
+    const melody=[261.63,329.63,392,523.25,392,329.63,261.63,329.63,392,523.25];
+    melody.forEach((f,i)=>setTimeout(()=>Synth.note(f,1.5,'sine',0.04,0.05),i*600));
+
+    const lines=[
+      'You played every tape.',
+      'You faced the hallway. You fixed the signal.',
+      'You looked into the static and found yourself.',
+      '',
+      'The bravest recording in this archive',
+      'was never made by me.',
+      '',
+      'It was made by <span class="hl">you</span>,',
+      'at 2am,',
+      'when you told yourself to keep going.',
+      '',
+      'Happy Birthday, <span class="gold">Anushri</span>.',
+      '',
+      'I will always be <span class="gold">DADDY</span>.',
+    ];
+    for(const line of lines){
+      const p=document.createElement('p');p.innerHTML=line||'&nbsp;';d.appendChild(p);
+      await sleep(80);p.classList.add('show');await sleep(500);
+    }
+  };
+
+  return{boot,select,loading,final};
+})();
+
+/* ═══════════════════════════════════════
+   TAPE SHELF & DRAG SYSTEM
+   ═══════════════════════════════════════ */
+const TAPES=[
+  {id:'tape1',title:'SIDE A: The Weight',color:'var(--red)',file:'tape1.html'},
+  {id:'tape2',title:'TRACKING: Distortion',color:'var(--blue)',file:'tape2.html'},
+  {id:'tape3',title:'PLAY: The Static',color:'var(--cyan)',file:'tape3.html'},
+  {id:'tape4',title:'RECORD: For You',color:'var(--gold)',file:'tape4.html',final:true},
+];
+
+let dragState=null;
+
+function buildTapeShelf(){
+  const shelf=$('tape-shelf');shelf.innerHTML='';
+  TAPES.forEach(t=>{
+    const done=State.isDone(t.id);
+    const locked=t.final&&!State.allDone();
+    const tape=document.createElement('div');
+    tape.className='vhs-tape'+(done?' complete':'')+(locked?' locked':'');
+    tape.dataset.id=t.id;
+    tape.dataset.file=t.file;
+    tape.dataset.title=t.title;
+    tape.innerHTML=`
+      <div class="tape-color" style="background:${t.color}"></div>
+      <div class="tape-window"><div class="reel"></div><div class="tape-strip"></div><div class="reel"></div></div>
+      <div class="tape-label-area">
+        <div class="tape-title">${t.title}</div>
+        <div class="tape-status">${locked?'LOCKED':done?'✓ PLAYED':'NEW'}</div>
+      </div>
+    `;
+    if(!locked){
+      tape.addEventListener('mousedown',e=>startDrag(e,tape,t));
+      tape.addEventListener('touchstart',e=>startDrag(e,tape,t),{passive:false});
+      tape.addEventListener('click',()=>insertTape(t));
+    }
+    shelf.appendChild(tape);
+  });
 }
 
-document.getElementById('bios-screen').onclick = BIOS_BOOT;
+function startDrag(e,el,tape){
+  e.preventDefault();
+  const rect=el.getBoundingClientRect();
+  const cx=e.clientX||e.touches?.[0]?.clientX||0;
+  const cy=e.clientY||e.touches?.[0]?.clientY||0;
+  const ghost=el.cloneNode(true);
+  ghost.className='vhs-tape tape-ghost';
+  ghost.style.width=rect.width+'px';ghost.style.height=rect.height+'px';
+  ghost.style.left=rect.left+'px';ghost.style.top=rect.top+'px';
+  document.body.appendChild(ghost);
+  el.style.opacity='0.25';
+  dragState={el,tape,ghost,ox:cx-rect.left,oy:cy-rect.top};
+  Synth.selectClick();
+}
 
+function moveDrag(e){
+  if(!dragState)return;e.preventDefault();
+  const cx=e.clientX||e.touches?.[0]?.clientX||0;
+  const cy=e.clientY||e.touches?.[0]?.clientY||0;
+  dragState.ghost.style.left=(cx-dragState.ox)+'px';
+  dragState.ghost.style.top=(cy-dragState.oy)+'px';
+  const slotRect=$('tape-slot').getBoundingClientRect();
+  const gRect=dragState.ghost.getBoundingClientRect();
+  const over=!(gRect.right<slotRect.left||gRect.left>slotRect.right||gRect.bottom<slotRect.top-30||gRect.top>slotRect.bottom+30);
+  $('tape-slot').classList.toggle('active',over);
+}
+
+function endDrag(e){
+  if(!dragState)return;
+  const slotRect=$('tape-slot').getBoundingClientRect();
+  const gRect=dragState.ghost.getBoundingClientRect();
+  const over=!(gRect.right<slotRect.left||gRect.left>slotRect.right||gRect.bottom<slotRect.top-30||gRect.top>slotRect.bottom+30);
+  dragState.ghost.remove();
+  dragState.el.style.opacity='1';
+  $('tape-slot').classList.remove('active');
+  if(over)insertTape(dragState.tape);
+  dragState=null;
+}
+
+document.addEventListener('mousemove',moveDrag);
+document.addEventListener('mouseup',endDrag);
+document.addEventListener('touchmove',moveDrag,{passive:false});
+document.addEventListener('touchend',endDrag);
+
+async function insertTape(tape){
+  Synth.init();Synth.resume();
+  if(!audioOn){audioOn=true;Synth.setMuted(false);audioBtn.textContent='♪ ON';audioBtn.classList.add('on')}
+  Synth.mechClunk();
+  Synth.stopArp();
+  Noise.burst(600);
+  $('slot-label').textContent='▶ LOADING';
+  await Screen.loading(tape.title);
+  window.location.href=tape.file;
+}
+
+/* ═══════════════════════════════════════
+   REC TIMER
+   ═══════════════════════════════════════ */
+let recSec=0;
+setInterval(()=>{recSec++},1000);
+
+/* ═══════════════════════════════════════
+   INIT
+   ═══════════════════════════════════════ */
+(async()=>{
+  Noise.init();
+
+  // If all tapes done including tape4, show final
+  if(State.isDone('tape4')){
+    $('led').classList.add('on');
+    Synth.init();Synth.resume();Synth.startAmbient();
+    if(!audioOn){audioOn=true;Synth.setMuted(false);audioBtn.textContent='♪ ON';audioBtn.classList.add('on')}
+    await Screen.final();
+    return;
+  }
+
+  await Screen.boot();
+
+  // Start audio after user gesture
+  Synth.init();Synth.resume();Synth.startAmbient();Synth.startArp();
+  if(!audioOn){audioOn=true;Synth.setMuted(false);audioBtn.textContent='♪ ON';audioBtn.classList.add('on')}
+
+  Noise.burst(300);
+  await sleep(400);
+  Screen.select();
+})();
 </script>
 </body>
 </html>
