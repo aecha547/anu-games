@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>FILE_03: THE PARADOX</title>
+    <style>
+        body { margin: 0; background: #000; color: #fff; font-family: 'Courier New', monospace; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
+        #stage { width: 800px; height: 400px; border-top: 2px solid #fff; border-bottom: 2px solid #fff; position: relative; display: flex; justify-content: space-between; align-items: center; padding: 0 100px; }
+        
+        .entity { width: 60px; height: 60px; border-radius: 50%; position: relative; transition: all 0.5s; }
+        #me { background: #00F3FF; box-shadow: 0 0 20px #00F3FF; } /* The User */
+        #her { background: #FF2A6D; box-shadow: 0 0 20px #FF2A6D; border: 4px solid #fff; } /* Anushri (Tough) */
+        
+        #dialogue { margin-top: 30px; height: 100px; width: 800px; text-align: center; font-size: 1.2rem; }
+        #btn { background: transparent; border: 1px solid #fff; color: #fff; padding: 10px 30px; cursor: pointer; font-family: inherit; display: none; margin-top: 20px;}
+        #btn:hover { background: #fff; color: #000; }
+        
+        .spark { position: absolute; background: yellow; width: 4px; height: 4px; pointer-events: none; }
+    </style>
+</head>
+<body>
+    <div id="stage">
+        <div id="me" class="entity"></div>
+        <div id="clash-zone" style="flex-grow: 1"></div>
+        <div id="her" class="entity"></div>
+    </div>
+    <div id="dialogue"></div>
+    <button id="btn">CONTINUE</button>
+    <a href="index.html" id="exit" style="display:none; margin-top:20px; color:#aaa">ARCHIVE</a>
+
+    <script>
+        const dialogue = [
+            { s: "SYSTEM", t: "Simulating First Contact..." },
+            { s: "ME", t: "Variable detected. Status: Rude. Value: Unknown." },
+            { s: "HER", t: "Stay away. I am sharp. I will cut you." },
+            { s: "ME", t: "I was pissed. I almost walked away." },
+            { s: "ACTION", t: "*Clash*" }, // 4
+            { s: "ME", t: "But the math didn't add up. Why build walls if there's nothing to protect?" },
+            { s: "ACTION", t: "*Wait*" }, // 6
+            { s: "ME", t: "I looked closer. Beneath the rudeness... a Gem." },
+            { s: "HER", t: "Why are you still here?" },
+            { s: "ME", t: "Because I solved for X. And X is you." },
+            { s: "SYSTEM", t: "Status Updated: CONSTANT THOUGHT." }
+        ];
+
+        let idx = 0;
+        const dEl = document.getElementById('dialogue');
+        const btn = document.getElementById('btn');
+        const me = document.getElementById('me');
+        const her = document.getElementById('her');
+
+        const type = (txt) => {
+            dEl.innerText = "";
+            let i = 0;
+            const timer = setInterval(() => {
+                dEl.innerText += txt.charAt(i);
+                i++;
+                if(i >= txt.length) {
+                    clearInterval(timer);
+                    btn.style.display = 'inline-block';
+                }
+            }, 30);
+        };
+
+        const clash = () => {
+            // Animation of them hitting
+            me.style.transform = "translateX(200px)";
+            her.style.transform = "translateX(-200px)";
+            setTimeout(() => {
+                me.style.transform = "translateX(0)";
+                her.style.transform = "translateX(0)";
+                // Sparks
+                createSparks();
+            }, 300);
+        };
+
+        const merge = () => {
+            me.style.background = "#FFD700"; // Gold
+            her.style.background = "#FFD700"; // Gold
+            her.style.borderColor = "#FFD700";
+            me.style.boxShadow = "0 0 50px #FFD700";
+            her.style.boxShadow = "0 0 50px #FFD700";
+        };
+
+        const createSparks = () => {
+            const stage = document.getElementById('stage');
+            for(let i=0; i<20; i++) {
+                const s = document.createElement('div');
+                s.className = 'spark';
+                s.style.left = '50%'; s.style.top = '50%';
+                stage.appendChild(s);
+                const angle = Math.random() * Math.PI * 2;
+                const dist = Math.random() * 100;
+                s.animate([
+                    { transform: 'translate(0,0)' },
+                    { transform: `translate(${Math.cos(angle)*dist}px, ${Math.sin(angle)*dist}px)`, opacity: 0 }
+                ], { duration: 500, fill: 'forwards' });
+            }
+        };
+
+        const next = () => {
+            btn.style.display = 'none';
+            if(idx >= dialogue.length) {
+                document.getElementById('exit').style.display = 'block';
+                return;
+            }
+            
+            const line = dialogue[idx];
+            if(line.s === "ACTION") {
+                if(line.t === "*Clash*") clash();
+                if(line.t === "*Wait*") merge();
+                idx++;
+                setTimeout(next, 1000);
+            } else {
+                type(`${line.s}: ${line.t}`);
+                idx++;
+            }
+        };
+
+        btn.addEventListener('click', next);
+        setTimeout(next, 1000);
+
+    </script>
+</body>
+</html>
