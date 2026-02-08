@@ -1,184 +1,551 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>FILE_02: THE FORTRESS</title>
-    <style>
-        body { margin: 0; background: #110000; color: #FF3366; font-family: monospace; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
-        canvas { border: 2px solid #FF3366; background: #0a0000; }
-        #ui { position: absolute; top: 20px; text-align: center; width: 100%; pointer-events: none; }
-        h1 { margin: 0; text-shadow: 0 0 10px #FF3366; }
-        p { color: #aaa; background: rgba(0,0,0,0.8); display: inline-block; padding: 5px; }
-        #back-btn { position: absolute; bottom: 20px; text-decoration: none; color: #fff; border: 1px solid #fff; padding: 10px 20px; display: none; pointer-events: auto; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>TRACKING: Fix the Signal</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=VT323&family=Cormorant+Garamond:ital,wght@0,400;1,400&display=swap');
+:root{--bg:#050505;--green:#a8e6a3;--dim:#555;--warm:#ffeedd;--red:#cc4444;--gold:#d4af37;--blue:#5588bb;--cyan:#00d4aa;--static-w:#d4d4d4;--glass:rgba(8,8,15,0.92)}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;background:#000;font-family:'VT323',monospace;color:var(--static-w);user-select:none}
+
+.tv-body{position:relative;width:min(94vw,720px);margin:auto;margin-top:max(2vh,10px);aspect-ratio:4/3;background:#1a1a1a;border-radius:24px;border:3px solid #2a2a2a;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.8)}
+.tv-screen{flex:1;margin:14px 14px 6px;background:#000;border-radius:10px;position:relative;overflow:hidden}
+.tv-screen::before{content:'';position:absolute;inset:0;z-index:90;pointer-events:none;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.12) 2px,rgba(0,0,0,0.12) 4px)}
+.tv-screen::after{content:'';position:absolute;inset:0;z-index:91;pointer-events:none;background:radial-gradient(ellipse at center,transparent 55%,rgba(0,0,0,0.5) 100%)}
+canvas#noise{position:absolute;inset:0;z-index:5;opacity:0.08}
+
+#game{position:absolute;inset:0;z-index:20;display:flex;flex-direction:column;padding:16px;overflow:hidden}
+
+.tv-bar{height:40px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;background:#111;border-top:1px solid #222}
+.tv-bar span{font-size:10px;letter-spacing:0.2em;color:#444;text-transform:uppercase}
+
+/* HUD */
+.hud{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,0.04)}
+.hud-label{font-size:11px;letter-spacing:0.2em;color:var(--dim);text-transform:uppercase}
+.signal-bar{width:140px;height:6px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.1);border-radius:3px;overflow:hidden}
+.signal-fill{height:100%;background:linear-gradient(90deg,var(--red),var(--gold),var(--green));border-radius:3px;transition:width 0.6s ease;box-shadow:0 0 8px rgba(168,230,163,0.3)}
+.hud-right{text-align:right}
+.attempts-text{font-size:13px;color:var(--dim)}
+
+/* Main content area */
+.content-area{flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;position:relative;overflow:hidden}
+
+/* Static bands that cover truths */
+.truth-panel{
+width:90%;max-width:440px;
+position:relative;
+margin-bottom:16px;
+min-height:60px;
+}
+.truth-text{
+font-family:'Cormorant Garamond',serif;
+font-size:clamp(15px,2.2vw,19px);
+line-height:1.8;
+color:var(--warm);
+text-align:center;
+padding:14px 20px;
+background:rgba(255,255,255,0.02);
+border:1px solid rgba(255,255,255,0.04);
+opacity:0;
+transition:opacity 0.8s ease;
+}
+.truth-text.revealed{opacity:1}
+.truth-text .hl{color:var(--green)}
+.truth-text .gold{color:var(--gold)}
+
+.static-band{
+position:absolute;inset:0;
+background:repeating-linear-gradient(0deg,
+rgba(255,255,255,0.06) 0px,rgba(0,0,0,0.3) 2px,
+rgba(255,255,255,0.04) 4px,rgba(0,0,0,0.2) 6px);
+z-index:5;
+transition:opacity 0.8s ease;
+display:flex;justify-content:center;align-items:center;
+}
+.static-band.cleared{opacity:0;pointer-events:none}
+.static-band-text{font-size:12px;color:var(--red);letter-spacing:0.15em;opacity:0.7;text-shadow:0 0 4px var(--red)}
+
+/* Puzzle area */
+.puzzle-box{
+width:90%;max-width:440px;
+background:rgba(0,0,0,0.3);
+border:1px dashed rgba(255,255,255,0.08);
+border-radius:4px;
+padding:16px;
+text-align:center;
+}
+.puzzle-type{font-size:11px;letter-spacing:0.2em;color:var(--blue);margin-bottom:8px;text-transform:uppercase}
+.puzzle-prompt{font-size:16px;color:var(--static-w);line-height:1.6;margin-bottom:12px}
+.puzzle-hint{font-size:13px;color:var(--dim);margin-top:10px;opacity:0;transition:opacity 0.5s}
+.puzzle-hint.visible{opacity:1}
+
+/* Input */
+.input-row{display:flex;gap:6px;justify-content:center;margin-bottom:10px;flex-wrap:wrap}
+.input-display{
+font-size:24px;letter-spacing:0.15em;
+color:var(--static-w);
+min-width:160px;text-align:center;
+border-bottom:2px solid rgba(255,255,255,0.15);
+padding:6px 4px;
+transition:all 0.3s;
+min-height:38px;
+}
+.input-display.correct{color:var(--green);border-color:var(--green);text-shadow:0 0 10px var(--green)}
+.input-display.wrong{color:var(--red);border-color:var(--red)}
+
+/* Keypad */
+.keypad{display:grid;gap:4px;margin-top:8px;max-width:340px;margin-left:auto;margin-right:auto}
+.keypad.num{grid-template-columns:repeat(3,1fr)}
+.keypad.alpha{grid-template-columns:repeat(7,1fr)}
+.key{
+padding:10px 4px;
+background:rgba(255,255,255,0.02);
+border:1px solid rgba(255,255,255,0.06);
+border-radius:3px;
+color:var(--cyan);
+font-family:'VT323';font-size:15px;
+cursor:pointer;text-align:center;
+transition:all 0.12s;
+}
+.key:hover{border-color:var(--cyan);box-shadow:0 0 12px rgba(0,212,170,0.15)}
+.key:active{transform:scale(0.94);background:var(--cyan);color:#000}
+.key.act-clear{color:var(--red);border-color:rgba(204,68,68,0.3)}
+.key.act-enter{grid-column:span 2;color:var(--green);border-color:rgba(168,230,163,0.3)}
+
+/* Narrator text */
+.narrator-line{
+font-size:14px;color:var(--dim);text-align:center;
+margin-top:10px;min-height:20px;
+font-style:italic;
+}
+
+/* Completion overlay */
+.complete-overlay{
+position:absolute;inset:0;z-index:40;
+background:rgba(0,0,0,0.92);
+display:flex;flex-direction:column;
+justify-content:center;align-items:center;
+padding:24px;text-align:center;
+opacity:0;pointer-events:none;
+transition:opacity 1s;
+}
+.complete-overlay.visible{opacity:1;pointer-events:auto}
+.complete-title{font-size:24px;color:var(--green);letter-spacing:0.2em;margin-bottom:16px;text-shadow:0 0 10px rgba(168,230,163,0.3)}
+.complete-text{font-family:'Cormorant Garamond',serif;font-size:17px;line-height:2;color:var(--warm);max-width:440px}
+.complete-text .gold{color:var(--gold)}
+.eject-btn{
+margin-top:24px;padding:10px 28px;
+background:transparent;border:1px solid var(--dim);
+color:var(--dim);font-family:'VT323';font-size:15px;
+cursor:pointer;letter-spacing:0.15em;transition:all 0.3s;
+}
+.eject-btn:hover{border-color:var(--green);color:var(--green)}
+
+.back-btn{position:fixed;top:10px;left:10px;z-index:200;background:rgba(0,0,0,0.6);border:1px solid #333;color:#666;font-family:'VT323';font-size:13px;padding:4px 10px;cursor:pointer;text-decoration:none}
+.back-btn:hover{color:var(--green);border-color:var(--green)}
+
+@media(max-width:600px){
+.tv-body{width:98vw;border-radius:12px;margin-top:4px}
+.tv-screen{margin:8px 8px 4px}
+.keypad.alpha{grid-template-columns:repeat(6,1fr)}
+.key{padding:12px 3px;font-size:14px}
+}
+</style>
 </head>
 <body>
-    <div id="ui">
-        <h1>THE FORTRESS</h1>
-        <p>You built walls to survive. Deflect the negativity.<br>[Move Mouse/Touch to Rotate Shield]</p>
-        <div id="hp">INTEGRITY: 100%</div>
-    </div>
-    <canvas id="c"></canvas>
-    <a href="index.html" id="back-btn">THREAT NEUTRALIZED. RETURN.</a>
+<a href="index.html" class="back-btn">◀ EJECT</a>
 
-    <script>
-        const c = document.getElementById('c');
-        const ctx = c.getContext('2d');
-        let w, h;
-        
-        let angle = 0;
-        let hp = 100;
-        let threats = [];
-        let score = 0;
-        let state = 'playing'; // playing, win, over
+<div class="tv-body">
+<div class="tv-screen">
+<canvas id="noise"></canvas>
+<div id="game">
+<!-- HUD -->
+<div class="hud">
+<div>
+<div class="hud-label">Signal Clarity</div>
+<div class="signal-bar"><div class="signal-fill" id="signal-fill" style="width:0%"></div></div>
+</div>
+<div class="hud-right">
+<div class="hud-label">Layer <span id="layer-num">1</span>/5</div>
+<div class="attempts-text" id="attempts-text"></div>
+</div>
+</div>
 
-        const resize = () => {
-            w = c.width = window.innerWidth > 800 ? 800 : window.innerWidth - 40;
-            h = c.height = 600;
-        };
+<!-- Content -->
+<div class="content-area" id="content-area">
+<!-- Dynamic content injected by JS -->
+</div>
 
-        const spawnThreat = () => {
-            if(state !== 'playing') return;
-            const a = Math.random() * Math.PI * 2;
-            const r = 400;
-            threats.push({
-                x: w/2 + Math.cos(a) * r,
-                y: h/2 + Math.sin(a) * r,
-                vx: -Math.cos(a) * 3,
-                vy: -Math.sin(a) * 3,
-                text: ["FAKE", "EXCLUDED", "RUDE", "ALONE"][Math.floor(Math.random()*4)],
-                active: true
-            });
-            if(score < 10) setTimeout(spawnThreat, 1000);
-        };
+<div class="narrator-line" id="narrator"></div>
+</div>
 
-        // Audio
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        const sfx = (freq) => {
-            if(audioCtx.state === 'suspended') audioCtx.resume();
-            const o = audioCtx.createOscillator();
-            const g = audioCtx.createGain();
-            o.type = 'sawtooth';
-            o.frequency.setValueAtTime(freq, audioCtx.currentTime);
-            o.frequency.exponentialRampToValueAtTime(freq/2, audioCtx.currentTime + 0.1);
-            g.gain.value = 0.1;
-            g.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.1);
-            o.connect(g); g.connect(audioCtx.destination);
-            o.start(); o.stop(audioCtx.currentTime + 0.1);
-        };
+<!-- Completion -->
+<div class="complete-overlay" id="complete-overlay">
+<div class="complete-title">SIGNAL RESTORED</div>
+<div class="complete-text" id="complete-text"></div>
+<button class="eject-btn" id="eject-btn">◀ EJECT TAPE</button>
+</div>
+</div>
+<div class="tv-bar">
+<span>TRACKING — FIX THE SIGNAL</span>
+<span id="counter">00:00</span>
+</div>
+</div>
 
-        const update = () => {
-            if(state !== 'playing') return;
+<audio id="bgm" loop preload="auto">
+<source src="fallen-down.mp3" type="audio/mpeg">
+</audio>
 
-            threats.forEach(t => {
-                if(!t.active) return;
-                t.x += t.vx;
-                t.y += t.vy;
+<script>
+'use strict';
+/*═══════════════════════════════════════════
+  A2: TRACKING — FIX THE SIGNAL
+  Persistence-based puzzles that clear static
+  to reveal truths. Not genius-level — achievable
+  but requiring patience. Like her journey.
+═══════════════════════════════════════════*/
 
-                const dx = t.x - w/2;
-                const dy = t.y - h/2;
-                const dist = Math.sqrt(dx*dx + dy*dy);
+const $=id=>document.getElementById(id);
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 
-                // Shield Hit Check (Shield is approx +/- 45 deg from mouse angle)
-                if(dist < 60 && dist > 40) {
-                    const threatAngle = Math.atan2(dy, dx);
-                    let diff = threatAngle - angle;
-                    while(diff < -Math.PI) diff += Math.PI*2;
-                    while(diff > Math.PI) diff -= Math.PI*2;
+// ── Noise ──
+const Noise=(()=>{
+const c=$('noise');const ctx=c.getContext('2d');
+let w=0,h=0;
+const resize=()=>{const r=c.parentElement.getBoundingClientRect();w=c.width=r.width;h=c.height=r.height};
+const draw=()=>{const img=ctx.createImageData(w,h);const d=img.data;for(let i=0;i<d.length;i+=4){const v=Math.random()*255;d[i]=d[i+1]=d[i+2]=v;d[i+3]=Math.random()*20}ctx.putImageData(img,0,0);requestAnimationFrame(draw)};
+window.addEventListener('resize',resize);
+return{init:()=>{resize();draw()}};
+})();
 
-                    if(Math.abs(diff) < 1) { // Blocked
-                        t.active = false;
-                        t.vx *= -1.5; t.vy *= -1.5; // Bounce visuals
-                        sfx(440);
-                        score++;
-                        if(score >= 10) win();
-                    }
-                }
+// ── Audio ──
+const bgm=$('bgm');
+const startAudio=()=>{bgm.volume=0.28;bgm.play().catch(()=>{})};
 
-                // Core Hit
-                if(dist < 20) {
-                    t.active = false;
-                    hp -= 20;
-                    document.getElementById('hp').innerText = `INTEGRITY: ${hp}%`;
-                    sfx(100);
-                    c.style.transform = `translate(${Math.random()*10-5}px, ${Math.random()*10-5}px)`;
-                    setTimeout(() => c.style.transform = 'none', 50);
-                    if(hp <= 0) {
-                        state = 'over';
-                        document.querySelector('p').innerText = "Don't let them break you. Refresh to try again.";
-                    }
-                }
-            });
-        };
+// ── Counter ──
+let secs=0;
+setInterval(()=>{secs++;const m=String(Math.floor(secs/60)).padStart(2,'0');const s=String(secs%60).padStart(2,'0');$('counter').textContent=`${m}:${s}`},1000);
 
-        const win = () => {
-            state = 'win';
-            threats = [];
-            document.querySelector('h1').innerText = "SHIELD NOT REQUIRED";
-            document.querySelector('p').innerText = "You realized: Your value cannot be damaged by words. The 'Tough Cookie' shell protected you, but your core is diamond.";
-            document.getElementById('back-btn').style.display = 'block';
-        };
+// ── Puzzle Data ──
+// Each layer: a lie (shown on static band), a puzzle to solve, and a truth revealed when solved
+// Puzzles are PERSISTENCE-based, not genius-level
 
-        const draw = () => {
-            ctx.fillStyle = 'rgba(16,0,0,0.3)';
-            ctx.fillRect(0,0,w,h);
+const LAYERS=[
+{
+lie:"She will never be good enough.",
+puzzle:{
+type:'PATTERN RECOGNITION',
+prompt:'The sequence adds 3, then 5, then 3, then 5...<br><span style="color:var(--gold)">2, 5, 10, 13, 18, ?</span>',
+answer:'21',
+mode:'num',
+hint:'Add 3 to 18.',
+narratorIntro:'The first band of static hums with a familiar lie.',
+narratorSolve:'The static peels away like old paint.'
+},
+truth:'Showing up <span class="hl">every single day</span> — even when you doubt yourself — is not weakness. It is the definition of strength.'
+},
+{
+lie:"Everyone else finds it easy.",
+puzzle:{
+type:'WORD RECOVERY',
+prompt:'The static scrambled a word. Unscramble it:<br><span style="color:var(--gold)">E F F O R T</span><br>Rearranged: T O F F E R',
+answer:'EFFORT',
+mode:'alpha',
+hint:'It means the energy you put into something. 6 letters.',
+narratorIntro:'The second lie is one you have heard a thousand times.',
+narratorSolve:'Nobody finds it easy. Some are just better at hiding the struggle.'
+},
+truth:'Nobody who achieved anything <span class="hl">real</span> found it easy. They simply chose not to stop. <span class="gold">So did you.</span>'
+},
+{
+lie:"If you fail this, you fail everything.",
+puzzle:{
+type:'LOGIC',
+prompt:'True or False:<br>"A single exam result defines your entire future."',
+answer:'FALSE',
+mode:'tf',
+hint:'Think carefully. Does one moment truly erase everything you have built?',
+narratorIntro:'This lie is the loudest. It echoes in exam halls and quiet bedrooms alike.',
+narratorSolve:'One result is a data point. Not a verdict.'
+},
+truth:'A single result is a <span class="hl">moment</span>. Your trajectory is made of hundreds of moments. One bad day does not erase the hundreds of good ones.'
+},
+{
+lie:"You need someone else to be strong.",
+puzzle:{
+type:'COMPLETION',
+prompt:'Complete the sentence:<br>"The person who kept going when nobody was watching was ___."',
+answer:'ME',
+mode:'alpha',
+hint:'Two letters. First person. Not him. Not them.',
+narratorIntro:'This one is quieter than the others. Almost gentle. Almost true.',
+narratorSolve:'He is there. He loves you. But the engine is yours.'
+},
+truth:'Love is not a crutch. It is a <span class="hl">witness</span>. The person who wakes up, studies, tries, fails, and tries again — that person is <span class="gold">you</span>. Remove everyone else from the equation, and you are still standing.'
+},
+{
+lie:"You are average. Average people do not reach the stars.",
+puzzle:{
+type:'REFRAME',
+prompt:'What do you call someone average who refuses to quit?',
+answer:'UNSTOPPABLE',
+mode:'alpha',
+hint:'11 letters. Starts with U. Means nothing can hold them back.',
+narratorIntro:'The final band is the thickest. The oldest. The most believed.',
+narratorSolve:'Average is a starting point. Not a ceiling.'
+},
+truth:'"Average" is a word other people use to describe where you <span class="hl">started</span>. It has never described where you are <span class="gold">going</span>.'
+}
+];
 
-            const cx = w/2, cy = h/2;
+// ── Game State ──
+let currentLayer=0;
+let input='';
+let attempts=0;
+let totalAttempts=0;
+let hintShown=false;
+let signalPct=0;
 
-            // Draw Core (Anushri)
-            ctx.beginPath();
-            ctx.arc(cx, cy, 15, 0, Math.PI*2);
-            ctx.fillStyle = '#fff';
-            ctx.shadowBlur = 20; ctx.shadowColor = '#fff';
-            ctx.fill();
-            ctx.shadowBlur = 0;
+// ── DOM refs ──
+const contentArea=$('content-area');
+const narratorEl=$('narrator');
+const signalFill=$('signal-fill');
+const layerNum=$('layer-num');
+const attemptsText=$('attempts-text');
 
-            // Draw Shield
-            ctx.beginPath();
-            ctx.arc(cx, cy, 50, angle - 1, angle + 1);
-            ctx.strokeStyle = '#FF3366';
-            ctx.lineWidth = 5;
-            ctx.stroke();
+// ── Render ──
+const updateSignal=()=>{
+signalPct=Math.round((currentLayer/LAYERS.length)*100);
+signalFill.style.width=signalPct+'%';
+};
 
-            // Draw Threats
-            ctx.font = '12px monospace';
-            ctx.textAlign = 'center';
-            threats.forEach(t => {
-                if(!t.active) return;
-                ctx.fillStyle = '#f00';
-                ctx.fillText(t.text, t.x, t.y);
-            });
+const setNarrator=(text)=>{narratorEl.textContent=text};
 
-            requestAnimationFrame(draw);
-        };
+const renderLayer=(idx)=>{
+const L=LAYERS[idx];
+input='';
+attempts=0;
+hintShown=false;
+layerNum.textContent=idx+1;
+attemptsText.textContent='';
 
-        const loop = () => {
-            update();
-            draw();
-            if(state === 'playing') requestAnimationFrame(loop);
-        };
+contentArea.innerHTML='';
 
-        c.addEventListener('mousemove', e => {
-            const rect = c.getBoundingClientRect();
-            const dx = e.clientX - rect.left - w/2;
-            const dy = e.clientY - rect.top - h/2;
-            angle = Math.atan2(dy, dx);
-        });
-        
-        c.addEventListener('touchmove', e => {
-            e.preventDefault();
-            const rect = c.getBoundingClientRect();
-            const dx = e.touches[0].clientX - rect.left - w/2;
-            const dy = e.touches[0].clientY - rect.top - h/2;
-            angle = Math.atan2(dy, dx);
-        });
+// Truth panel (hidden under static)
+const truthPanel=document.createElement('div');
+truthPanel.className='truth-panel';
 
-        window.addEventListener('resize', resize);
-        resize();
-        spawnThreat();
-        draw();
-        setInterval(update, 16);
+const truthText=document.createElement('div');
+truthText.className='truth-text';
+truthText.innerHTML=L.truth;
 
-    </script>
+const staticBand=document.createElement('div');
+staticBand.className='static-band';
+staticBand.id='static-band';
+const bandText=document.createElement('div');
+bandText.className='static-band-text';
+bandText.textContent=L.lie;
+staticBand.appendChild(bandText);
+
+truthPanel.appendChild(truthText);
+truthPanel.appendChild(staticBand);
+contentArea.appendChild(truthPanel);
+
+// Puzzle box
+const puzzleBox=document.createElement('div');
+puzzleBox.className='puzzle-box';
+
+const pType=document.createElement('div');
+pType.className='puzzle-type';
+pType.textContent=L.puzzle.type;
+
+const pPrompt=document.createElement('div');
+pPrompt.className='puzzle-prompt';
+pPrompt.innerHTML=L.puzzle.prompt;
+
+const inputDisplay=document.createElement('div');
+inputDisplay.className='input-display';
+inputDisplay.id='input-display';
+
+const pHint=document.createElement('div');
+pHint.className='puzzle-hint';
+pHint.id='puzzle-hint';
+pHint.textContent='HINT: '+L.puzzle.hint;
+
+puzzleBox.appendChild(pType);
+puzzleBox.appendChild(pPrompt);
+puzzleBox.appendChild(inputDisplay);
+
+// Build keypad
+const keypad=document.createElement('div');
+keypad.className='keypad';
+
+if(L.puzzle.mode==='num'){
+keypad.classList.add('num');
+'123456789'.split('').forEach(k=>keypad.appendChild(makeKey(k)));
+keypad.appendChild(makeKey('CLR','act-clear'));
+keypad.appendChild(makeKey('0'));
+keypad.appendChild(makeKey('ENT','act-enter'));
+}else if(L.puzzle.mode==='alpha'){
+keypad.classList.add('alpha');
+'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').forEach(k=>keypad.appendChild(makeKey(k)));
+keypad.appendChild(makeKey('CLR','act-clear'));
+keypad.appendChild(makeKey('ENT','act-enter'));
+}else if(L.puzzle.mode==='tf'){
+keypad.classList.add('num');
+keypad.style.gridTemplateColumns='1fr 1fr';
+keypad.appendChild(makeKey('TRUE'));
+keypad.appendChild(makeKey('FALSE'));
+}
+
+puzzleBox.appendChild(keypad);
+puzzleBox.appendChild(pHint);
+contentArea.appendChild(puzzleBox);
+
+setNarrator(L.puzzle.narratorIntro);
+};
+
+const makeKey=(label,cls='')=>{
+const btn=document.createElement('button');
+btn.className='key'+(cls?' '+cls:'');
+btn.textContent=label;
+btn.addEventListener('click',()=>handleInput(label));
+return btn;
+};
+
+const handleInput=(key)=>{
+const L=LAYERS[currentLayer];
+
+if(L.puzzle.mode==='tf'){
+checkAnswer(key);
+return;
+}
+
+if(key==='CLR'){input='';updateInputDisplay();return}
+if(key==='ENT'){checkAnswer(input);return}
+if(input.length<16){input+=key;updateInputDisplay()}
+};
+
+const updateInputDisplay=()=>{
+const el=$('input-display');
+if(el){el.textContent=input;el.className='input-display'}
+};
+
+const checkAnswer=(userAnswer)=>{
+const L=LAYERS[currentLayer];
+const correct=L.puzzle.answer.toUpperCase();
+const given=(typeof userAnswer==='string'?userAnswer:'').toUpperCase().trim();
+
+attempts++;
+totalAttempts++;
+
+if(given===correct){
+handleCorrect();
+}else{
+handleWrong();
+}
+};
+
+const handleCorrect=async()=>{
+const el=$('input-display');
+if(el){el.textContent='✓ CORRECT';el.className='input-display correct'}
+
+setNarrator(LAYERS[currentLayer].puzzle.narratorSolve);
+
+// Clear static band
+await sleep(400);
+const band=$('static-band');
+if(band)band.classList.add('cleared');
+
+// Reveal truth
+await sleep(600);
+const truth=contentArea.querySelector('.truth-text');
+if(truth)truth.classList.add('revealed');
+
+await sleep(2500);
+
+currentLayer++;
+updateSignal();
+
+if(currentLayer>=LAYERS.length){
+showCompletion();
+}else{
+renderLayer(currentLayer);
+}
+};
+
+const handleWrong=async()=>{
+const el=$('input-display');
+if(el){el.textContent='✗ TRY AGAIN';el.className='input-display wrong'}
+
+attemptsText.textContent=`Attempts: ${attempts}`;
+
+// Show hint after 2 failures
+if(attempts>=2&&!hintShown){
+hintShown=true;
+const h=$('puzzle-hint');
+if(h)h.classList.add('visible');
+setNarrator('It is okay to need a hint. Asking for help is not failure.');
+}else{
+setNarrator('Not quite. But you are still trying. That matters.');
+}
+
+await sleep(800);
+input='';
+updateInputDisplay();
+};
+
+const showCompletion=async()=>{
+const overlay=$('complete-overlay');
+const textEl=$('complete-text');
+
+// Determine message based on total attempts
+let msg;
+if(totalAttempts<=LAYERS.length+2){
+msg='You cleared every band of static with barely a stumble.<br><br>But here is the thing — <span class="gold">speed was never the point</span>.<br><br>The point is that you did not walk away from a single one.';
+}else if(totalAttempts<=LAYERS.length+8){
+msg='Some of those took more than one try.<br><br>You know what that means?<br><br>It means you <span class="gold">tried more than once</span>.<br><br>That is not failure. That is the entire definition of persistence.';
+}else{
+msg='That was hard. Some of those puzzles fought back.<br><br>You could have quit at any point. You could have ejected the tape.<br><br>But you stayed. You tried again. And again.<br><br>And now the signal is <span class="gold">clear</span>.<br><br>Just like it will be for you.';
+}
+
+textEl.innerHTML=msg;
+overlay.classList.add('visible');
+
+$('eject-btn').addEventListener('click',()=>{
+try{
+const s=JSON.parse(localStorage.getItem('anushri_tapes')||'{}');
+s.A2=true;s.A2_attempts=totalAttempts;
+localStorage.setItem('anushri_tapes',JSON.stringify(s));
+}catch{}
+window.location.href='index.html';
+});
+};
+
+// ── Keyboard support ──
+document.addEventListener('keydown',e=>{
+const key=e.key.toUpperCase();
+if(key==='BACKSPACE'){input='';updateInputDisplay();return}
+if(key==='ENTER'){
+const L=LAYERS[currentLayer];
+if(L.puzzle.mode==='tf')return;
+checkAnswer(input);
+return;
+}
+if(/^[A-Z0-9]$/.test(key)){
+const L=LAYERS[currentLayer];
+if(L.puzzle.mode==='num'&&!/[0-9]/.test(key))return;
+if(input.length<16){input+=key;updateInputDisplay()}
+}
+});
+
+// ── Init ──
+Noise.init();
+startAudio();
+updateSignal();
+renderLayer(0);
+</script>
 </body>
 </html>
