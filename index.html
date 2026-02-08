@@ -3,1620 +3,1011 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ANUSHRI_ARCHIVE.vhs</title>
+    <title>ANUSHRI_ARCHIVE_REMASTERED</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+        /* --- TYPOGRAPHY --- */
+        @import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=VT323&display=swap');
 
         :root {
-            --phosphor: #4af626;
-            --phosphor-dim: #1e5c12;
-            --phosphor-bright: #afffa1;
-            --gold: #ffb84d;
+            --phosphor-main: #33ff00;
+            --phosphor-dim: #1a8000;
+            --phosphor-bloom: #ccffb3;
+            --alert: #ff3333;
+            --gold: #ffcc00;
+            --chassis: #111;
+            --chassis-light: #222;
+            --bg-grain: #050505;
         }
 
-        * { box-sizing: border-box; user-select: none; -webkit-user-drag: none; margin: 0; padding: 0; }
-
+        /* --- GLOBAL RESET & AESTHETICS --- */
+        * { box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; cursor: crosshair; }
+        
         body {
-            background: #060606;
+            background-color: var(--bg-grain);
+            margin: 0;
             height: 100vh;
             overflow: hidden;
-            font-family: 'VT323', monospace;
+            font-family: 'Space Mono', monospace;
+            color: #ccc;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: var(--phosphor);
         }
 
-        /* --- BOOT OVERLAY --- */
-        #boot-overlay {
-            position: fixed; inset: 0; z-index: 9999;
-            background: #000;
-            display: flex; flex-direction: column;
-            align-items: center; justify-content: center;
-            cursor: pointer;
-            transition: opacity 0.8s;
-        }
-        #boot-overlay.hidden { opacity: 0; pointer-events: none; }
-        #boot-overlay h1 {
-            font-size: 3rem; color: var(--phosphor);
-            text-shadow: 0 0 20px var(--phosphor), 0 0 40px var(--phosphor-dim);
-            animation: flicker 3s infinite;
-        }
-        #boot-overlay p { color: #555; font-size: 1.2rem; margin-top: 20px; animation: blink 1.5s infinite; }
-
-        @keyframes flicker {
-            0%, 100% { opacity: 1; }
-            92% { opacity: 1; }
-            93% { opacity: 0.3; }
-            94% { opacity: 1; }
-            96% { opacity: 0.7; }
-            97% { opacity: 1; }
-        }
-        @keyframes blink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
-        @keyframes pulse-glow {
-            0%, 100% { box-shadow: 0 0 5px rgba(74,246,38,0.3); }
-            50% { box-shadow: 0 0 15px rgba(74,246,38,0.6), 0 0 30px rgba(74,246,38,0.2); }
+        /* Film Grain Overlay */
+        body::after {
+            content: "";
+            position: absolute; inset: 0;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.08'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 9999;
         }
 
-        /* --- LAYOUT --- */
-        #station {
+        /* --- LAYOUT GRID --- */
+        #workspace {
             display: grid;
-            grid-template-columns: 1fr 300px;
-            grid-template-rows: 1fr 140px;
-            gap: 16px;
-            width: 95vw;
-            max-width: 1200px;
-            height: 88vh;
-            max-height: 820px;
+            grid-template-columns: 1fr 320px;
+            grid-template-rows: 1fr 160px;
+            gap: 24px;
+            width: 96vw;
+            height: 92vh;
+            max-width: 1400px;
+            position: relative;
         }
 
-        /* --- TV UNIT --- */
-        .tv-unit {
+        /* --- COMPONENT: THE MONITOR (TV) --- */
+        .monitor-casing {
             grid-column: 1;
             grid-row: 1 / span 2;
-            background: linear-gradient(145deg, #1a1a1a, #0d0d0d);
-            border-radius: 24px;
-            border: 3px solid #2a2a2a;
-            box-shadow: inset 0 0 60px #000, 0 10px 60px rgba(0,0,0,0.9);
+            background: #1a1a1a;
+            border-radius: 32px;
+            padding: 32px;
+            box-shadow: 
+                inset 0 0 80px #000,
+                0 20px 50px rgba(0,0,0,0.8),
+                0 0 0 4px #2a2a2a;
             position: relative;
             display: flex;
             flex-direction: column;
-            padding: 28px;
         }
 
         .screen-bezel {
             flex: 1;
             background: #000;
-            border-radius: 12px;
+            border-radius: 60% 60% 60% 60% / 10% 10% 10% 10%; /* Subtle CRT curve */
+            border-radius: 16px; /* Modern fallback */
             position: relative;
             overflow: hidden;
-            border: 3px solid #1a1a1a;
-            box-shadow: inset 0 0 30px rgba(0,0,0,0.9), 0 0 2px rgba(74,246,38,0.1);
+            border: 8px solid #0f0f0f;
+            box-shadow: inset 0 0 20px rgba(0,0,0,1);
         }
 
-        canvas#crt {
+        canvas#crt-canvas {
             display: block;
             width: 100%;
             height: 100%;
+            filter: contrast(1.1) brightness(1.2) saturate(1.1);
         }
 
-        .scanlines {
-            position: absolute; inset: 0; pointer-events: none; z-index: 10;
-            background: repeating-linear-gradient(
-                0deg,
-                transparent,
-                transparent 2px,
-                rgba(0,0,0,0.15) 2px,
-                rgba(0,0,0,0.15) 4px
-            );
-            opacity: 0.5;
+        /* CRT Effects Layer */
+        .crt-overlay {
+            position: absolute; inset: 0; pointer-events: none;
+            background: 
+                linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
+                linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            background-size: 100% 2px, 3px 100%;
+            mix-blend-mode: overlay;
+        }
+        
+        .screen-glare {
+            position: absolute; inset: 0; pointer-events: none;
+            background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.05), transparent 40%);
         }
 
-        .vignette {
-            position: absolute; inset: 0; pointer-events: none; z-index: 11;
-            background: radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.85) 100%);
-        }
-
-        .glass-glare {
-            position: absolute; inset: 0; pointer-events: none; z-index: 12;
-            background: linear-gradient(135deg, rgba(255,255,255,0.04) 0%, transparent 35%);
-        }
-
-        /* --- HUD OVERLAY --- */
-        #game-ui {
-            position: absolute; top: 20px; left: 20px; right: 20px; bottom: 20px;
-            pointer-events: none; z-index: 20;
-            display: flex; flex-direction: column; justify-content: space-between;
-        }
-
-        .channel-id {
-            color: var(--phosphor-dim); font-size: 1.8rem; opacity: 0.6;
-            text-shadow: 0 0 4px var(--phosphor-dim);
-        }
-
-        .subtitle-box {
-            align-self: center; text-align: center;
-            color: var(--phosphor-bright);
-            font-size: 1.4rem;
-            text-shadow: 0 0 10px var(--phosphor);
-            background: rgba(0,0,0,0.7);
-            padding: 10px 24px;
-            border-radius: 4px;
-            opacity: 0; transition: opacity 0.4s;
-            max-width: 80%;
-        }
-
-        .rec-indicator {
-            position: absolute; top: 20px; right: 20px;
-            color: #f00; font-size: 1.2rem; opacity: 0;
-            transition: opacity 0.3s;
-        }
-        .rec-indicator.on { opacity: 1; animation: blink 1s infinite; }
-
-        /* --- TAPE RACK --- */
+        /* --- COMPONENT: TAPE RACK --- */
         .tape-rack {
-            grid-column: 2; grid-row: 1;
-            background: linear-gradient(180deg, #141414, #0e0e0e);
-            border: 2px solid #2a2a2a;
+            grid-column: 2;
+            grid-row: 1;
+            background: #111;
+            border: 1px solid #333;
             border-radius: 8px;
-            padding: 16px;
-            display: flex; flex-direction: column;
-            gap: 12px;
-            overflow-y: auto;
-            box-shadow: inset 0 0 25px #000;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            box-shadow: inset 0 0 30px #000;
         }
 
-        .tape-rack::-webkit-scrollbar { width: 6px; }
-        .tape-rack::-webkit-scrollbar-track { background: #111; }
-        .tape-rack::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
-
-        .rack-label {
-            color: #444; text-align: center;
-            border-bottom: 1px solid #2a2a2a;
-            padding-bottom: 8px; margin-bottom: 4px;
-            letter-spacing: 3px; font-size: 14px;
+        .rack-header {
+            color: #555;
+            font-size: 0.8rem;
+            letter-spacing: 2px;
+            text-align: center;
+            border-bottom: 1px solid #222;
+            padding-bottom: 10px;
+            margin-bottom: 10px;
         }
 
-        /* --- VHS TAPE --- */
-        .vhs-tape {
-            min-height: 100px;
-            background: linear-gradient(180deg, #222, #181818);
-            border-radius: 5px;
+        /* --- COMPONENT: PHYSICAL TAPE --- */
+        .tape-obj {
+            width: 100%;
+            height: 100px;
+            background: #222;
+            border-radius: 6px;
             border: 1px solid #333;
             position: relative;
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s, border-color 0.3s;
-            display: flex; flex-direction: column;
-            align-items: center; justify-content: center;
-            box-shadow: 2px 4px 12px rgba(0,0,0,0.6);
-            flex-shrink: 0;
+            cursor: grab;
+            touch-action: none; /* Critical for custom drag */
+            transition: box-shadow 0.2s;
+            box-shadow: 2px 4px 10px #000;
         }
 
-        .vhs-tape:hover {
-            transform: translateY(-2px) scale(1.02);
-            box-shadow: 2px 6px 20px rgba(0,0,0,0.8);
+        .tape-obj:hover {
             border-color: #555;
+            box-shadow: 4px 8px 15px rgba(0,0,0,0.5);
         }
-        .vhs-tape:active { transform: scale(0.97); }
-        .vhs-tape.selected {
-            border-color: var(--phosphor);
-            animation: pulse-glow 1.5s infinite;
-        }
-        .vhs-tape.completed {
-            border-color: #444;
-        }
-        .vhs-tape.completed::after {
-            content: '✓ VIEWED';
-            position: absolute; bottom: 4px; right: 8px;
-            font-size: 10px; color: var(--phosphor-dim);
-        }
-        .vhs-tape.playing { display: none; }
 
+        .tape-obj.dragging {
+            cursor: grabbing;
+            z-index: 1000;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.8);
+            transform: scale(1.05);
+        }
+        
+        .tape-obj.in-machine {
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s;
+        }
+
+        /* Tape Details */
         .tape-window {
-            position: absolute; top: 12px; left: 12%; width: 76%; height: 30px;
-            background: #111; border-radius: 3px; overflow: hidden;
-            border: 1px solid #2a2a2a;
+            position: absolute; top: 15px; left: 10%; width: 80%; height: 25px;
+            background: #000; border-radius: 2px; border: 1px solid #333;
+            display: flex; justify-content: space-between; padding: 0 15%; align-items: center;
         }
-        .tape-reel {
-            position: absolute; top: 50%; width: 18px; height: 18px;
-            border: 2px solid #444; border-radius: 50%;
-            transform: translateY(-50%);
-        }
-        .tape-reel.left { left: 15%; }
-        .tape-reel.right { right: 15%; }
-        .tape-reel::after {
-            content: ''; position: absolute; inset: 4px;
-            border: 1px solid #333; border-radius: 50%;
-        }
-
-        .tape-label-sticker {
-            background: #f0eee8;
-            color: #111;
-            padding: 4px 10px;
-            margin-top: 32px;
-            width: 82%;
-            text-align: center;
-            font-family: 'VT323', monospace;
-            font-weight: bold;
-            font-size: 13px;
-            transform: rotate(-0.5deg);
-            box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+        .tape-spool { width: 20px; height: 20px; border-radius: 50%; border: 2px solid #fff; opacity: 0.2; }
+        
+        .tape-label {
+            position: absolute; bottom: 15px; left: 5%; width: 90%;
+            background: #f0f0f0; color: #111;
+            font-family: 'Space Mono', monospace; font-weight: 700; font-size: 0.8rem;
+            padding: 4px 8px; text-align: center;
             border-radius: 2px;
-            line-height: 1.3;
+            transform: rotate(-0.5deg);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.3);
         }
 
-        /* --- VCR PLAYER --- */
-        .vcr-player {
-            grid-column: 2; grid-row: 2;
-            background: linear-gradient(180deg, #1c1c1c, #141414);
-            border: 2px solid #2a2a2a;
-            border-radius: 6px;
-            display: flex; flex-direction: column;
-            align-items: center; justify-content: center;
+        /* --- COMPONENT: VCR DECK --- */
+        .vcr-deck {
+            grid-column: 2;
+            grid-row: 2;
+            background: linear-gradient(to bottom, #222, #111);
+            border-radius: 8px;
+            border: 1px solid #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
             position: relative;
-            box-shadow: 0 -4px 15px rgba(0,0,0,0.5);
-            gap: 8px;
-            padding: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
 
-        .slot-mouth {
-            width: 82%; height: 26px;
-            background: #050505;
-            border: 1px solid #3a3a3a;
+        .slot-housing {
+            width: 85%; height: 40px;
+            background: #000;
+            border: 2px solid #333;
             border-radius: 4px;
             position: relative;
             overflow: hidden;
-            transition: border-color 0.3s, box-shadow 0.3s;
-            cursor: pointer;
-        }
-        .slot-mouth.drag-over, .slot-mouth.ready {
-            border-color: var(--phosphor);
-            box-shadow: 0 0 12px var(--phosphor-dim);
-        }
-        .slot-flap {
-            width: 100%; height: 100%;
-            background: linear-gradient(180deg, #2a2a2a, #1a1a1a);
-            transform-origin: top; transition: transform 0.4s ease-in-out;
-        }
-        .slot-mouth.inserting .slot-flap { transform: rotateX(-90deg); }
-
-        .led-panel {
-            display: flex; gap: 18px; font-size: 11px;
-            color: #444; text-transform: uppercase; letter-spacing: 1px;
-        }
-        .led {
-            width: 7px; height: 7px; border-radius: 50%;
-            display: inline-block; margin-right: 4px;
-            vertical-align: middle;
             transition: all 0.3s;
         }
-        .led.pwr { background: #600; }
-        .led.pwr.on { background: #f44; box-shadow: 0 0 6px #f44; }
-        .led.play { background: #040; }
-        .led.play.on { background: #4f4; box-shadow: 0 0 6px #4f4; }
 
-        .vcr-brand {
-            font-size: 10px; color: #333; letter-spacing: 4px;
+        .slot-housing.active {
+            border-color: var(--phosphor-main);
+            box-shadow: 0 0 15px var(--phosphor-dim);
         }
 
-        .eject-btn {
-            position: absolute; right: 8px; bottom: 8px;
-            padding: 4px 12px;
-            background: #2a2a2a; border: 1px solid #444;
-            color: #888; cursor: pointer;
-            font-family: inherit; font-size: 11px;
-            border-radius: 3px;
-            transition: all 0.2s;
-        }
-        .eject-btn:hover { background: #3a3a3a; color: #fff; border-color: #666; }
-        .eject-btn:active { transform: scale(0.95); }
-
-        .hint-text {
-            position: absolute; bottom: -22px; left: 0; right: 0;
-            text-align: center; font-size: 11px; color: #333;
-            transition: opacity 0.3s;
+        .slot-door {
+            width: 100%; height: 100%;
+            background: #1a1a1a;
+            transform-origin: top;
+            transition: transform 0.2s;
+            border-bottom: 1px solid #333;
         }
 
-        /* --- MOBILE --- */
+        .slot-housing.open .slot-door { transform: rotateX(-90deg); }
+
+        .vcr-controls {
+            margin-top: 20px;
+            display: flex;
+            gap: 20px;
+            width: 85%;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .led-indicator {
+            width: 8px; height: 8px; background: #300; border-radius: 50%;
+            box-shadow: inset 0 0 2px #000;
+            transition: background 0.2s;
+        }
+        .led-indicator.on { background: #f00; box-shadow: 0 0 8px #f00; }
+        
+        .counter-display {
+            font-family: 'VT323', monospace;
+            font-size: 1.5rem;
+            color: var(--phosphor-main);
+            text-shadow: 0 0 5px var(--phosphor-dim);
+            background: #000;
+            padding: 2px 8px;
+            border-radius: 2px;
+        }
+
+        .btn-eject {
+            background: #333; color: #fff; border: none;
+            padding: 6px 12px; font-family: 'Space Mono'; font-size: 0.7rem;
+            cursor: pointer; border-radius: 2px;
+            transition: background 0.2s;
+        }
+        .btn-eject:hover { background: #444; }
+
+        /* --- UI OVERLAY (BIOS) --- */
+        #bios-screen {
+            position: fixed; inset: 0; background: #000; z-index: 10000;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            color: var(--phosphor-main);
+            font-family: 'VT323';
+        }
+        
+        .bios-text { font-size: 1.5rem; text-shadow: 0 0 10px var(--phosphor-dim); margin-bottom: 20px; }
+        .blink { animation: blink 1s infinite; }
+        
+        @keyframes blink { 50% { opacity: 0; } }
+
         @media (max-width: 900px) {
-            #station {
-                grid-template-columns: 1fr;
-                grid-template-rows: 1fr 100px 180px;
-                height: 100vh; width: 100vw;
-                gap: 8px; padding: 8px;
-            }
-            .tv-unit { grid-column: 1; grid-row: 1; padding: 12px; border-radius: 12px; }
-            .vcr-player { grid-column: 1; grid-row: 2; }
-            .tape-rack {
-                grid-column: 1; grid-row: 3;
-                flex-direction: row; overflow-x: auto; overflow-y: hidden;
-                padding: 10px;
-            }
-            .vhs-tape { min-width: 130px; min-height: 80px; }
-            .tape-window { top: 8px; height: 24px; }
-            .tape-label-sticker { margin-top: 26px; font-size: 11px; }
-            .subtitle-box { font-size: 1.1rem !important; }
-        }
-
-        @media (max-width: 500px) {
-            .channel-id { font-size: 1.2rem; }
-            .subtitle-box { font-size: 1rem !important; padding: 6px 12px; }
+            #workspace { grid-template-columns: 1fr; grid-template-rows: 1fr 120px 180px; gap: 10px; width: 100vw; height: 100vh; padding: 10px; }
+            .monitor-casing { grid-column: 1; grid-row: 1; padding: 10px; border-radius: 10px; }
+            .vcr-deck { grid-column: 1; grid-row: 2; }
+            .tape-rack { grid-column: 1; grid-row: 3; flex-direction: row; overflow-x: auto; padding: 10px; align-items: center; }
+            .tape-obj { min-width: 140px; height: 90px; }
         }
     </style>
 </head>
 <body>
 
-<!-- BOOT SCREEN -->
-<div id="boot-overlay">
-    <h1>ANUSHRI_ARCHIVE</h1>
-    <p>[ CLICK TO POWER ON ]</p>
-</div>
+    <!-- BIOS BOOT SCREEN -->
+    <div id="bios-screen">
+        <div class="bios-text">ANUSHRI_ARCHIVE.SYS LOADING...</div>
+        <div class="bios-text">MEM: 64KB OK</div>
+        <br>
+        <div class="bios-text blink">[ CLICK TO INITIALIZE SYSTEM ]</div>
+    </div>
 
-<div id="station">
-    <!-- TV -->
-    <div class="tv-unit">
-        <div class="screen-bezel" id="tv-screen">
-            <canvas id="crt"></canvas>
-            <div class="scanlines"></div>
-            <div class="vignette"></div>
-            <div class="glass-glare"></div>
-            <div id="game-ui">
-                <div>
-                    <div class="channel-id" id="channel-disp">AV-1</div>
-                    <div class="rec-indicator" id="rec-ind">● REC</div>
-                </div>
-                <div class="subtitle-box" id="subs"></div>
+    <!-- MAIN WORKSPACE -->
+    <div id="workspace">
+        
+        <!-- TV -->
+        <div class="monitor-casing">
+            <div class="screen-bezel">
+                <canvas id="crt-canvas"></canvas>
+                <div class="crt-overlay"></div>
+                <div class="screen-glare"></div>
             </div>
         </div>
+
+        <!-- TAPE RACK -->
+        <div class="tape-rack" id="rack">
+            <div class="rack-header">ARCHIVE STORAGE</div>
+            <!-- Tapes generated via JS -->
+        </div>
+
+        <!-- VCR -->
+        <div class="vcr-deck" id="vcr-deck">
+            <div class="slot-housing" id="slot">
+                <div class="slot-door"></div>
+            </div>
+            
+            <div class="vcr-controls">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <div class="led-indicator" id="pwr-led"></div>
+                    <span style="font-size:0.7rem; color:#555">PWR</span>
+                </div>
+                
+                <div class="counter-display" id="counter">00:00:00</div>
+                
+                <button class="btn-eject" id="eject-btn">EJECT</button>
+            </div>
+        </div>
+
     </div>
-
-    <!-- TAPE RACK -->
-    <div class="tape-rack" id="tape-rack">
-        <div class="rack-label">ARCHIVE ▪ ANUSHRI</div>
-
-        <div class="vhs-tape" id="tape1" data-id="1" draggable="true">
-            <div class="tape-window"><div class="tape-reel left"></div><div class="tape-reel right"></div></div>
-            <div class="tape-label-sticker">TAPE 01<br>THE HALLWAY</div>
-        </div>
-
-        <div class="vhs-tape" id="tape2" data-id="2" draggable="true">
-            <div class="tape-window"><div class="tape-reel left"></div><div class="tape-reel right"></div></div>
-            <div class="tape-label-sticker" style="color:#a00">TAPE 02<br>THE CURVE</div>
-        </div>
-
-        <div class="vhs-tape" id="tape3" data-id="3" draggable="true">
-            <div class="tape-window"><div class="tape-reel left"></div><div class="tape-reel right"></div></div>
-            <div class="tape-label-sticker" style="font-style:italic">TAPE 03<br>SIGNAL LOST</div>
-        </div>
-
-        <div class="vhs-tape" id="tape4" data-id="4" style="display:none">
-            <div class="tape-window"><div class="tape-reel left"></div><div class="tape-reel right"></div></div>
-            <div class="tape-label-sticker" style="background:#ffd700;color:#000;font-weight:bold">TAPE 04<br>★ RECORD ★</div>
-        </div>
-    </div>
-
-    <!-- VCR PLAYER -->
-    <div class="vcr-player" id="vcr">
-        <div class="led-panel">
-            <div><span class="led pwr on" id="led-pwr"></span> PWR</div>
-            <div><span class="led play" id="led-play"></span> PLAY</div>
-        </div>
-        <div class="slot-mouth" id="slot">
-            <div class="slot-flap"></div>
-        </div>
-        <div class="vcr-brand">AUTO-TRACKING SYSTEM</div>
-        <button class="eject-btn" id="eject-btn">⏏ EJECT</button>
-        <div class="hint-text" id="hint">Select a tape, then click here</div>
-    </div>
-</div>
 
 <script>
-/* ============================================================
-   ANUSHRI_ARCHIVE.vhs — Complete Rewrite
-   All errors fixed. Enhanced experience.
-   ============================================================ */
+/**
+ * ANUSHRI ARCHIVE: REMASTERED
+ * A high-fidelity "analog horror" style interactive fiction.
+ */
 
-// ─── AUDIO ENGINE ─────────────────────────────────────────
-const AudioSys = {
+// --- 1. CORE UTILS & MATH ---
+const MathUtils = {
+    lerp: (start, end, amt) => (1 - amt) * start + amt * end,
+    dist: (x1, y1, x2, y2) => Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2),
+    clamp: (val, min, max) => Math.min(Math.max(val, min), max)
+};
+
+// --- 2. AUDIO CONTROLLER (Web Audio API) ---
+const AudioEngine = {
     ctx: null,
     master: null,
-    initialized: false,
     musicNodes: [],
-    musicTimer: null,
-
+    
     init() {
-        if (this.initialized) return;
-        try {
-            this.ctx = new (window.AudioContext || window.webkitAudioContext)();
-            this.master = this.ctx.createGain();
-            this.master.gain.value = 0.25;
-            this.master.connect(this.ctx.destination);
-            this.initialized = true;
-        } catch (e) {
-            console.warn('Web Audio not available');
-        }
+        if(this.ctx) return;
+        this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+        this.master = this.ctx.createGain();
+        this.master.gain.value = 0.4;
+        this.master.connect(this.ctx.destination);
     },
 
-    resume() {
-        if (this.ctx && this.ctx.state === 'suspended') {
-            this.ctx.resume();
-        }
-    },
-
-    playTone(freq, type = 'sine', duration = 0.3, vol = 0.1) {
-        if (!this.ctx) return;
-        this.resume();
-        const now = this.ctx.currentTime;
+    playTone(freq, type='sine', dur=0.1, vol=0.1) {
+        if(!this.ctx) return;
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
         osc.type = type;
-        osc.frequency.setValueAtTime(freq, now);
-        gain.gain.setValueAtTime(Math.min(vol, 0.5), now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+        osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+        gain.gain.setValueAtTime(vol, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + dur);
         osc.connect(gain);
         gain.connect(this.master);
-        osc.start(now);
-        osc.stop(now + duration);
+        osc.start();
+        osc.stop(this.ctx.currentTime + dur);
     },
 
-    playNoise(duration = 0.3, lowpass = 800, vol = 0.15) {
-        if (!this.ctx) return;
-        this.resume();
-        const sr = this.ctx.sampleRate;
-        const len = sr * duration;
-        const buf = this.ctx.createBuffer(1, len, sr);
+    playNoise(dur=0.2, type='white', vol=0.1) {
+        if(!this.ctx) return;
+        const size = this.ctx.sampleRate * dur;
+        const buf = this.ctx.createBuffer(1, size, this.ctx.sampleRate);
         const data = buf.getChannelData(0);
-        let last = 0;
-        for (let i = 0; i < len; i++) {
-            const white = Math.random() * 2 - 1;
-            last = (last + (0.02 * white)) / 1.02; // Brown-ish
-            data[i] = last * 3.5;
-        }
+        for(let i=0; i<size; i++) data[i] = Math.random() * 2 - 1;
+        
         const src = this.ctx.createBufferSource();
         src.buffer = buf;
-        const filt = this.ctx.createBiquadFilter();
-        filt.type = 'lowpass';
-        filt.frequency.value = lowpass;
         const gain = this.ctx.createGain();
         gain.gain.value = vol;
-        src.connect(filt);
-        filt.connect(gain);
+        
+        // Simple Lowpass for "Brown" noise feel
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.value = type === 'brown' ? 400 : 3000;
+        
+        src.connect(filter);
+        filter.connect(gain);
         gain.connect(this.master);
         src.start();
     },
 
     playClunk() {
-        this.playNoise(0.15, 300, 0.4);
-        this.playTone(80, 'square', 0.08, 0.3);
-        setTimeout(() => this.playTone(50, 'sawtooth', 0.15, 0.25), 80);
+        this.playNoise(0.3, 'brown', 0.5);
+        this.playTone(60, 'square', 0.2, 0.4);
+        setTimeout(() => this.playTone(40, 'sawtooth', 0.4, 0.3), 100);
     },
 
-    playBeep(high = false) {
-        this.playTone(high ? 800 : 400, 'square', 0.05, 0.08);
-    },
-
-    playHit() {
-        this.playTone(90, 'sawtooth', 0.1, 0.2);
-        this.playNoise(0.05, 2000, 0.1);
-    },
-
-    playSuccess() {
-        [440, 554, 659, 880].forEach((f, i) => {
-            setTimeout(() => this.playTone(f, 'triangle', 0.4, 0.1), i * 120);
-        });
-    },
-
-    startAmbience(mood) {
+    // Procedural Music Engine
+    startSoundtrack(theme) {
         this.stopMusic();
-        const intervals = [];
-
-        if (mood === 'sad') {
-            const notes = [220, 261.6, 293.7, 329.6, 392];
-            intervals.push(setInterval(() => {
+        
+        const now = this.ctx.currentTime;
+        
+        if(theme === 'hallway') {
+            // Sad, slow arpeggio
+            const notes = [220, 261, 329, 392]; // Am7
+            this.musicLoop = setInterval(() => {
                 const n = notes[Math.floor(Math.random() * notes.length)];
-                this.playTone(n, 'sine', 2.5, 0.04);
-                if (Math.random() > 0.6) this.playTone(n * 0.5, 'sine', 3, 0.02);
-            }, 2500));
-        } else if (mood === 'tense') {
-            intervals.push(setInterval(() => {
-                this.playTone(110, 'sawtooth', 0.08, 0.04);
-                setTimeout(() => this.playTone(116.5, 'sawtooth', 0.08, 0.04), 150);
-            }, 400));
-            intervals.push(setInterval(() => {
-                this.playTone(55, 'sine', 0.5, 0.06);
-            }, 2000));
-        } else if (mood === 'hope') {
-            const notes = [440, 554, 659, 880, 1108];
-            intervals.push(setInterval(() => {
-                const n = notes[Math.floor(Math.random() * notes.length)];
-                this.playTone(n, 'triangle', 2, 0.04);
-                this.playTone(n * 0.5, 'sine', 2.5, 0.02);
-            }, 1800));
-        } else if (mood === 'love') {
-            const chords = [[262, 330, 392], [220, 277, 330], [247, 311, 370], [262, 330, 392]];
-            let ci = 0;
-            intervals.push(setInterval(() => {
-                const chord = chords[ci % chords.length];
-                chord.forEach(f => this.playTone(f, 'sine', 2.5, 0.03));
-                ci++;
-            }, 3000));
+                this.playTone(n, 'sine', 2.0, 0.05);
+                this.playTone(n/2, 'triangle', 2.5, 0.02); // Bass
+            }, 2500);
+        } else if (theme === 'panic') {
+            // Fast, dissonant
+            this.musicLoop = setInterval(() => {
+                const n = 100 + Math.random() * 50;
+                this.playTone(n, 'sawtooth', 0.1, 0.05);
+                if(Math.random()>0.7) this.playNoise(0.05, 'white', 0.1);
+            }, 150);
+        } else if (theme === 'void') {
+            // Drone
+            const osc = this.ctx.createOscillator();
+            const g = this.ctx.createGain();
+            osc.frequency.value = 55;
+            g.gain.value = 0.05;
+            osc.connect(g); g.connect(this.master);
+            osc.start();
+            this.musicNodes.push(osc);
+        } else if (theme === 'hope') {
+            // Major chords
+            const notes = [261, 329, 392, 523]; // C Major
+            this.musicLoop = setInterval(() => {
+                notes.forEach((n,i) => {
+                    setTimeout(() => this.playTone(n, 'sine', 1.5, 0.05), i*200);
+                });
+            }, 4000);
         }
-
-        this.musicNodes = intervals;
     },
 
     stopMusic() {
-        this.musicNodes.forEach(id => clearInterval(id));
+        if(this.musicLoop) clearInterval(this.musicLoop);
+        this.musicNodes.forEach(n => n.stop());
         this.musicNodes = [];
     }
 };
 
-// ─── TEXT / SUBTITLE ENGINE ───────────────────────────────
-const TextSys = {
-    el: document.getElementById('subs'),
-    queue: [],
-    busy: false,
-    timeoutId: null,
-
-    show(text, duration = 2500) {
-        this.queue.push({ text, duration });
-        if (!this.busy) this._process();
-    },
-
-    _process() {
-        if (this.queue.length === 0) {
-            this.el.style.opacity = '0';
-            this.busy = false;
-            return;
-        }
-        this.busy = true;
-        const item = this.queue.shift();
-        this.el.textContent = '';
-        this.el.style.opacity = '1';
-
-        // Typewriter effect
-        let i = 0;
-        const typeSpeed = Math.max(20, Math.min(50, item.duration / item.text.length / 2));
-        const typeInterval = setInterval(() => {
-            if (i < item.text.length) {
-                this.el.textContent += item.text[i];
-                if (i % 3 === 0) AudioSys.playTone(
-                    item.text.includes('GUIDE') ? 180 : 500,
-                    'square', 0.02, 0.03
-                );
-                i++;
-            } else {
-                clearInterval(typeInterval);
-            }
-        }, typeSpeed);
-
-        this.timeoutId = setTimeout(() => {
-            clearInterval(typeInterval);
-            this._process();
-        }, item.duration);
-    },
-
-    clear() {
-        if (this.timeoutId) clearTimeout(this.timeoutId);
-        this.queue = [];
-        this.el.style.opacity = '0';
-        this.busy = false;
-    }
-};
-
-// ─── INPUT SYSTEM (Mouse + Touch unified) ─────────────────
+// --- 3. PHYSICS & INPUT CONTROLLER (Custom Drag) ---
 const Input = {
-    x: 0,
-    y: 0,
-    canvasX: 0,
-    canvasY: 0,
-    clicked: false,
-    _consumeClick() {
-        const v = this.clicked;
-        this.clicked = false;
-        return v;
-    },
-    _update(clientX, clientY) {
-        this.x = clientX;
-        this.y = clientY;
-        const rect = Game.canvas.getBoundingClientRect();
-        this.canvasX = ((clientX - rect.left) / rect.width) * Game.width;
-        this.canvasY = ((clientY - rect.top) / rect.height) * Game.height;
-    }
-};
-
-// Mouse
-window.addEventListener('mousemove', e => Input._update(e.clientX, e.clientY));
-document.getElementById('crt').addEventListener('mousedown', e => {
-    e.preventDefault();
-    Input.clicked = true;
-    Input._update(e.clientX, e.clientY);
-});
-
-// Touch
-document.getElementById('crt').addEventListener('touchstart', e => {
-    e.preventDefault();
-    const t = e.touches[0];
-    Input.clicked = true;
-    Input._update(t.clientX, t.clientY);
-}, { passive: false });
-document.getElementById('crt').addEventListener('touchmove', e => {
-    e.preventDefault();
-    const t = e.touches[0];
-    Input._update(t.clientX, t.clientY);
-}, { passive: false });
-
-// ─── VFX SYSTEM ───────────────────────────────────────────
-const VFX = {
-    shake: { intensity: 0, decay: 0.9 },
-    particles: [],
-    transition: { active: false, progress: 0, type: 'none' },
-
-    addShake(intensity = 5) {
-        this.shake.intensity = Math.max(this.shake.intensity, intensity);
-    },
-
-    addParticle(x, y, color = '#fff', count = 5) {
-        for (let i = 0; i < count; i++) {
-            this.particles.push({
-                x, y,
-                vx: (Math.random() - 0.5) * 4,
-                vy: (Math.random() - 0.5) * 4 - 2,
-                life: 1,
-                decay: 0.01 + Math.random() * 0.02,
-                size: 2 + Math.random() * 3,
-                color
-            });
-        }
-    },
-
-    update() {
-        // Shake
-        this.shake.intensity *= this.shake.decay;
-        if (this.shake.intensity < 0.1) this.shake.intensity = 0;
-
-        // Particles
-        this.particles = this.particles.filter(p => {
-            p.x += p.vx;
-            p.y += p.vy;
-            p.vy += 0.05;
-            p.life -= p.decay;
-            return p.life > 0;
-        });
-
-        // Transition
-        if (this.transition.active) {
-            this.transition.progress += 0.02;
-            if (this.transition.progress >= 1) {
-                this.transition.active = false;
-            }
-        }
-    },
-
-    drawParticles(ctx) {
-        this.particles.forEach(p => {
-            ctx.globalAlpha = p.life;
-            ctx.fillStyle = p.color;
-            ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
-        });
-        ctx.globalAlpha = 1;
-    },
-
-    getShakeOffset() {
-        if (this.shake.intensity < 0.1) return { x: 0, y: 0 };
-        return {
-            x: (Math.random() - 0.5) * this.shake.intensity * 2,
-            y: (Math.random() - 0.5) * this.shake.intensity * 2
-        };
-    },
-
-    startTransition(type = 'fadeIn') {
-        this.transition = { active: true, progress: 0, type };
-    }
-};
-
-// ─── LEVEL DEFINITIONS ────────────────────────────────────
-const Levels = {
-    progress: {
-        tape1_done: false,
-        tape2_done: false,
-        tape2_hits: 0,
-        tape3_done: false,
-        tape4_done: false
-    },
-
-    // --- TAPE 1: THE HALLWAY ---
-    t1: {
-        playerX: 60,
-        peers: [],
-        doorX: 0,
-        doorGlow: 0,
-        corridor: [],
-        done: false,
-        narrativeStep: 0
-    },
-
-    initTape1(w, h) {
-        this.t1.done = false;
-        this.t1.playerX = 60;
-        this.t1.doorX = w * 1.2;
-        this.t1.narrativeStep = 0;
-        this.t1.peers = [];
-        for (let i = 0; i < 6; i++) {
-            this.t1.peers.push({
-                x: 200 + i * 180,
-                h: 40 + Math.random() * 30,
-                speed: 1.5 + Math.random() * 2,
-                opacity: 0.6 + Math.random() * 0.4
-            });
-        }
-        AudioSys.startAmbience('sad');
-        setTimeout(() => TextSys.show("GUIDE: Walk forward. Just keep moving.", 3000), 1500);
-        setTimeout(() => TextSys.show("GUIDE: Move your cursor gently. Don't rush.", 4000), 5000);
-    },
-
-    updateTape1(w, h) {
-        if (this.t1.done) return;
-
-        const mouseRatio = Math.max(0, Math.min(1, Input.canvasX / w));
-        const speed = mouseRatio * 2;
-
-        // If mouse is too far right (rushing), door recedes
-        if (mouseRatio > 0.75) {
-            this.t1.doorX += 1.5;
-            if (Game.frame % 120 === 0 && this.t1.narrativeStep < 1) {
-                TextSys.show("ANUSHRI: They're all faster than me...", 2000);
-                this.t1.narrativeStep = 1;
-            }
-        } else {
-            // Door slowly comes closer when not rushing
-            this.t1.doorX -= 0.3;
-        }
-
-        this.t1.playerX += speed;
-        this.t1.doorGlow = Math.sin(Game.frame * 0.05) * 0.3 + 0.7;
-
-        // Peers drift
-        this.t1.peers.forEach(p => {
-            p.x -= p.speed;
-            if (p.x < -50) p.x = w + 50 + Math.random() * 100;
-        });
-
-        // Narrative beats
-        if (this.t1.playerX > w * 0.3 && this.t1.narrativeStep < 2) {
-            TextSys.show("GUIDE: See? Steady wins.", 2000);
-            this.t1.narrativeStep = 2;
-        }
-
-        // Win condition
-        if (this.t1.playerX >= this.t1.doorX - 30) {
-            this.t1.done = true;
-            this.progress.tape1_done = true;
-            AudioSys.playSuccess();
-            VFX.addParticle(w / 2, h / 2, '#fff', 30);
-            TextSys.show("GUIDE: You made it. Not by running — by enduring.", 4000);
-            Game.scheduleEject(4500);
-        }
-    },
-
-    drawTape1(ctx, w, h) {
-        // Background gradient — dark corridor
-        const grad = ctx.createLinearGradient(0, 0, w, 0);
-        grad.addColorStop(0, '#0a0a12');
-        grad.addColorStop(1, '#0a1a0a');
-        ctx.fillStyle = grad;
-        ctx.fillRect(0, 0, w, h);
-
-        // Floor
-        ctx.fillStyle = '#151520';
-        ctx.fillRect(0, h - 60, w, 60);
-        ctx.strokeStyle = '#222';
-        ctx.lineWidth = 1;
-        for (let lx = 0; lx < w; lx += 80) {
-            ctx.beginPath();
-            ctx.moveTo(lx, h - 60);
-            ctx.lineTo(lx, h);
-            ctx.stroke();
-        }
-
-        // Ceiling line
-        ctx.strokeStyle = '#1a1a2a';
-        ctx.beginPath();
-        ctx.moveTo(0, 40);
-        ctx.lineTo(w, 40);
-        ctx.stroke();
-
-        // Peer silhouettes
-        this.t1.peers.forEach(p => {
-            ctx.globalAlpha = p.opacity * 0.7;
-            ctx.fillStyle = '#0a0a15';
-            // Body
-            ctx.fillRect(p.x - 8, h - 60 - p.h, 16, p.h);
-            // Head
-            ctx.beginPath();
-            ctx.arc(p.x, h - 60 - p.h - 8, 8, 0, Math.PI * 2);
-            ctx.fill();
-        });
-        ctx.globalAlpha = 1;
-
-        // Door (glowing exit)
-        const dx = this.t1.doorX;
-        const glow = this.t1.doorGlow;
-        ctx.fillStyle = `rgba(255, 255, 200, ${glow * 0.3})`;
-        ctx.fillRect(dx - 30, h - 140, 60, 80);
-        ctx.shadowColor = '#ffffaa';
-        ctx.shadowBlur = 20 * glow;
-        ctx.fillStyle = `rgba(255, 255, 240, ${glow})`;
-        ctx.fillRect(dx - 20, h - 130, 40, 70);
-        ctx.shadowBlur = 0;
-
-        // Player
-        this._drawAnushri(ctx, this.t1.playerX, h - 80, '#fff');
-
-        // Distance indicator
-        const dist = Math.max(0, this.t1.doorX - this.t1.playerX);
-        ctx.fillStyle = 'rgba(255,255,255,0.3)';
-        ctx.font = '16px VT323';
-        ctx.textAlign = 'right';
-        ctx.fillText(`${Math.floor(dist)}m to door`, w - 20, 30);
-        ctx.textAlign = 'start';
-    },
-
-    // --- TAPE 2: THE CURVE ---
-    t2: {
-        bullets: [],
-        timer: 0,
-        maxTime: 900, // 15 seconds at 60fps
-        done: false,
-        playerX: 0,
-        shakeFrame: 0
-    },
-
-    initTape2(w, h) {
-        this.t2.done = false;
-        this.t2.bullets = [];
-        this.t2.timer = this.t2.maxTime;
-        this.t2.playerX = w / 2;
-        this.progress.tape2_hits = 0;
-        AudioSys.startAmbience('tense');
-        setTimeout(() => TextSys.show("GUIDE: The Bell Curve. Grades are falling.", 3000), 1000);
-        setTimeout(() => TextSys.show("GUIDE: Move to dodge. Just survive.", 3000), 4500);
-    },
-
-    updateTape2(w, h) {
-        if (this.t2.done) return;
-
-        // Player follows mouse/touch smoothly
-        this.t2.playerX += (Input.canvasX - this.t2.playerX) * 0.12;
-        this.t2.playerX = Math.max(20, Math.min(w - 20, this.t2.playerX));
-
-        // Spawn grades
-        const spawnRate = Math.max(4, 12 - Math.floor((this.t2.maxTime - this.t2.timer) / 100));
-        if (Game.frame % spawnRate === 0) {
-            const labels = ['C-', 'D', 'F', '42', '55', '38', 'D+', 'FAIL', '61', 'C'];
-            this.t2.bullets.push({
-                x: Math.random() * (w - 40) + 20,
-                y: -20,
-                label: labels[Math.floor(Math.random() * labels.length)],
-                speed: 2.5 + Math.random() * 3,
-                size: 14 + Math.random() * 8,
-                hit: false
-            });
-        }
-
-        // Update bullets
-        const playerY = h - 90;
-        for (let i = this.t2.bullets.length - 1; i >= 0; i--) {
-            const b = this.t2.bullets[i];
-            b.y += b.speed;
-
-            // Collision
-            if (!b.hit && Math.abs(b.x - this.t2.playerX) < 22 && Math.abs(b.y - playerY) < 22) {
-                b.hit = true;
-                this.progress.tape2_hits++;
-                VFX.addShake(6);
-                AudioSys.playHit();
-                VFX.addParticle(b.x, b.y, '#f44', 8);
-            }
-
-            // Remove off-screen
-            if (b.y > h + 30) {
-                this.t2.bullets.splice(i, 1);
-            }
-        }
-
-        this.t2.timer--;
-
-        // Narrative
-        if (this.t2.timer === Math.floor(this.t2.maxTime * 0.5)) {
-            TextSys.show("GUIDE: Halfway. Keep going.", 2000);
-        }
-
-        if (this.t2.timer <= 0) {
-            this.t2.done = true;
-            this.progress.tape2_done = true;
-            AudioSys.playSuccess();
-            const hits = this.progress.tape2_hits;
-            const msg = hits === 0
-                ? "GUIDE: Untouched. Incredible."
-                : `GUIDE: ${hits} hit${hits > 1 ? 's' : ''}. But you're still standing.`;
-            TextSys.show(msg, 4000);
-            Game.scheduleEject(4500);
-        }
-    },
-
-    drawTape2(ctx, w, h) {
-        // Dark red background
-        ctx.fillStyle = '#0a0000';
-        ctx.fillRect(0, 0, w, h);
-
-        // Bell curve in background
-        ctx.strokeStyle = 'rgba(255, 50, 50, 0.15)';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        for (let x = 0; x < w; x += 2) {
-            const nx = (x / w - 0.5) * 6;
-            const bellY = Math.exp(-nx * nx / 2) * h * 0.6;
-            if (x === 0) ctx.moveTo(x, h - bellY);
-            else ctx.lineTo(x, h - bellY);
-        }
-        ctx.stroke();
-
-        // Bullets
-        ctx.textAlign = 'center';
-        this.t2.bullets.forEach(b => {
-            if (b.hit) return;
-            ctx.font = `${b.size}px VT323`;
-            ctx.fillStyle = b.label === 'F' || b.label === 'FAIL' ? '#ff3333' : '#884444';
-            ctx.shadowColor = '#f00';
-            ctx.shadowBlur = b.label === 'F' ? 8 : 0;
-            ctx.fillText(b.label, b.x, b.y);
-            ctx.shadowBlur = 0;
-        });
-        ctx.textAlign = 'start';
-
-        // Player
-        this._drawAnushri(ctx, this.t2.playerX, h - 90, '#ff6666');
-
-        // Timer bar
-        const pct = Math.max(0, this.t2.timer / this.t2.maxTime);
-        ctx.fillStyle = '#300';
-        ctx.fillRect(20, h - 20, w - 40, 8);
-        ctx.fillStyle = pct > 0.3 ? '#f44' : '#f00';
-        ctx.fillRect(20, h - 20, (w - 40) * pct, 8);
-
-        // HUD
-        ctx.fillStyle = '#f88';
-        ctx.font = '18px VT323';
-        ctx.fillText(`SURVIVE: ${Math.ceil(this.t2.timer / 60)}s`, 20, 30);
-        ctx.fillText(`HITS: ${this.progress.tape2_hits}`, 20, 52);
-    },
-
-    // --- TAPE 3: SIGNAL LOST ---
-    t3: {
-        noiseLevel: 1.0,
-        totalClicks: 0,
-        done: false,
-        message: "I AM SUFFICIENT",
-        revealPhrases: [
-            "I AM SUFFICIENT",
-            "I DON'T NEED PERMISSION",
-            "I FIXED THIS MYSELF",
-            "I AM ENOUGH"
-        ],
-        currentPhrase: 0
-    },
-
-    initTape3(w, h) {
-        this.t3.done = false;
-        this.t3.noiseLevel = 1.0;
-        this.t3.totalClicks = 0;
-        this.t3.currentPhrase = 0;
-        this.t3.message = this.t3.revealPhrases[0];
-        AudioSys.stopMusic();
-        AudioSys.playNoise(1.0, 3000, 0.2);
-        setTimeout(() => TextSys.show("SIGNAL LOST — TRACKING ERROR", 2500), 500);
-        setTimeout(() => TextSys.show("MANUAL INTERVENTION REQUIRED", 2500), 3500);
-        setTimeout(() => TextSys.show("CLICK THE SCREEN TO ADJUST TRACKING", 3000), 6500);
-    },
-
-    updateTape3(w, h) {
-        if (this.t3.done) return;
-
-        if (Input._consumeClick()) {
-            this.t3.totalClicks++;
-            this.t3.noiseLevel = Math.max(0, this.t3.noiseLevel - 0.08);
-            AudioSys.playTone(200 + this.t3.totalClicks * 30, 'sine', 0.08, 0.06);
-            VFX.addParticle(Input.canvasX, Input.canvasY, '#4af626', 3);
-
-            // Phase transitions
-            if (this.t3.noiseLevel < 0.7 && this.t3.currentPhrase === 0) {
-                this.t3.currentPhrase = 1;
-                this.t3.message = this.t3.revealPhrases[1];
-            }
-            if (this.t3.noiseLevel < 0.4 && this.t3.currentPhrase === 1) {
-                this.t3.currentPhrase = 2;
-                this.t3.message = this.t3.revealPhrases[2];
-            }
-            if (this.t3.noiseLevel < 0.15 && this.t3.currentPhrase === 2) {
-                this.t3.currentPhrase = 3;
-                this.t3.message = this.t3.revealPhrases[3];
-            }
-        }
-
-        // Noise creeps back very slowly (beatable)
-        if (this.t3.noiseLevel < 1.0) {
-            this.t3.noiseLevel += 0.002;
-        }
-
-        // Win
-        if (this.t3.noiseLevel <= 0.02 && !this.t3.done) {
-            this.t3.done = true;
-            this.progress.tape3_done = true;
-            AudioSys.playSuccess();
-            TextSys.show("ANUSHRI: I fixed it. I didn't need the Guide.", 4000);
-            Game.scheduleEject(5000);
-        }
-    },
-
-    drawTape3(ctx, w, h) {
-        // Hidden message
-        ctx.fillStyle = '#000';
-        ctx.fillRect(0, 0, w, h);
-
-        // Draw the revealed text behind noise
-        const alpha = Math.max(0, 1 - this.t3.noiseLevel);
-        ctx.globalAlpha = alpha;
-        ctx.fillStyle = '#fff';
-        ctx.font = `${Math.min(w / 10, 48)}px VT323`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.shadowColor = '#4af626';
-        ctx.shadowBlur = 20 * alpha;
-        ctx.fillText(this.t3.message, w / 2, h / 2);
-        ctx.shadowBlur = 0;
-        ctx.globalAlpha = 1;
-
-        // Static overlay
-        if (this.t3.noiseLevel > 0.01) {
-            const imgData = ctx.getImageData(0, 0, w, h);
-            const d = imgData.data;
-            const nl = this.t3.noiseLevel;
-            for (let i = 0; i < d.length; i += 4) {
-                if (Math.random() < nl) {
-                    const v = Math.random() * 200;
-                    d[i] = d[i + 1] = d[i + 2] = v;
-                    d[i + 3] = 255;
-                }
-            }
-            ctx.putImageData(imgData, 0, 0);
-
-            // VHS tracking bars
-            if (nl > 0.3) {
-                const barY = (Math.sin(Game.frame * 0.03) * 0.5 + 0.5) * h;
-                ctx.fillStyle = `rgba(0,0,0,${nl * 0.8})`;
-                ctx.fillRect(0, barY, w, 30 * nl);
-            }
-        }
-
-        // Instructions
-        if (this.t3.noiseLevel > 0.3) {
-            ctx.fillStyle = `rgba(255, 80, 80, ${0.5 + Math.sin(Game.frame * 0.1) * 0.3})`;
-            ctx.font = '18px VT323';
-            ctx.fillText('[ CLICK TO ADJUST TRACKING ]', w / 2, h - 40);
-        }
-
-        // Progress bar
-        const pct = 1 - this.t3.noiseLevel;
-        ctx.fillStyle = '#222';
-        ctx.fillRect(w * 0.1, h - 15, w * 0.8, 6);
-        ctx.fillStyle = '#4af626';
-        ctx.fillRect(w * 0.1, h - 15, w * 0.8 * pct, 6);
-
-        ctx.textAlign = 'start';
-        ctx.textBaseline = 'alphabetic';
-    },
-
-    // --- TAPE 4: RECORD (FINALE) ---
-    t4: {
-        step: 0,
-        floatingHearts: [],
-        done: false
-    },
-
-    initTape4(w, h) {
-        this.t4.step = 0;
-        this.t4.done = false;
-        this.t4.floatingHearts = [];
-        for (let i = 0; i < 30; i++) {
-            this.t4.floatingHearts.push({
-                x: Math.random() * w,
-                y: Math.random() * h,
-                size: 3 + Math.random() * 6,
-                speed: 0.3 + Math.random() * 0.8,
-                drift: (Math.random() - 0.5) * 0.5,
-                opacity: 0.2 + Math.random() * 0.5,
-                phase: Math.random() * Math.PI * 2
-            });
-        }
-        AudioSys.startAmbience('love');
-        document.getElementById('rec-ind').classList.add('on');
-    },
-
-    updateTape4(w, h) {
-        if (this.t4.done) return;
-
-        // Narrative beats based on frame
-        const beats = [
-            [90,   "DADDY: Happy Birthday, Anushri.", 3500],
-            [300,  "DADDY: You thought you were falling behind.", 3500],
-            [500,  "DADDY: But I was watching the whole time.", 3500],
-            [700,  "DADDY: And this is what I saw:", 3000],
-            [850,  `THE HALLWAY: You walked through it.`, 3000],
-            [1050, `THE CURVE: ${this.progress.tape2_hits} hits. You never quit.`, 3500],
-            [1250, "THE SIGNAL: You fixed it yourself.", 3000],
-            [1450, "DADDY: You didn't need me to tell you.", 3500],
-            [1650, "DADDY: You already knew.", 3000],
-            [1850, "You are sufficient. You are enough.", 4000],
-            [2100, "I will always be DADDY. ♥", 5000],
-        ];
-
-        beats.forEach(([frame, text, dur]) => {
-            if (Game.frame === frame) {
-                TextSys.show(text, dur);
-                if (frame >= 1850) AudioSys.playSuccess();
-            }
-        });
-
-        // Hearts float
-        this.t4.floatingHearts.forEach(h_obj => {
-            h_obj.y -= h_obj.speed;
-            h_obj.x += Math.sin(Game.frame * 0.02 + h_obj.phase) * h_obj.drift;
-            if (h_obj.y < -20) {
-                h_obj.y = h + 20;
-                h_obj.x = Math.random() * w;
-            }
-        });
-
-        if (Game.frame > 2600 && !this.t4.done) {
-            this.t4.done = true;
-            this.progress.tape4_done = true;
-            document.getElementById('rec-ind').classList.remove('on');
-            Game.scheduleEject(2000);
-        }
-    },
-
-    drawTape4(ctx, w, h) {
-        // Warm gradient
-        const grad = ctx.createRadialGradient(w / 2, h / 2, 50, w / 2, h / 2, Math.max(w, h));
-        grad.addColorStop(0, '#3d2800');
-        grad.addColorStop(0.5, '#1a1000');
-        grad.addColorStop(1, '#0a0500');
-        ctx.fillStyle = grad;
-        ctx.fillRect(0, 0, w, h);
-
-        // Floating hearts
-        this.t4.floatingHearts.forEach(fh => {
-            ctx.globalAlpha = fh.opacity;
-            ctx.fillStyle = '#ffb84d';
-            this._drawHeart(ctx, fh.x, fh.y, fh.size);
-        });
-        ctx.globalAlpha = 1;
-
-        // Central glow
-        const pulse = 1 + Math.sin(Game.frame * 0.04) * 0.15;
-        const cx = w / 2, cy = h / 2;
-
-        ctx.save();
-        ctx.translate(cx, cy);
-        ctx.scale(pulse, pulse);
-
-        // Glow
-        const grd = ctx.createRadialGradient(0, 0, 10, 0, 0, 60);
-        grd.addColorStop(0, 'rgba(255, 184, 77, 0.4)');
-        grd.addColorStop(1, 'rgba(255, 184, 77, 0)');
-        ctx.fillStyle = grd;
-        ctx.beginPath();
-        ctx.arc(0, 0, 60, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Heart
-        ctx.fillStyle = '#ffb84d';
-        ctx.shadowColor = '#ffb84d';
-        ctx.shadowBlur = 25;
-        this._drawHeart(ctx, 0, -5, 20);
-        ctx.shadowBlur = 0;
-
-        ctx.restore();
-
-        // "REC" indicator
-        if (Game.frame % 60 < 40) {
-            ctx.fillStyle = '#f00';
-            ctx.font = '16px VT323';
-            ctx.textAlign = 'left';
-            ctx.fillText('● REC', 15, 25);
-        }
-
-        // Timestamp
-        const sec = Math.floor(Game.frame / 60);
-        const mm = String(Math.floor(sec / 60)).padStart(2, '0');
-        const ss = String(sec % 60).padStart(2, '0');
-        ctx.fillStyle = 'rgba(255,255,255,0.3)';
-        ctx.font = '14px VT323';
-        ctx.textAlign = 'right';
-        ctx.fillText(`${mm}:${ss}`, w - 15, 25);
-        ctx.textAlign = 'start';
-    },
-
-    // ─── SHARED DRAWING HELPERS ─────────────────────────────
-
-    _drawAnushri(ctx, x, y, color = '#fff') {
-        ctx.save();
-        ctx.translate(x, y);
-        const s = 1 + Math.sin(Game.frame * 0.08) * 0.06;
-        ctx.scale(s, s);
-
-        // Soul diamond with glow
-        ctx.fillStyle = color;
-        ctx.shadowColor = color;
-        ctx.shadowBlur = 12;
-        ctx.beginPath();
-        ctx.moveTo(0, -14);
-        ctx.lineTo(10, 0);
-        ctx.lineTo(0, 18);
-        ctx.lineTo(-10, 0);
-        ctx.closePath();
-        ctx.fill();
-
-        // Inner light
-        ctx.fillStyle = 'rgba(255,255,255,0.5)';
-        ctx.shadowBlur = 0;
-        ctx.beginPath();
-        ctx.moveTo(0, -6);
-        ctx.lineTo(4, 0);
-        ctx.lineTo(0, 8);
-        ctx.lineTo(-4, 0);
-        ctx.closePath();
-        ctx.fill();
-
-        ctx.restore();
-    },
-
-    _drawHeart(ctx, x, y, size) {
-        ctx.save();
-        ctx.translate(x, y);
-        ctx.beginPath();
-        ctx.moveTo(0, size * 0.4);
-        ctx.bezierCurveTo(-size, -size * 0.2, -size * 0.5, -size, 0, -size * 0.4);
-        ctx.bezierCurveTo(size * 0.5, -size, size, -size * 0.2, 0, size * 0.4);
-        ctx.fill();
-        ctx.restore();
-    },
-
-    // ─── DISPATCH ───────────────────────────────────────────
-    init(id, w, h) {
-        if (id === 1) this.initTape1(w, h);
-        if (id === 2) this.initTape2(w, h);
-        if (id === 3) this.initTape3(w, h);
-        if (id === 4) this.initTape4(w, h);
-    },
-
-    update(id, w, h) {
-        if (id === 1) this.updateTape1(w, h);
-        if (id === 2) this.updateTape2(w, h);
-        if (id === 3) this.updateTape3(w, h);
-        if (id === 4) this.updateTape4(w, h);
-    },
-
-    draw(id, ctx, w, h) {
-        if (id === 1) this.drawTape1(ctx, w, h);
-        if (id === 2) this.drawTape2(ctx, w, h);
-        if (id === 3) this.drawTape3(ctx, w, h);
-        if (id === 4) this.drawTape4(ctx, w, h);
-    }
-};
-
-// ─── GAME ENGINE ──────────────────────────────────────────
-const Game = {
-    canvas: document.getElementById('crt'),
-    ctx: null,
-    width: 0,
-    height: 0,
-    state: 'static',   // 'static' | 'inserting' | 'play'
-    activeTape: null,
-    frame: 0,
-    ejectTimeout: null,
-    selectedTape: null,
-
+    x: 0, y: 0,
+    isDown: false,
+    dragTarget: null,
+    dragOffset: { x:0, y:0 },
+    
     init() {
-        this.ctx = this.canvas.getContext('2d');
+        window.addEventListener('mousedown', e => this.down(e));
+        window.addEventListener('mousemove', e => this.move(e));
+        window.addEventListener('mouseup', e => this.up(e));
+        
+        window.addEventListener('touchstart', e => this.down(e.touches[0]));
+        window.addEventListener('touchmove', e => this.move(e.touches[0]));
+        window.addEventListener('touchend', e => this.up(e));
+    },
+
+    down(e) {
+        this.isDown = true;
+        this.x = e.clientX;
+        this.y = e.clientY;
+        
+        // Check for tape intersection
+        const tapes = document.querySelectorAll('.tape-obj');
+        tapes.forEach(tape => {
+            const rect = tape.getBoundingClientRect();
+            if(this.x >= rect.left && this.x <= rect.right &&
+               this.y >= rect.top && this.y <= rect.bottom && 
+               !tape.classList.contains('in-machine')) {
+                
+                this.dragTarget = tape;
+                this.dragOffset.x = this.x - rect.left;
+                this.dragOffset.y = this.y - rect.top;
+                
+                // Lift
+                tape.style.position = 'fixed';
+                tape.style.width = rect.width + 'px';
+                tape.classList.add('dragging');
+                this.updateDragPos();
+            }
+        });
+        
+        // Also handle clicking on screen for gameplay
+        if(e.target.id === 'crt-canvas') Game.handleInput(true);
+    },
+
+    move(e) {
+        this.x = e.clientX;
+        this.y = e.clientY;
+        if(this.dragTarget) this.updateDragPos();
+        
+        if(!this.isDown) Game.handleMove(this.x, this.y);
+    },
+
+    up(e) {
+        this.isDown = false;
+        
+        if(this.dragTarget) {
+            // Check drop zone (VCR Slot)
+            const slot = document.getElementById('slot').getBoundingClientRect();
+            const tape = this.dragTarget.getBoundingClientRect();
+            
+            // Simple AABB collision
+            if(tape.left < slot.right && tape.right > slot.left &&
+               tape.top < slot.bottom && tape.bottom > slot.top) {
+                // DROP!
+                VCR.insert(this.dragTarget);
+            } else {
+                // Return to rack
+                this.dragTarget.style.position = 'relative';
+                this.dragTarget.style.left = '0';
+                this.dragTarget.style.top = '0';
+                this.dragTarget.style.transform = 'none';
+            }
+            
+            this.dragTarget.classList.remove('dragging');
+            this.dragTarget = null;
+        }
+    },
+
+    updateDragPos() {
+        if(!this.dragTarget) return;
+        this.dragTarget.style.left = (this.x - this.dragOffset.x) + 'px';
+        this.dragTarget.style.top = (this.y - this.dragOffset.y) + 'px';
+        // Add physics tilt based on velocity (simplified)
+        this.dragTarget.style.transform = `rotate(${Math.random()*2-1}deg) scale(1.05)`;
+    }
+};
+
+// --- 4. THE VCR SYSTEM ---
+const VCR = {
+    state: 'idle', // idle, playing, ejected
+    activeTapeId: null,
+    
+    insert(tapeEl) {
+        if(this.state === 'playing') return;
+        
+        AudioEngine.playClunk();
+        this.state = 'loading';
+        
+        // Visuals
+        const slot = document.getElementById('slot');
+        slot.classList.add('open');
+        tapeEl.classList.add('in-machine');
+        
+        setTimeout(() => {
+            slot.classList.remove('open');
+            this.state = 'playing';
+            this.activeTapeId = parseInt(tapeEl.dataset.id);
+            document.getElementById('pwr-led').classList.add('on');
+            Game.loadTape(this.activeTapeId);
+        }, 800);
+    },
+
+    eject() {
+        if(this.state !== 'playing') return;
+        
+        AudioEngine.playClunk();
+        AudioEngine.stopMusic();
+        this.state = 'idle';
+        
+        document.getElementById('pwr-led').classList.remove('on');
+        document.getElementById('slot').classList.add('open');
+        
+        setTimeout(() => {
+            // Bring tape back
+            const tape = document.querySelector(`.tape-obj[data-id="${this.activeTapeId}"]`);
+            if(tape) {
+                tape.classList.remove('in-machine');
+                tape.style.position = 'relative';
+                tape.style.left = '0'; 
+                tape.style.top = '0';
+            }
+            document.getElementById('slot').classList.remove('open');
+            Game.stop();
+            
+            // Unlock Tape 4 check
+            if(Game.progress.tape3) {
+                document.getElementById('tape-4').style.display = 'block';
+            }
+            
+        }, 600);
+    }
+};
+
+// --- 5. RENDER & GAME ENGINE ---
+const Game = {
+    canvas: document.getElementById('crt-canvas'),
+    ctx: document.getElementById('crt-canvas').getContext('2d'),
+    width: 0, height: 0,
+    raf: null,
+    frame: 0,
+    
+    mode: 'static', // static, game
+    level: null,
+    
+    progress: { tape1: false, tape2: false, tape3: false },
+    
+    init() {
         this.resize();
         window.addEventListener('resize', () => this.resize());
         this.loop();
     },
 
     resize() {
-        const rect = this.canvas.parentElement.getBoundingClientRect();
-        // Use device pixel ratio for sharp rendering
-        const dpr = Math.min(window.devicePixelRatio || 1, 2);
-        this.width = this.canvas.width = Math.floor(rect.width * dpr);
-        this.height = this.canvas.height = Math.floor(rect.height * dpr);
-        this.canvas.style.width = rect.width + 'px';
-        this.canvas.style.height = rect.height + 'px';
+        const r = this.canvas.parentElement.getBoundingClientRect();
+        this.canvas.width = r.width;
+        this.canvas.height = r.height;
+        this.width = r.width;
+        this.height = r.height;
     },
 
-    selectTape(id) {
-        if (this.state !== 'static') return;
-
-        // Deselect previous
-        document.querySelectorAll('.vhs-tape').forEach(t => t.classList.remove('selected'));
-
-        if (this.selectedTape === id) {
-            // Double-click = insert
-            this.insertTape(id);
-            this.selectedTape = null;
-            return;
-        }
-
-        this.selectedTape = id;
-        const tapeEl = document.getElementById(`tape${id}`);
-        if (tapeEl) tapeEl.classList.add('selected');
-
-        // Highlight slot
-        document.getElementById('slot').classList.add('ready');
-        document.getElementById('hint').textContent = 'Click here to insert tape';
-        AudioSys.playBeep();
-    },
-
-    insertTape(id) {
-        if (this.state !== 'static') return;
-
-        AudioSys.init();
-        AudioSys.resume();
-        AudioSys.playClunk();
-
-        this.state = 'inserting';
-        this.selectedTape = null;
-
-        const slot = document.getElementById('slot');
-        slot.classList.add('inserting');
-        slot.classList.remove('ready', 'drag-over');
-        document.getElementById('hint').style.opacity = '0';
-        document.querySelectorAll('.vhs-tape').forEach(t => t.classList.remove('selected'));
-
-        // Hide tape from rack
-        const tapeEl = document.getElementById(`tape${id}`);
-        if (tapeEl) tapeEl.classList.add('playing');
-
-        setTimeout(() => {
-            this.state = 'play';
-            this.activeTape = parseInt(id);
-            this.frame = 0;
-
-            document.getElementById('led-play').classList.add('on');
-            document.getElementById('channel-disp').textContent = `▶ TAPE 0${id}`;
-            slot.classList.remove('inserting');
-
-            this.resize(); // Ensure dimensions are fresh
-            Levels.init(this.activeTape, this.width, this.height);
-            VFX.startTransition('fadeIn');
-        }, 1200);
-    },
-
-    scheduleEject(delay = 3000) {
-        // Clear any previous scheduled eject
-        if (this.ejectTimeout) clearTimeout(this.ejectTimeout);
-        this.ejectTimeout = setTimeout(() => this.eject(), delay);
-    },
-
-    eject() {
-        if (!this.activeTape && this.state === 'static') return;
-        if (this.ejectTimeout) { clearTimeout(this.ejectTimeout); this.ejectTimeout = null; }
-
-        AudioSys.playClunk();
-        AudioSys.stopMusic();
-        TextSys.clear();
-
-        const tapeId = this.activeTape;
-
-        this.state = 'static';
-        this.activeTape = null;
+    loadTape(id) {
+        this.mode = 'game';
         this.frame = 0;
+        
+        if(id === 1) this.level = new Tape1_Hallway(this);
+        if(id === 2) this.level = new Tape2_Curve(this);
+        if(id === 3) this.level = new Tape3_Signal(this);
+        if(id === 4) this.level = new Tape4_Finale(this);
+        
+        this.level.start();
+    },
 
-        document.getElementById('led-play').classList.remove('on');
-        document.getElementById('rec-ind').classList.remove('on');
-        document.getElementById('channel-disp').textContent = 'AV-1';
-        document.getElementById('hint').style.opacity = '1';
-        document.getElementById('hint').textContent = 'Select a tape, then click here';
+    stop() {
+        this.mode = 'static';
+        this.level = null;
+    },
 
-        // Return tape to rack with completion marker
-        if (tapeId) {
-            const tapeEl = document.getElementById(`tape${tapeId}`);
-            if (tapeEl) {
-                tapeEl.classList.remove('playing');
-                if (Levels.progress[`tape${tapeId}_done`]) {
-                    tapeEl.classList.add('completed');
-                }
-            }
-        }
-
-        // Reveal tape 4 if tape 3 done
-        if (Levels.progress.tape3_done) {
-            const t4 = document.getElementById('tape4');
-            if (t4.style.display === 'none') {
-                t4.style.display = 'flex';
-                t4.setAttribute('draggable', 'true');
-                setupTapeInteraction(t4);
-                setTimeout(() => {
-                    TextSys.show("NEW TAPE FOUND IN ARCHIVE", 3000);
-                    AudioSys.playBeep(true);
-                }, 1500);
-            }
-        }
+    handleInput(click) {
+        if(this.level) this.level.input(click);
+    },
+    
+    handleMove(x, y) {
+        // Convert screen coords to canvas coords
+        const r = this.canvas.getBoundingClientRect();
+        const cx = x - r.left;
+        const cy = y - r.top;
+        if(this.level) this.level.move(cx, cy);
     },
 
     loop() {
-        if (this.state === 'play' && this.activeTape) {
-            this.frame++;
-            VFX.update();
-            Levels.update(this.activeTape, this.width, this.height);
-            this.drawGame();
-        } else {
+        this.ctx.fillStyle = '#000';
+        this.ctx.fillRect(0, 0, this.width, this.height);
+        
+        if(this.mode === 'static') {
             this.drawStatic();
+        } else if (this.level) {
+            this.level.update();
+            this.level.draw(this.ctx);
+            // CRT Lines
+            this.ctx.fillStyle = `rgba(0, 255, 0, 0.03)`;
+            this.ctx.fillRect(0, (this.frame * 2) % this.height, this.width, 2);
         }
+
+        // Global vignette
+        const grad = this.ctx.createRadialGradient(this.width/2, this.height/2, this.width/3, this.width/2, this.height/2, this.width);
+        grad.addColorStop(0, 'transparent');
+        grad.addColorStop(1, 'rgba(0,0,0,0.6)');
+        this.ctx.fillStyle = grad;
+        this.ctx.fillRect(0,0,this.width, this.height);
+
+        this.frame++;
         requestAnimationFrame(() => this.loop());
     },
 
-    drawGame() {
-        const ctx = this.ctx;
-        const w = this.width;
-        const h = this.height;
-
-        ctx.save();
-
-        // Screen shake
-        const shake = VFX.getShakeOffset();
-        ctx.translate(shake.x, shake.y);
-
-        // Clear
-        ctx.fillStyle = '#050505';
-        ctx.fillRect(-10, -10, w + 20, h + 20);
-
-        // Draw active level
-        Levels.draw(this.activeTape, ctx, w, h);
-
-        // Particles
-        VFX.drawParticles(ctx);
-
-        // VHS tracking glitch
-        if (Math.random() > 0.97) {
-            const gy = Math.random() * h;
-            ctx.fillStyle = 'rgba(255,255,255,0.06)';
-            ctx.fillRect(-10, gy, w + 20, 3 + Math.random() * 8);
-        }
-
-        // Color fringing (chromatic aberration hint)
-        if (Math.random() > 0.99) {
-            ctx.globalCompositeOperation = 'lighter';
-            ctx.fillStyle = 'rgba(255,0,0,0.02)';
-            ctx.fillRect(2, 0, w, h);
-            ctx.fillStyle = 'rgba(0,0,255,0.02)';
-            ctx.fillRect(-2, 0, w, h);
-            ctx.globalCompositeOperation = 'source-over';
-        }
-
-        // Fade-in transition
-        if (VFX.transition.active && VFX.transition.type === 'fadeIn') {
-            ctx.fillStyle = `rgba(0,0,0,${1 - VFX.transition.progress})`;
-            ctx.fillRect(-10, -10, w + 20, h + 20);
-        }
-
-        ctx.restore();
-    },
-
     drawStatic() {
-        const w = this.width;
-        const h = this.height;
-        const ctx = this.ctx;
-
-        // Efficient static noise
-        const imgData = ctx.createImageData(w, h);
-        const buf32 = new Uint32Array(imgData.data.buffer);
-        for (let i = 0; i < buf32.length; i++) {
-            if (Math.random() < 0.08) {
-                const v = Math.floor(Math.random() * 40);
-                buf32[i] = (255 << 24) | (v << 16) | (v << 8) | v;
-            } else {
-                buf32[i] = 0xff000000;
-            }
+        const img = this.ctx.createImageData(this.width, this.height);
+        const buf = new Uint32Array(img.data.buffer);
+        for(let i=0; i<buf.length; i++) {
+            if(Math.random() < 0.1) buf[i] = 0xff111111; // Dark gray
+            else buf[i] = 0xff000000;
         }
-        ctx.putImageData(imgData, 0, 0);
-
-        // "NO SIGNAL" text
-        ctx.fillStyle = '#1e5c12';
-        ctx.font = `${Math.min(w / 15, 36)}px VT323`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.shadowColor = '#1e5c12';
-        ctx.shadowBlur = 8;
-        ctx.fillText('NO SIGNAL', w / 2, h / 2);
-        ctx.shadowBlur = 0;
-        ctx.textAlign = 'start';
-        ctx.textBaseline = 'alphabetic';
+        this.ctx.putImageData(img, 0, 0);
+        
+        // Text
+        this.ctx.font = "30px 'VT323'";
+        this.ctx.fillStyle = "#1a8000";
+        this.ctx.textAlign = "center";
+        this.ctx.fillText("NO SIGNAL", this.width/2, this.height/2);
+        
+        // Time
+        const d = new Date();
+        this.ctx.font = "20px 'VT323'";
+        this.ctx.fillText(d.toLocaleTimeString(), this.width - 60, 40);
     }
 };
 
-// ─── TAPE INTERACTION SETUP ───────────────────────────────
-function setupTapeInteraction(tapeEl) {
-    // Click/Tap to select
-    tapeEl.addEventListener('click', (e) => {
-        e.preventDefault();
-        Game.selectTape(tapeEl.dataset.id);
-    });
-    tapeEl.addEventListener('touchend', (e) => {
-        e.preventDefault();
-        Game.selectTape(tapeEl.dataset.id);
-    });
+// --- 6. LEVEL CLASSES (5 CHAPTERS EACH) ---
 
-    // Drag support (desktop)
-    tapeEl.setAttribute('draggable', 'true');
-    tapeEl.addEventListener('dragstart', (e) => {
-        e.dataTransfer.setData('text/plain', tapeEl.dataset.id);
-        e.dataTransfer.effectAllowed = 'move';
-        tapeEl.style.opacity = '0.5';
-    });
-    tapeEl.addEventListener('dragend', () => {
-        tapeEl.style.opacity = '1';
-    });
+class BaseLevel {
+    constructor(game) {
+        this.game = game;
+        this.w = game.width;
+        this.h = game.height;
+        this.chapter = 1;
+        this.timer = 0;
+        this.text = "";
+        this.textAlpha = 0;
+    }
+    showText(str, dur=180) {
+        this.text = str;
+        this.textAlpha = 255;
+        this.textTimer = dur;
+        AudioEngine.playTone(400, 'square', 0.05, 0.05);
+    }
+    drawUI(ctx) {
+        if(this.textAlpha > 0) {
+            ctx.fillStyle = `rgba(0, 0, 0, 0.8)`;
+            ctx.fillRect(20, this.h - 80, this.w - 40, 60);
+            
+            ctx.font = "24px 'Space Mono'";
+            ctx.fillStyle = `rgba(50, 255, 50, ${this.textAlpha/255})`;
+            ctx.textAlign = "center";
+            ctx.fillText(this.text, this.w/2, this.h - 45);
+            
+            this.textAlpha -= 1;
+        }
+        // Scanline
+        ctx.fillStyle = "rgba(255,255,255,0.05)";
+        ctx.fillRect(0, Math.random()*this.h, this.w, 2);
+    }
 }
 
-// Setup all initial tapes
-document.querySelectorAll('.vhs-tape').forEach(tape => {
-    if (tape.style.display !== 'none') {
-        setupTapeInteraction(tape);
+// === TAPE 1: THE HALLWAY (Anxiety/Stealth) ===
+class Tape1_Hallway extends BaseLevel {
+    start() {
+        this.p = { x: 50, y: this.h - 100 };
+        this.eyes = [];
+        this.doorX = this.w + 500;
+        AudioEngine.startSoundtrack('hallway');
+        this.showText("CH 1: THE WEIGHT. Move slowly.");
     }
-});
 
-// Slot interactions
-const slot = document.getElementById('slot');
-slot.addEventListener('dragover', (e) => { e.preventDefault(); slot.classList.add('drag-over'); });
-slot.addEventListener('dragleave', () => slot.classList.remove('drag-over'));
-slot.addEventListener('drop', (e) => {
-    e.preventDefault();
-    slot.classList.remove('drag-over');
-    const id = e.dataTransfer.getData('text/plain');
-    if (id) Game.insertTape(id);
-});
-
-// Click slot to insert selected tape
-slot.addEventListener('click', () => {
-    if (Game.selectedTape) {
-        Game.insertTape(Game.selectedTape);
+    input(click) {}
+    
+    move(x, y) {
+        // Mechanics: If you move mouse FAST, you slow down.
+        // If you move mouse SLOW, you move fast. (Paradox)
+        const dx = Math.abs(x - this.lastX || x);
+        this.lastX = x;
+        
+        let speed = 0;
+        if(dx < 5) speed = 2; // Slow movement = Fast walk
+        else if (dx > 20) speed = 0.2; // Panic movement = Freeze
+        
+        this.p.x += speed;
     }
-});
 
-// Eject button
-document.getElementById('eject-btn').addEventListener('click', () => Game.eject());
+    update() {
+        this.timer++;
+        
+        // Chapter Transitions
+        if(this.chapter === 1 && this.p.x > 300) {
+            this.chapter = 2;
+            this.showText("CH 2: THE GAZE. Don't touch the eyes.");
+            // Spawn Eyes
+            for(let i=0; i<10; i++) this.eyes.push({x: this.w + i*200, y: 100 + Math.random()*200});
+        }
+        
+        // Logic
+        this.p.x = Math.min(this.p.x, this.w/2); // Camera lock logic simulation
+        
+        // Background parallax
+        this.eyes.forEach(e => {
+            e.x -= 2; // Moving left
+            if(Math.abs(e.x - this.p.x) < 30) {
+                // Collision with gaze
+                AudioEngine.playTone(100, 'sawtooth', 0.1, 0.1);
+                this.p.x -= 10; // Push back
+            }
+        });
 
-// ─── BOOT SEQUENCE ────────────────────────────────────────
-const bootOverlay = document.getElementById('boot-overlay');
-function boot() {
-    AudioSys.init();
-    AudioSys.resume();
-    AudioSys.playNoise(0.3, 500, 0.2);
-    AudioSys.playTone(200, 'square', 0.1, 0.1);
-    bootOverlay.classList.add('hidden');
-    setTimeout(() => bootOverlay.remove(), 1000);
+        // End condition
+        if(this.timer > 1000 && this.chapter < 5) {
+             this.chapter = 5;
+             this.showText("CH 5: THE DOOR. It's locked from the inside.");
+             setTimeout(() => {
+                 Game.progress.tape1 = true;
+                 VCR.eject();
+             }, 4000);
+        }
+    }
+
+    draw(ctx) {
+        // Hallway perspective
+        ctx.fillStyle = "#111";
+        ctx.fillRect(0,0,this.w,this.h);
+        
+        // Floor
+        ctx.strokeStyle = "#333";
+        ctx.beginPath();
+        ctx.moveTo(0, this.h); ctx.lineTo(this.w/2, this.h/2); ctx.lineTo(this.w, this.h);
+        ctx.stroke();
+
+        // Player (Small White Dot)
+        ctx.fillStyle = "#fff";
+        ctx.beginPath(); ctx.arc(this.p.x, this.p.y, 5, 0, Math.PI*2); ctx.fill();
+        
+        // Eyes
+        ctx.fillStyle = "#f00";
+        this.eyes.forEach(e => {
+            ctx.beginPath(); 
+            // Eye shape
+            ctx.ellipse(e.x, e.y, 20, 10, 0, 0, Math.PI*2);
+            ctx.fill();
+        });
+
+        this.drawUI(ctx);
+    }
+}
+
+// === TAPE 2: THE CURVE (Survival) ===
+class Tape2_Curve extends BaseLevel {
+    start() {
+        this.p = { x: this.w/2, y: this.h - 50 };
+        this.bullets = [];
+        this.hits = 0;
+        AudioEngine.startSoundtrack('panic');
+        this.showText("CH 1: THE RAIN. Avoid the grades.");
+    }
+    
+    move(x, y) { this.p.x = x; }
+
+    update() {
+        this.timer++;
+        
+        // Spawn Grades
+        if(this.timer % 10 === 0) {
+            this.bullets.push({
+                x: Math.random() * this.w,
+                y: -20,
+                txt: Math.random()>0.5 ? "F" : "D-",
+                v: 3 + Math.random() * 3
+            });
+        }
+        
+        // Update
+        this.bullets.forEach((b,i) => {
+            b.y += b.v;
+            // Collision
+            if(MathUtils.dist(b.x, b.y, this.p.x, this.p.y) < 20) {
+                this.bullets.splice(i, 1);
+                this.hits++;
+                AudioEngine.playNoise(0.1, 'white', 0.2);
+            }
+        });
+        
+        if(this.timer > 1200) {
+            this.showText(`SURVIVED. HITS: ${this.hits}. You kept standing.`);
+             setTimeout(() => {
+                 Game.progress.tape2 = true;
+                 VCR.eject();
+             }, 4000);
+        }
+    }
+
+    draw(ctx) {
+        // Matrix Rain style
+        ctx.fillStyle = "rgba(0,0,0,0.2)";
+        ctx.fillRect(0,0,this.w,this.h);
+        
+        ctx.font = "20px 'VT323'";
+        this.bullets.forEach(b => {
+            ctx.fillStyle = "#0f0";
+            ctx.fillText(b.txt, b.x, b.y);
+        });
+        
+        // Player
+        ctx.fillStyle = "#fff";
+        ctx.fillRect(this.p.x-10, this.p.y-10, 20, 20);
+        
+        this.drawUI(ctx);
+    }
+}
+
+// === TAPE 3: SIGNAL LOST (Puzzle) ===
+class Tape3_Signal extends BaseLevel {
+    start() {
+        this.noise = 1.0;
+        AudioEngine.startSoundtrack('void');
+        this.showText("CH 1: THE VOID. No Guide detected.");
+    }
+    
+    input(click) {
+        // Mechanic: Click to clear noise
+        if(click) {
+            this.noise -= 0.05;
+            AudioEngine.playTone(200 + (1-this.noise)*500, 'sine', 0.1, 0.1);
+        }
+    }
+
+    update() {
+        this.timer++;
+        // Noise grows back
+        if(this.noise < 1.0) this.noise += 0.002;
+        
+        if(this.noise <= 0.1) {
+             this.showText("SIGNAL RESTORED. I am sufficient.");
+             setTimeout(() => {
+                 Game.progress.tape3 = true;
+                 VCR.eject();
+             }, 4000);
+        }
+    }
+
+    draw(ctx) {
+        // Hidden Image
+        ctx.fillStyle = "#000";
+        ctx.fillRect(0,0,this.w,this.h);
+        
+        ctx.fillStyle = "#fff";
+        ctx.font = "40px 'Space Mono'";
+        ctx.textAlign = "center";
+        ctx.fillText("I AM ENOUGH", this.w/2, this.h/2);
+        
+        // Noise Overlay
+        const img = ctx.getImageData(0,0,this.w,this.h);
+        const data = img.data;
+        for(let i=0; i<data.length; i+=4) {
+            if(Math.random() < this.noise) {
+                data[i] = data[i+1] = data[i+2] = Math.random()*255;
+            }
+        }
+        ctx.putImageData(img, 0, 0);
+        
+        this.drawUI(ctx);
+    }
+}
+
+// === TAPE 4: FINALE (Cinematic) ===
+class Tape4_Finale extends BaseLevel {
+    start() {
+        AudioEngine.startSoundtrack('hope');
+        this.particles = [];
+        for(let i=0; i<100; i++) this.particles.push({
+            x: this.w/2, y: this.h/2,
+            vx: (Math.random()-0.5)*2, vy: (Math.random()-0.5)*2,
+            life: Math.random()
+        });
+    }
+
+    update() {
+        this.timer++;
+        this.particles.forEach(p => {
+            p.x += p.vx; p.y += p.vy;
+            if(p.x<0||p.x>this.w) p.vx*=-1;
+            if(p.y<0||p.y>this.h) p.vy*=-1;
+        });
+        
+        if(this.timer === 100) this.showText("DADDY: Happy Birthday.");
+        if(this.timer === 300) this.showText("You saved yourself.");
+    }
+
+    draw(ctx) {
+        // Gold/Warm
+        const g = ctx.createLinearGradient(0,0,0,this.h);
+        g.addColorStop(0, "#332200");
+        g.addColorStop(1, "#664400");
+        ctx.fillStyle = g;
+        ctx.fillRect(0,0,this.w,this.h);
+        
+        ctx.fillStyle = "#ffcc00";
+        this.particles.forEach(p => {
+            ctx.beginPath(); ctx.arc(p.x, p.y, 2, 0, Math.PI*2); ctx.fill();
+        });
+        
+        this.drawUI(ctx);
+    }
+}
+
+// --- INIT ---
+function BIOS_BOOT() {
+    AudioEngine.init();
+    document.getElementById('bios-screen').style.display = 'none';
+    Input.init();
     Game.init();
+    
+    // Create tapes
+    const rack = document.getElementById('rack');
+    const tapesData = [
+        {id:1, label:"THE HALLWAY", color:"#fff"},
+        {id:2, label:"THE CURVE", color:"#f00"},
+        {id:3, label:"SIGNAL LOST", color:"#888"},
+        {id:4, label:"RECORD", color:"gold", hidden:true}
+    ];
+    
+    tapesData.forEach(t => {
+        const div = document.createElement('div');
+        div.className = 'tape-obj';
+        div.dataset.id = t.id;
+        if(t.hidden) { div.id = 'tape-4'; div.style.display='none'; }
+        
+        div.innerHTML = `
+            <div class="tape-window">
+                <div class="tape-spool"></div><div class="tape-spool"></div>
+            </div>
+            <div class="tape-label" style="background:${t.color === 'gold' ? '#ffcc00' : '#f0f0f0'}">${t.label}</div>
+        `;
+        rack.appendChild(div);
+    });
+    
+    // Eject button logic
+    document.getElementById('eject-btn').onclick = () => VCR.eject();
 }
-bootOverlay.addEventListener('click', boot);
-bootOverlay.addEventListener('touchend', (e) => { e.preventDefault(); boot(); });
 
-// Keyboard: Escape to eject
-window.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') Game.eject();
-    if (e.key === ' ') { e.preventDefault(); Input.clicked = true; }
-});
+document.getElementById('bios-screen').onclick = BIOS_BOOT;
+
 </script>
 </body>
 </html>
