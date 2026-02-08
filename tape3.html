@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>PLAY: The Static</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=VT323&family=Cormorant+Garamond:ital,wght@0,400;1,400&display=swap');
+:root{--bg:#050505;--phosphor:#a8e6a3;--dim:#555;--warm:#ffeedd;--red:#cc4444;--gold:#d4af37;--blue:#5588bb;--cyan:#00d4aa;--white:#d4d4d4;--soul:#00ffaa}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;background:#000;font-family:'VT323',monospace;color:var(--white);user-select:none}
+
+.tv-body{position:relative;width:min(94vw,740px);margin:auto;margin-top:max(1vh,4px);background:linear-gradient(145deg,#222,#181818,#111);border-radius:20px;border:2px solid #2a2a2a;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.8)}
+.tv-screen{position:relative;margin:12px 12px 0;aspect-ratio:4/3;background:#050508;border-radius:10px;overflow:hidden;box-shadow:inset 0 0 40px rgba(0,0,0,0.8)}
+.tv-screen::before{content:'';position:absolute;inset:0;z-index:90;pointer-events:none;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.12) 2px,rgba(0,0,0,0.12) 4px)}
+.tv-screen::after{content:'';position:absolute;inset:0;z-index:91;pointer-events:none;background:radial-gradient(ellipse at center,transparent 58%,rgba(0,0,0,0.55) 100%)}
+canvas#noise{position:absolute;inset:0;z-index:5;opacity:0.07;image-rendering:pixelated;transition:opacity 0.5s}
+#ui{position:absolute;inset:0;z-index:20;display:flex;flex-direction:column;padding:10px;overflow:hidden}
+.tv-bar{display:flex;align-items:center;justify-content:space-between;padding:8px 16px;background:#111;border-top:1px solid #1a1a1a}
+.tv-bar span{font-size:10px;letter-spacing:0.2em;color:#444;text-transform:uppercase}
+
+/* HUD */
+.hud{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px;flex-shrink:0}
+.hp-row{display:flex;align-items:center;gap:6px}
+.hp-label{font-size:16px;color:var(--gold)}
+.hp-outer{width:100px;height:12px;border:2px solid #fff;background:#222}
+.hp-inner{height:100%;background:var(--gold);transition:width 0.2s}
+.hp-text{font-size:12px;color:var(--dim)}
+.res-label{font-size:10px;color:var(--dim);letter-spacing:0.1em;text-align:right}
+.res-outer{width:160px;height:6px;border:1px solid #444;background:#222;margin-top:2px}
+.res-inner{height:100%;background:var(--cyan);transition:width 0.5s}
+
+/* Actors */
+.actors{flex:1;display:flex;justify-content:space-around;align-items:center;position:relative;min-height:0}
+.actor{display:flex;flex-direction:column;align-items:center}
+.actor-label{font-size:10px;color:var(--dim);letter-spacing:0.1em;margin-top:4px}
+
+/* Enemy anim */
+.enemy-svg{transition:filter 0.5s,opacity 0.5s}
+.enemy-glitch{animation:eGlitch 0.15s infinite}
+.enemy-calm{animation:eFloat 3s ease-in-out infinite}
+@keyframes eGlitch{0%{transform:translate(0)}20%{transform:translate(-2px,2px)}40%{transform:translate(2px,-1px)}60%{transform:translate(-1px,-2px)}100%{transform:translate(0)}}
+@keyframes eFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+
+/* Dialogue */
+.dlg-box{
+min-height:110px;border:2px solid var(--white);background:rgba(0,0,0,0.95);
+padding:10px 12px;position:relative;flex-shrink:0;
+}
+.dlg-text{font-size:clamp(14px,2.2vw,19px);line-height:1.5;min-height:40px}
+.dlg-text .voice{color:var(--red);opacity:0.85}
+.dlg-text .self{color:var(--warm)}
+.dlg-text .narrator{color:var(--dim);font-style:italic}
+.dlg-text .green{color:var(--phosphor)}
+.dlg-text .gold{color:var(--gold)}
+.dlg-text .young{color:var(--cyan)}
+
+.cont-prompt{position:absolute;bottom:6px;right:10px;font-size:12px;color:var(--gold);animation:blink 1s infinite;display:none}
+@keyframes blink{50%{opacity:0}}
+
+/* Menus */
+.menu-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px;display:none}
+.menu-btn{
+border:2px solid var(--red);color:var(--red);padding:7px 10px;
+font-size:17px;font-family:'VT323';cursor:pointer;text-transform:uppercase;
+text-align:left;transition:all 0.1s;background:transparent;
+}
+.menu-btn:hover,.menu-btn:focus{background:var(--red);color:#000;box-shadow:0 0 8px var(--red);outline:none}
+.menu-btn.mercy{border-color:var(--gold);color:var(--gold)}
+.menu-btn.mercy:hover{background:var(--gold);color:#000;box-shadow:0 0 8px var(--gold)}
+
+.act-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px;display:none}
+.act-btn{
+border:2px solid var(--blue);color:var(--blue);padding:7px 10px;
+font-size:16px;font-family:'VT323';cursor:pointer;text-align:left;
+transition:all 0.1s;background:transparent;
+}
+.act-btn:hover{background:var(--blue);color:#000}
+
+/* Bullet box */
+#bullet-canvas{position:absolute;z-index:30;display:none;border:3px solid var(--white);background:#000}
+
+/* Overlays */
+.overlay{
+position:absolute;inset:0;z-index:50;background:rgba(0,0,0,0.93);
+display:flex;flex-direction:column;justify-content:center;align-items:center;
+text-align:center;padding:20px;opacity:0;pointer-events:none;transition:opacity 1s;
+}
+.overlay.show{opacity:1;pointer-events:auto}
+.overlay h2{font-size:24px;letter-spacing:0.15em;margin-bottom:12px}
+.overlay p{font-family:'Cormorant Garamond',serif;font-size:16px;line-height:2;max-width:440px;color:var(--warm)}
+.overlay p .gold{color:var(--gold)}
+.overlay p .green{color:var(--phosphor)}
+.overlay button{margin-top:16px;padding:8px 24px;background:transparent;border:1px solid var(--dim);color:var(--dim);font-family:'VT323';font-size:14px;cursor:pointer;transition:all 0.3s}
+.overlay button:hover{border-color:var(--phosphor);color:var(--phosphor)}
+
+/* Shake */
+.shake{animation:shake 0.35s}
+@keyframes shake{10%,90%{transform:translate(-3px)}20%,80%{transform:translate(5px)}30%,50%,70%{transform:translate(-6px)}40%,60%{transform:translate(6px)}}
+
+/* Mobile dpad */
+#dpad{position:absolute;bottom:8px;right:8px;z-index:60;display:none}
+.dp-row{display:flex;justify-content:center}
+.dp-btn{width:36px;height:36px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.25);color:#fff;font-size:14px;display:flex;justify-content:center;align-items:center;border-radius:5px;margin:1px;touch-action:manipulation}
+
+.back{position:fixed;top:8px;left:8px;z-index:200;background:rgba(0,0,0,0.6);border:1px solid #333;color:#555;font-family:'VT323';font-size:12px;padding:4px 10px;cursor:pointer;text-decoration:none;border-radius:2px}
+.back:hover{color:var(--phosphor);border-color:var(--phosphor)}
+
+@media(max-width:640px){
+.tv-body{width:98vw;border-radius:12px;margin-top:2px}
+.tv-screen{margin:8px 8px 0}
+#dpad{display:block}
+.actors{min-height:100px}
+}
+</style>
+</head>
+<body>
+<a href="index.html" class="back">◀ EJECT</a>
+<div class="tv-body">
+<div class="tv-screen" id="tv-screen">
+<canvas id="noise"></canvas>
+<div id="ui">
+<div class="hud">
+<div>
+<div class="hp-row"><span class="hp-label">HP</span><div class="hp-outer"><div class="hp-inner" id="hp-fill" style="width:100%"></div></div><span class="hp-text" id="hp-text">20/20</span></div>
+</div>
+<div>
+<div class="res-label">RESONANCE <span id="res-pct">0%</span></div>
+<div class="res-outer"><div class="res-inner" id="res-fill" style="width:0%"></div></div>
+</div>
+</div>
+<div class="actors">
+<!-- Player -->
+<div class="actor" id="player-actor">
+<svg viewBox="0 0 80 110" width="52">
+<ellipse cx="40" cy="105" rx="18" ry="3" fill="rgba(0,0,0,0.3)"/>
+<rect x="26" y="48" width="28" height="36" rx="5" fill="#4a5a8a"><animate attributeName="height" values="36;37;36" dur="3s" repeatCount="indefinite"/></rect>
+<rect x="20" y="56" width="10" height="22" rx="4" fill="#4a5a8a"/><rect x="50" y="56" width="10" height="22" rx="4" fill="#4a5a8a"/>
+<circle cx="40" cy="36" r="15" fill="#ddb896"/>
+<path d="M22,24 Q40,8 58,24 L58,36 Q48,30 40,32 Q32,30 22,36 Z" fill="#1a1a1a"/>
+<path d="M34,28a2,2 0 1,1 0,0.01 M46,28a2,2 0 1,1 0,0.01" fill="#111"/>
+<path d="M36,42 Q40,44 44,42" stroke="#888" stroke-width="1.2" fill="none"/>
+<circle cx="40" cy="36" r="18" fill="none" stroke="rgba(0,255,170,0.1)" stroke-width="2"><animate attributeName="r" values="18;20;18" dur="4s" repeatCount="indefinite"/></circle>
+</svg>
+<div class="actor-label">ANUSHRI</div>
+</div>
+<!-- Enemy: Younger Anushri -->
+<div class="actor" id="enemy-actor">
+<svg viewBox="0 0 70 100" width="48" class="enemy-svg enemy-glitch" id="enemy-svg">
+<ellipse cx="35" cy="95" rx="16" ry="3" fill="rgba(0,0,0,0.3)"/>
+<rect x="18" y="44" width="34" height="32" rx="5" fill="#5ac" opacity="0.9"><animate attributeName="fill-opacity" values="0.9;0.7;0.9" dur="2s" repeatCount="indefinite"/></rect>
+<circle cx="35" cy="30" r="14" fill="#eec8a0"/>
+<path d="M18,18 Q35,4 52,18 L52,32 Q44,26 35,28 Q26,26 18,32 Z" fill="#1a1a1a"/>
+<circle cx="29" cy="29" r="3" fill="#111"><animate attributeName="r" values="3;2.5;3" dur="1.5s" repeatCount="indefinite"/></circle>
+<circle cx="41" cy="29" r="3" fill="#111"><animate attributeName="r" values="3;2.5;3" dur="1.5s" repeatCount="indefinite"/></circle>
+<path d="M30,38 Q35,36 40,38" stroke="#666" stroke-width="1.2" fill="none"/>
+<!-- Sparkle -->
+<circle cx="55" cy="16" r="2" fill="var(--cyan)" opacity="0.6"><animate attributeName="opacity" values="0.6;0.2;0.6" dur="2s" repeatCount="indefinite"/></circle>
+</svg>
+<div class="actor-label" id="enemy-label">YOUNGER SELF</div>
+</div>
+</div>
+<div class="dlg-box" id="dlg-box">
+<div class="dlg-text" id="dlg-text"></div>
+<div class="cont-prompt" id="cont">▼</div>
+<div class="menu-grid" id="main-menu">
+<button class="menu-btn" data-act="fight">⚔ Fight</button>
+<button class="menu-btn" data-act="act">★ Act</button>
+<button class="menu-btn" data-act="item">♥ Item</button>
+<button class="menu-btn mercy" data-act="mercy">✦ Mercy</button>
+</div>
+<div class="act-grid" id="act-menu">
+<button class="act-btn" data-act="listen">Listen</button>
+<button class="act-btn" data-act="remember">Remember</button>
+<button class="act-btn" data-act="apologize">Apologize</button>
+<button class="act-btn" data-act="back">← Back</button>
+</div>
+</div>
+</div>
+<canvas id="bullet-canvas" width="200" height="200"></canvas>
+<div id="dpad"><div class="dp-row"><div class="dp-btn" data-d="u">▲</div></div><div class="dp-row"><div class="dp-btn" data-d="l">◀</div><div style="width:36px"></div><div class="dp-btn" data-d="r">▶</div></div><div class="dp-row"><div class="dp-btn" data-d="d">▼</div></div></div>
+<div class="overlay" id="win-overlay"><h2 style="color:var(--gold)">SIGNAL CLEAR</h2><p id="win-text"></p><button id="win-btn">◀ EJECT TAPE</button></div>
+<div class="overlay" id="lose-overlay"><h2 style="color:var(--red)">TAPE JAMMED</h2><p>The static won this time.<br>But the tape can always be replayed.</p><button id="retry-btn">REWIND</button></div>
+</div>
+<div class="tv-bar"><span>PLAY — FACE THE STATIC</span><span>CH-03</span></div>
+</div>
+
+<script>
+'use strict';
+const $=id=>document.getElementById(id);
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+
+/* ═══ NOISE ═══ */
+const Noise=(()=>{const c=$('noise'),ctx=c.getContext('2d');let w=0,h=0;const resize=()=>{const r=c.parentElement.getBoundingClientRect();w=c.width=Math.ceil(r.width/2);h=c.height=Math.ceil(r.height/2)};const draw=()=>{if(!w)return;const img=ctx.createImageData(w,h);const d=img.data;for(let i=0;i<d.length;i+=4){const v=Math.random()*255;d[i]=d[i+1]=d[i+2]=v;d[i+3]=Math.random()*18}ctx.putImageData(img,0,0);requestAnimationFrame(draw)};window.addEventListener('resize',resize);return{init(){resize();draw()},setIntensity(v){c.style.opacity=v}}})();
+
+/* ═══ SYNTH ═══ */
+const Synth=(()=>{let ctx=null,m=null;const init=()=>{if(ctx)return;ctx=new(window.AudioContext||window.webkitAudioContext)();m=ctx.createGain();m.gain.value=0.4;m.connect(ctx.destination);if(ctx.state==='suspended')ctx.resume()};
+const note=(f,dur,type='triangle',vol=0.06,atk=0.01)=>{if(!ctx)return;const o=ctx.createOscillator(),g=ctx.createGain();o.type=type;o.frequency.value=f;g.gain.setValueAtTime(0.001,ctx.currentTime);g.gain.linearRampToValueAtTime(vol,ctx.currentTime+atk);g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+dur);o.connect(g);g.connect(m);o.start();o.stop(ctx.currentTime+dur+0.05)};
+const noiseBurst=(dur=0.1,vol=0.05)=>{if(!ctx)return;const sz=Math.floor(ctx.sampleRate*dur),buf=ctx.createBuffer(1,sz,ctx.sampleRate),d=buf.getChannelData(0);for(let i=0;i<sz;i++)d[i]=Math.random()*2-1;const s=ctx.createBufferSource();s.buffer=buf;const g=ctx.createGain();g.gain.setValueAtTime(vol,ctx.currentTime);g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+dur);s.connect(g);g.connect(m);s.start()};
+const hit=()=>{note(100,0.15,'sawtooth',0.07);note(80,0.12,'sawtooth',0.05)};
+const heal=()=>{note(440,0.12,'sine',0.04);setTimeout(()=>note(660,0.15,'sine',0.04),70)};
+const sel=()=>note(440,0.04,'square',0.03);
+const confirm=()=>{note(660,0.05,'square',0.04)};
+const win=()=>{note(523,0.1,'triangle',0.05);setTimeout(()=>note(659,0.12,'triangle',0.05),80);setTimeout(()=>note(784,0.15,'triangle',0.05),170)};
+const typeClick=()=>note(1400+Math.random()*400,0.012,'square',0.015);
+const startBg=()=>{if(!ctx)return;const o=ctx.createOscillator(),f=ctx.createBiquadFilter(),g=ctx.createGain();o.type='square';o.frequency.value=55;f.type='lowpass';f.frequency.value=180;g.gain.value=0.008;o.connect(f);f.connect(g);g.connect(m);o.start()};
+return{init,note,noiseBurst,hit,heal,sel,confirm,win,typeClick,startBg}})();
+
+/* ═══ INPUT ═══ */
+const Keys={};
+window.addEventListener('keydown',e=>{Keys[e.key]=true});
+window.addEventListener('keyup',e=>{Keys[e.key]=false});
+document.querySelectorAll('.dp-btn').forEach(b=>{
+  const d=b.dataset.d;if(!d)return;
+  const k={u:'ArrowUp',d:'ArrowDown',l:'ArrowLeft',r:'ArrowRight'}[d];
+  b.addEventListener('touchstart',e=>{e.preventDefault();Keys[k]=true},{passive:false});
+  b.addEventListener('touchend',e=>{e.preventDefault();Keys[k]=false},{passive:false});
+});
+
+/* ═══ GAME STATE ═══ */
+const G={
+  state:'dialogue',hp:20,maxHp:20,
+  resonance:0,maxRes:100,pressure:0,
+  items:{breath:2},invulnUntil:0,
+  textQueue:[],textCb:null,typing:false,skipType:false,
+  apologyDone:false,listenCount:0,rememberCount:0,
+};
+
+/* ═══ DOM ═══ */
+const dlgText=$('dlg-text'),mainMenu=$('main-menu'),actMenu=$('act-menu'),contPrompt=$('cont');
+const hpFill=$('hp-fill'),hpText=$('hp-text'),resFill=$('res-fill'),resPct=$('res-pct');
+const enemySvg=$('enemy-svg'),noiseC=$('noise'),tvScreen=$('tv-screen');
+const bulletCanvas=$('bullet-canvas'),bCtx=bulletCanvas.getContext('2d');
+
+const updateHUD=()=>{
+  hpFill.style.width=(G.hp/G.maxHp*100)+'%';
+  hpText.textContent=`${Math.max(0,G.hp)}/${G.maxHp}`;
+  resFill.style.width=Math.min(100,(G.resonance/G.maxRes)*100)+'%';
+  resPct.textContent=Math.round(G.resonance/G.maxRes*100)+'%';
+  Noise.setIntensity(0.07+G.pressure*0.02);
+};
+
+/* ═══ TYPING ═══ */
+const typeText=async(text,spd=24)=>{
+  G.typing=true;G.skipType=false;dlgText.innerHTML='';
+  for(let i=0;i<text.length;i++){
+    if(G.skipType){dlgText.innerHTML=text;break}
+    if(text[i]==='<'){const j=text.indexOf('>',i);dlgText.innerHTML+=text.substring(i,j+1);i=j}
+    else{dlgText.innerHTML+=text[i];Synth.typeClick()}
+    await sleep(spd);
+  }
+  G.typing=false;
+};
+
+/* ═══ DIALOGUE QUEUE ═══ */
+const queue=(lines,cb)=>{
+  G.state='dialogue';mainMenu.style.display='none';actMenu.style.display='none';contPrompt.style.display='none';
+  G.textQueue=[...lines];G.textCb=cb||null;processQ();
+};
+const processQ=async()=>{
+  if(!G.textQueue.length){if(G.textCb)G.textCb();return}
+  const line=G.textQueue.shift();
+  if(typeof line==='function'){line();processQ();return}
+  await typeText(line);
+  contPrompt.style.display='block';
+  await new Promise(r=>{
+    const h=()=>{if(G.typing){G.skipType=true;return}contPrompt.style.display='none';document.removeEventListener('click',h);document.removeEventListener('keydown',kh);r()};
+    const kh=e=>{if(e.key==='z'||e.key==='Z'||e.key==='Enter'||e.key===' ')h()};
+    document.addEventListener('click',h);document.addEventListener('keydown',kh);
+  });
+  processQ();
+};
+
+/* ═══ MENUS ═══ */
+const showMenu=(text)=>{G.state='menu';if(text)dlgText.innerHTML=text;mainMenu.style.display='grid';actMenu.style.display='none'};
+const showAct=()=>{G.state='act_menu';mainMenu.style.display='none';actMenu.style.display='grid';dlgText.innerHTML='<span class="narrator">* What will you do?</span>';
+  // Show Promise button after Apologize
+  const btns=actMenu.querySelectorAll('.act-btn');
+  btns.forEach(b=>{if(b.dataset.act==='apologize'&&G.apologyDone){b.textContent='Promise';b.dataset.act='promise'}});
+};
+
+mainMenu.addEventListener('click',e=>{const a=e.target.dataset.act;if(!a||G.state!=='menu')return;Synth.confirm();mainMenu.style.display='none';
+  if(a==='fight')doFight();else if(a==='act')showAct();else if(a==='item')doItem();else if(a==='mercy')doMercy();
+});
+actMenu.addEventListener('click',e=>{const a=e.target.dataset.act;if(!a||G.state!=='act_menu')return;Synth.confirm();actMenu.style.display='none';
+  if(a==='listen')doListen();else if(a==='remember')doRemember();else if(a==='apologize')doApologize();else if(a==='promise')doPromise();else if(a==='back')showMenu('<span class="narrator">* She watches you. Waiting.</span>');
+});
+
+/* ═══ ACTIONS ═══ */
+const addRes=(v)=>{G.resonance=Math.min(G.maxRes,G.resonance+v);updateHUD()};
+
+function doFight(){
+  G.pressure=Math.min(8,G.pressure+2);updateHUD();
+  queue([
+    '<span class="narrator">* You strike at the static.</span>',
+    '<span class="narrator">* The image cracks. But the crack sounds like your own voice screaming.</span>',
+    '<span class="young">"You\'re hurting us."</span>',
+    '<span class="narrator">* The screen distortion thickens.</span>',
+  ],()=>startDodge('hard'));
+}
+
+function doListen(){
+  G.listenCount++;addRes(15);
+  const lines=G.listenCount<=1?[
+    '<span class="narrator">* You stop. You listen.</span>',
+    '<span class="young">"Remember when we stayed up all night reading about the ocean?"</span>',
+    '<span class="young">"We wanted to be a marine biologist."</span>',
+    '<span class="self">* "...I remember the poster on the wall. The whale shark."</span>',
+  ]:[
+    '<span class="narrator">* You listen deeper.</span>',
+    '<span class="young">"Remember the night you studied until your eyes burned? Not for anyone else. For yourself."</span>',
+    '<span class="narrator">* Something softens in the static.</span>',
+  ];
+  queue(lines,()=>startDodge('easy'));
+}
+
+function doRemember(){
+  G.rememberCount++;addRes(15);
+  const lines=G.rememberCount<=1?[
+    '<span class="narrator">* You reach back into the noise.</span>',
+    '<span class="self">"I remember being ten and thinking I could do anything."</span>',
+    '<span class="young">"You could. We could."</span>',
+    '<span class="self">"What happened?"</span>',
+    '<span class="young">"You started listening to everyone else instead of me."</span>',
+  ]:[
+    '<span class="narrator">* You remember further.</span>',
+    '<span class="self">"I remember the first time I understood a difficult problem. Actually understood it. Not memorized—understood."</span>',
+    '<span class="self">"It felt like light."</span>',
+    '<span class="young">"It still can."</span>',
+  ];
+  queue(lines,()=>startDodge('easy'));
+}
+
+function doApologize(){
+  G.apologyDone=true;addRes(20);
+  queue([
+    '<span class="self">"I\'m sorry."</span>',
+    '<span class="narrator">* The words hang in the static.</span>',
+    '<span class="self">"I\'m sorry I stopped believing in us."</span>',
+    '<span class="young">"..."</span>',
+    '<span class="young">"You really mean that?"</span>',
+    '<span class="narrator">* The distortion wavers. Not with anger. With recognition.</span>',
+  ],()=>startDodge('easy'));
+}
+
+function doPromise(){
+  addRes(25);
+  queue([
+    '<span class="self">"I can\'t promise we\'ll make it to the top."</span>',
+    '<span class="self">"But I promise we won\'t stop trying."</span>',
+    '<span class="narrator">* She looks at you for a long time.</span>',
+    '<span class="young">"...okay."</span>',
+    '<span class="narrator">* The static quiets to a whisper.</span>',
+  ],()=>startDodge('easy'));
+}
+
+function doItem(){
+  if(G.items.breath<=0){queue(['<span class="narrator">* (Nothing left.)</span>'],()=>showMenu());return}
+  if(G.hp>=G.maxHp){queue(['<span class="narrator">* HP is full.</span>'],()=>showMenu());return}
+  G.items.breath--;G.hp=Math.min(G.maxHp,G.hp+8);G.pressure=Math.max(0,G.pressure-1);updateHUD();Synth.heal();
+  queue([`<span class="narrator">* You breathe. Deep. Slow. (${G.items.breath} left)</span>`],()=>startDodge('easy'));
+}
+
+function doMercy(){
+  if(G.resonance>=85){doWin();return}
+  queue([
+    '<span class="narrator">* She isn\'t ready yet.</span>',
+    '<span class="narrator">* She\'s still afraid of what silence means.</span>',
+    '<span class="narrator">* Keep talking. Keep listening.</span>',
+  ],()=>startDodge('medium'));
+}
+
+/* ═══ DODGE (Bullet Hell) ═══ */
+let dodgeRaf=null;
+const words_bad=["AVERAGE","FAKE","INVISIBLE","FAILURE","WORTHLESS","SLOW"];
+const words_good=["TRYING","GROWING","STILL HERE","HONEST"];
+
+function startDodge(diff){
+  G.state='dodge';dlgText.innerHTML='';mainMenu.style.display='none';actMenu.style.display='none';
+
+  const BW=200,BH=200;
+  const scrRect=$('tv-screen').getBoundingClientRect();
+  bulletCanvas.style.display='block';
+  bulletCanvas.style.left=((scrRect.width-BW)/2)+'px';
+  bulletCanvas.style.top=((scrRect.height-BH)/2-8)+'px';
+  bulletCanvas.width=BW;bulletCanvas.height=BH;
+
+  let soul={x:BW/2,y:BH*0.7},bullets=[],frame=0;
+  const p=G.pressure;
+  const maxFrames=diff==='easy'?240:diff==='medium'?320:380;
+
+  const spawn=()=>{
+    const rate=diff==='easy'?Math.max(12,16-p):diff==='medium'?Math.max(9,13-p):Math.max(7,11-p);
+    if(frame%rate===0){
+      const isGood=G.resonance>40&&Math.random()>0.65;
+      const angle=Math.random()*Math.PI*2;
+      const sp=diff==='easy'?2.2:diff==='medium'?2.8:3.2;
+      bullets.push({
+        x:BW/2+Math.cos(angle)*(BW/2+10),
+        y:BH/2+Math.sin(angle)*(BH/2+10),
+        vx:-Math.cos(angle)*(sp+p*0.04),
+        vy:-Math.sin(angle)*(sp+p*0.04),
+        good:isGood,r:3,
+        word:isGood?words_good[Math.floor(Math.random()*words_good.length)]:words_bad[Math.floor(Math.random()*words_bad.length)]
+      });
+    }
+  };
+
+  const loop=()=>{
+    if(G.state!=='dodge')return;
+    bCtx.fillStyle='rgba(0,0,0,0.3)';bCtx.fillRect(0,0,BW,BH);
+
+    const spd=3.2;
+    if(Keys.ArrowUp||Keys.w||Keys.W)soul.y=Math.max(6,soul.y-spd);
+    if(Keys.ArrowDown||Keys.s||Keys.S)soul.y=Math.min(BH-6,soul.y+spd);
+    if(Keys.ArrowLeft||Keys.a||Keys.A)soul.x=Math.max(6,soul.x-spd);
+    if(Keys.ArrowRight||Keys.d||Keys.D)soul.x=Math.min(BW-6,soul.x+spd);
+
+    const now=performance.now();const inv=now<G.invulnUntil;
+    if(!inv||Math.floor(now/70)%2===0){
+      bCtx.fillStyle='#00ffaa';bCtx.shadowBlur=6;bCtx.shadowColor='#00ffaa';
+      bCtx.beginPath();bCtx.arc(soul.x,soul.y,5,0,Math.PI*2);bCtx.fill();bCtx.shadowBlur=0;
+    }
+
+    spawn();
+    bCtx.font='8px monospace';bCtx.textAlign='center';
+    for(let i=bullets.length-1;i>=0;i--){
+      const b=bullets[i];b.x+=b.vx;b.y+=b.vy;
+      bCtx.fillStyle=b.good?'rgba(0,212,170,0.7)':'rgba(255,255,255,0.6)';
+      bCtx.fillText(b.word,b.x,b.y);
+      const dx=soul.x-b.x,dy=soul.y-b.y;
+      if(dx*dx+dy*dy<(b.r+5)*(b.r+5)&&!b.good){
+        if(now>=G.invulnUntil){
+          bullets.splice(i,1);G.hp-=2;G.invulnUntil=now+500;updateHUD();Synth.hit();
+          tvScreen.classList.remove('shake');void tvScreen.offsetWidth;tvScreen.classList.add('shake');
+          if(G.hp<=0){endDodge();doLose();return}
+        }continue;
+      }
+      if(b.x<-30||b.x>BW+30||b.y<-30||b.y>BH+30)bullets.splice(i,1);
+    }
+    bCtx.strokeStyle='#fff';bCtx.lineWidth=2;bCtx.strokeRect(0,0,BW,BH);
+    frame++;
+    if(frame<maxFrames)dodgeRaf=requestAnimationFrame(loop);
+    else{endDodge();maybePhase(()=>showMenu('<span class="narrator">* She watches you. Waiting.</span>'))}
+  };
+  if(dodgeRaf)cancelAnimationFrame(dodgeRaf);
+  dodgeRaf=requestAnimationFrame(loop);
+}
+
+function endDodge(){cancelAnimationFrame(dodgeRaf);bulletCanvas.style.display='none'}
+
+/* ═══ PHASE TRANSITIONS ═══ */
+let p2=false,p3=false;
+function maybePhase(cb){
+  if(!p2&&G.resonance>=40){p2=true;
+    enemySvg.classList.remove('enemy-glitch');enemySvg.classList.add('enemy-calm');
+    queue([
+      '<span class="narrator">* The static changes. The sharp edges soften.</span>',
+      '<span class="young">"I\'m not your enemy."</span>',
+      '<span class="young">"I\'m the part of you that learned to expect disappointment."</span>',
+      '<span class="young">"So you\'d never be caught off guard."</span>',
+    ],cb);return;
+  }
+  if(!p3&&G.resonance>=70){p3=true;
+    queue([
+      '<span class="narrator">* The static is barely a whisper now.</span>',
+      '<span class="young">"If you stop doubting yourself..."</span>',
+      '<span class="young">"what happens to me?"</span>',
+      '<span class="narrator">* You realize: she was never trying to destroy you.</span>',
+      '<span class="narrator">* She was trying to keep you small enough to feel safe.</span>',
+    ],cb);return;
+  }
+  cb();
+}
+
+/* ═══ WIN / LOSE ═══ */
+function doWin(){
+  G.state='win';mainMenu.style.display='none';actMenu.style.display='none';Synth.win();
+  enemySvg.classList.remove('enemy-glitch');enemySvg.classList.add('enemy-calm');
+  enemySvg.style.opacity='0.5';Noise.setIntensity(0.03);
+
+  queue([
+    '<span class="narrator">* She stops fighting.</span>',
+    '<span class="young">"I thought if I kept you afraid..."</span>',
+    '<span class="young">"you\'d never have to feel the pain of failing."</span>',
+    '<span class="narrator">* You reach out your hand.</span>',
+    '<span class="narrator">* The static is warm.</span>',
+    '<span class="self">"You can stay. But we learn a kinder way to talk."</span>',
+    '<span class="narrator">* She takes your hand. She doesn\'t disappear.</span>',
+    '<span class="narrator">* She steps into you.</span>',
+    '<span class="narrator">* Not perfect. Not clear. But <span class="green">whole</span>.</span>',
+  ],()=>{
+    const o=$('win-overlay'),t=$('win-text');
+    let msg='The static is not gone. It never will be.<br><br>';
+    if(G.pressure<=2)msg+='You chose <span class="green">understanding</span> over force. The signal cleared because you <span class="gold">listened</span>.';
+    else if(G.pressure<=5)msg+='You fought some. You listened some. That\'s <span class="green">honest</span>. That\'s human.';
+    else msg+='You fought hard. But you\'re still <span class="green">here</span>. That\'s what matters.';
+    t.innerHTML=msg;o.classList.add('show');
+    $('win-btn').addEventListener('click',()=>{
+      try{const s=JSON.parse(localStorage.getItem('anushri_archive_v2')||'{}');s.tape3={complete:true,pressure:G.pressure,resonance:G.resonance};localStorage.setItem('anushri_archive_v2',JSON.stringify(s))}catch{}
+      window.location.href='index.html';
+    });
+  });
+}
+
+function doLose(){
+  G.state='gameover';$('lose-overlay').classList.add('show');
+  $('retry-btn').addEventListener('click',()=>location.reload());
+}
+
+/* ═══ STORY START ═══ */
+function startStory(){
+  queue([
+    '<span class="narrator">* You press play.</span>',
+    '<span class="narrator">* The screen fills with static. But this time something is different.</span>',
+    '<span class="narrator">* A shape forms. Small. Familiar.</span>',
+    '<span class="narrator">* It looks like you. But younger. Brighter. Angrier.</span>',
+    '<span class="young">"Oh. You came back."</span>',
+    '<span class="young">"I thought you forgot about me."</span>',
+    '<span class="narrator">* There is no guide text this time. No green voice at the bottom of the screen.</span>',
+    '<span class="narrator">* You are alone with yourself.</span>',
+  ],()=>showMenu('<span class="narrator">* She stands there. Small and furious. Waiting.</span>'));
+}
+
+/* ═══ INIT ═══ */
+Noise.init();Synth.init();Synth.startBg();updateHUD();startStory();
+</script>
+</body>
+</html>
