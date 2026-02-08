@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>FILE_01: THE AXIOM</title>
+    <style>
+        body { margin: 0; background: #080808; color: #00F3FF; font-family: monospace; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
+        canvas { border: 2px solid #00F3FF; box-shadow: 0 0 30px rgba(0, 243, 255, 0.2); background: #000; cursor: crosshair; }
+        #ui { position: absolute; top: 20px; text-align: center; pointer-events: none; width: 100%; }
+        h1 { font-size: 2rem; margin: 0; text-shadow: 0 0 10px #00F3FF; }
+        p { color: #888; font-size: 1rem; max-width: 600px; margin: 10px auto; background: rgba(0,0,0,0.8); padding: 10px; }
+        #back-btn { position: absolute; bottom: 20px; text-decoration: none; color: #00F3FF; border: 1px solid #00F3FF; padding: 10px 20px; opacity: 0; pointer-events: none; transition: opacity 1s; }
+        #back-btn.visible { opacity: 1; pointer-events: auto; }
+    </style>
+</head>
+<body>
+    <div id="ui">
+        <h1>THE AXIOM</h1>
+        <p id="msg">Your mind is a sanctuary of logic. Connect the nodes to restore the proofs. <br>[Click and Drag to connect]</p>
+    </div>
+    <canvas id="c"></canvas>
+    <a href="index.html" id="back-btn">DATA RECOVERED. RETURN TO ARCHIVE.</a>
+
+    <script>
+        const c = document.getElementById('c');
+        const ctx = c.getContext('2d');
+        let w, h;
+        
+        // Game State
+        const nodes = [];
+        let connections = [];
+        let currentDrag = null;
+        let completed = false;
+        
+        // Math/Logic Theme: Create a perfect geometric shape (A Star within a Pentagton)
+        const setupLevel = () => {
+            nodes.length = 0;
+            connections.length = 0;
+            const r = 150;
+            const cx = w/2, cy = h/2;
+            for(let i=0; i<5; i++) {
+                const angle = (i * 2 * Math.PI / 5) - Math.PI/2;
+                nodes.push({
+                    x: cx + r * Math.cos(angle),
+                    y: cy + r * Math.sin(angle),
+                    id: i,
+                    connected: []
+                });
+            }
+        };
+
+        const resize = () => {
+            w = c.width = window.innerWidth > 800 ? 800 : window.innerWidth - 40;
+            h = c.height = 600;
+            setupLevel();
+        };
+
+        // Input
+        const getPos = (e) => {
+            const rect = c.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            return { x: clientX - rect.left, y: clientY - rect.top };
+        };
+
+        const dist = (p1, p2) => Math.hypot(p1.x - p2.x, p1.y - p2.y);
+
+        const onDown = (e) => {
+            if(completed) return;
+            const p = getPos(e);
+            const clicked = nodes.find(n => dist(p, n) < 20);
+            if(clicked) currentDrag = { start: clicked, curr: p };
+        };
+
+        const onMove = (e) => {
+            if(currentDrag) currentDrag.curr = getPos(e);
+        };
+
+        const onUp = (e) => {
+            if(!currentDrag) return;
+            const p = getPos(e);
+            const target = nodes.find(n => dist(p, n) < 20);
+            
+            if(target && target !== currentDrag.start) {
+                // Check if connection exists
+                const exists = connections.some(c => 
+                    (c.a === currentDrag.start && c.b === target) || 
+                    (c.a === target && c.b === currentDrag.start)
+                );
+                
+                if(!exists) {
+                    connections.push({ a: currentDrag.start, b: target });
+                    // Audio Feedback
+                    playTone(440 + (connections.length * 100), 'sine');
+                    checkWin();
+                }
+            }
+            currentDrag = null;
+        };
+
+        c.addEventListener('mousedown', onDown);
+        c.addEventListener('mousemove', onMove);
+        window.addEventListener('mouseup', onUp);
+        c.addEventListener('touchstart', onDown);
+        c.addEventListener('touchmove', onMove);
+        window.addEventListener('touchend', onUp);
+
+        // Audio
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const playTone = (freq, type) => {
+            if(audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const g = audioCtx.createGain();
+            osc.type = type;
+            osc.frequency.value = freq;
+            g.gain.value = 0.1;
+            g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
+            osc.connect(g);
+            g.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.5);
+        };
+
+        const checkWin = () => {
+            // Need a pentagram (5 lines connecting alternating nodes) or pentagon + star (10 lines)
+            // Let's aim for 5 lines creating the inner star
+            if(connections.length >= 5) {
+                completed = true;
+                document.getElementById('msg').innerText = "Logic Verified. Your brilliance brings order to chaos.";
+                document.getElementById('back-btn').classList.add('visible');
+                playTone(880, 'triangle');
+            }
+        };
+
+        const draw = () => {
+            ctx.fillStyle = 'rgba(0,0,0,0.2)';
+            ctx.fillRect(0,0,w,h);
+
+            // Draw Nodes
+            nodes.forEach(n => {
+                ctx.beginPath();
+                ctx.arc(n.x, n.y, 10, 0, Math.PI*2);
+                ctx.fillStyle = '#00F3FF';
+                ctx.fill();
+                // Glow
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = '#00F3FF';
+            });
+            ctx.shadowBlur = 0;
+
+            // Draw Connections
+            ctx.strokeStyle = '#00F3FF';
+            ctx.lineWidth = 2;
+            connections.forEach(c => {
+                ctx.beginPath();
+                ctx.moveTo(c.a.x, c.a.y);
+                ctx.lineTo(c.b.x, c.b.y);
+                ctx.stroke();
+            });
+
+            // Draw Drag
+            if(currentDrag) {
+                ctx.beginPath();
+                ctx.moveTo(currentDrag.start.x, currentDrag.start.y);
+                ctx.lineTo(currentDrag.curr.x, currentDrag.curr.y);
+                ctx.strokeStyle = '#888';
+                ctx.setLineDash([5, 5]);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+
+            requestAnimationFrame(draw);
+        };
+
+        window.addEventListener('resize', resize);
+        resize();
+        draw();
+    </script>
+</body>
+</html>
