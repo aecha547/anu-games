@@ -3,441 +3,641 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>ANUSHRI_ARCHIVE.vhs</title>
+<title>ANUSHRI: PLAY/REWIND</title>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=VT323&family=Cormorant+Garamond:ital,wght@0,600;1,600&display=swap');
-
-:root {
-    --phosphor:#4af626;--phosphor-dim:#1e5c12;--phosphor-bright:#afffa1;--gold:#ffb84d;
+@import url('https://fonts.googleapis.com/css2?family=VT323&family=Caveat:wght@400;600&family=Cormorant+Garamond:ital,wght@0,400;1,400&display=swap');
+:root{
+--bg:#030303;--plastic:#1a1a1a;--screen-bg:#050508;
+--phosphor:#a8e6a3;--amber:#ffb000;--gold:#d4af37;
+--red:#cc4444;--blue:#5588bb;--cyan:#00d4aa;
+--dim:#555;--warm:#ffeedd;--white:#d4d4d4;
+--font-crt:'VT323',monospace;--font-hand:'Caveat',cursive;
+--font-serif:'Cormorant Garamond',serif;
 }
-*{box-sizing:border-box;user-select:none;-webkit-user-drag:none;margin:0;padding:0}
-body{background:#060606;height:100vh;overflow:hidden;font-family:'VT323',monospace;display:flex;align-items:center;justify-content:center;color:var(--phosphor);cursor:crosshair}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;background:var(--bg);font-family:var(--font-crt);color:var(--white);user-select:none}
 
-#boot-overlay{position:fixed;inset:0;z-index:9999;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:opacity .8s}
-#boot-overlay.hidden{opacity:0;pointer-events:none}
-#boot-overlay h1{font-family:'Cormorant Garamond',serif;font-size:5rem;color:var(--phosphor);text-shadow:0 0 25px var(--phosphor),0 0 50px var(--phosphor-dim);animation:flicker 2.8s infinite;letter-spacing:-2px;position:relative}
-#boot-overlay h1::after{content:"ARCHIVE";position:absolute;bottom:-22px;left:50%;transform:translateX(-50%);font-size:1.6rem;letter-spacing:8px;color:var(--phosphor-dim);opacity:.7;font-family:'VT323',monospace}
-#boot-overlay p{color:#444;font-size:1.3rem;margin-top:40px;animation:pulse 2s infinite;letter-spacing:2px}
-#boot-overlay .sub{color:var(--phosphor-dim);font-size:.85rem;margin-top:12px;opacity:.5}
-@keyframes flicker{0%,18%,22%,25%,53%,56%,100%{opacity:1}20%,24%,55%{opacity:.7;text-shadow:none}}
-@keyframes pulse{0%,100%{opacity:.3}50%{opacity:1}}
+/* === LAYOUT === */
+.wrapper{
+width:100%;height:100%;display:flex;flex-direction:column;
+align-items:center;justify-content:center;gap:20px;padding:10px;
+}
+
+/* === TV BODY === */
+.tv-body{
+position:relative;width:min(94vw,760px);
+background:linear-gradient(145deg,#222 0%,#181818 50%,#111 100%);
+border-radius:20px;border:2px solid #2a2a2a;
+box-shadow:0 20px 80px rgba(0,0,0,0.7),inset 0 1px 0 rgba(255,255,255,0.04);
+overflow:hidden;
+}
+
+/* === TV SCREEN === */
+.tv-screen{
+position:relative;margin:14px 14px 0;aspect-ratio:4/3;
+background:var(--screen-bg);border-radius:10px;overflow:hidden;
+box-shadow:inset 0 0 40px rgba(0,0,0,0.8),0 0 2px rgba(168,230,163,0.05);
+}
+/* Scanlines */
+.tv-screen::before{
+content:'';position:absolute;inset:0;z-index:50;pointer-events:none;
+background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.12) 2px,rgba(0,0,0,0.12) 4px);
+}
+/* Curvature */
+.tv-screen::after{
+content:'';position:absolute;inset:0;z-index:51;pointer-events:none;
+background:radial-gradient(ellipse at center,transparent 58%,rgba(0,0,0,0.55) 100%);
+}
+/* Static canvas */
+#static-canvas{position:absolute;inset:0;z-index:5;opacity:0.07}
+/* Screen content */
+#screen{position:absolute;inset:0;z-index:20;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:24px;overflow:hidden}
+
+/* === SCREEN GLOW === */
+.screen-glow{
+position:absolute;inset:-15px;z-index:-1;border-radius:20px;
+background:radial-gradient(ellipse,rgba(168,230,163,0.03) 0%,transparent 70%);
+pointer-events:none;transition:background 1s;
+}
+
+/* === TV CONTROLS === */
+.tv-controls{
+display:flex;align-items:center;justify-content:space-between;
+padding:10px 18px;background:#111;border-top:1px solid #1a1a1a;
+}
+.power-section{display:flex;align-items:center;gap:6px}
+.power-led{
+width:7px;height:7px;border-radius:50%;background:#1a0000;
+border:1px solid #333;transition:all 0.5s;
+}
+.power-led.on{background:var(--red);box-shadow:0 0 6px var(--red)}
+.ctrl-label{font-size:10px;letter-spacing:0.25em;color:#444;text-transform:uppercase}
+.brand-label{font-size:11px;letter-spacing:0.3em;color:#333;text-transform:uppercase}
+
+/* Tape Slot */
+.tape-slot{
+width:180px;height:18px;background:#080808;
+border:1px solid #222;border-radius:2px;
+box-shadow:inset 0 2px 6px rgba(0,0,0,0.8);
+display:flex;align-items:center;justify-content:center;
+transition:all 0.3s;position:relative;
+}
+.slot-label{font-size:10px;letter-spacing:0.15em;color:#333;transition:color 0.3s}
+.tape-slot.active{border-color:var(--phosphor);box-shadow:inset 0 2px 6px rgba(0,0,0,0.8),0 0 12px rgba(168,230,163,0.15)}
+.tape-slot.active .slot-label{color:var(--phosphor)}
+
+/* === TAPE SHELF === */
+.tape-shelf{
+display:flex;gap:16px;flex-wrap:wrap;justify-content:center;
+padding:0 10px;
+}
+
+/* === VHS TAPE === */
+.vhs-tape{
+width:150px;height:94px;background:linear-gradient(165deg,#1a1a1a 0%,#111 60%,#0a0a0a 100%);
+border:1.5px solid #2a2a2a;border-radius:5px;position:relative;cursor:grab;
+transition:transform 0.3s cubic-bezier(.17,.67,.35,1.3),box-shadow 0.3s,border-color 0.3s;
+box-shadow:0 4px 12px rgba(0,0,0,0.5);
+}
+.vhs-tape:hover{
+transform:translateY(-6px);border-color:#444;
+box-shadow:0 8px 24px rgba(0,0,0,0.6);
+}
+.vhs-tape:active{cursor:grabbing}
+.vhs-tape.locked{opacity:0.3;cursor:not-allowed;pointer-events:none}
+.vhs-tape.complete .tape-status{color:var(--phosphor)}
+
+/* Tape window */
+.tape-window{
+position:absolute;top:7px;left:16px;right:16px;height:30px;
+background:#060606;border-radius:3px;border:1px solid #1a1a1a;
+display:flex;align-items:center;justify-content:space-around;padding:0 10px;
+overflow:hidden;
+}
+/* Reels */
+.reel{
+width:18px;height:18px;border-radius:50%;
+border:1.5px solid #3a3a3a;background:#0a0a0a;
+position:relative;transition:border-color 0.3s;
+}
+.reel::before,.reel::after{
+content:'';position:absolute;background:#3a3a3a;
+}
+.reel::before{width:1px;height:100%;left:50%;top:0;transform:translateX(-50%)}
+.reel::after{width:100%;height:1px;top:50%;left:0;transform:translateY(-50%)}
+.vhs-tape:hover .reel{border-color:#555;animation:spin 2s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Tape strip between reels */
+.tape-strip{width:30px;height:1px;background:#333}
+
+/* Label */
+.tape-label-area{
+position:absolute;bottom:8px;left:10px;right:10px;
+background:linear-gradient(#f0e8d8,#e8dcc8);
+border-radius:2px;padding:4px 8px;
+box-shadow:0 1px 3px rgba(0,0,0,0.3);
+}
+.tape-title{
+font-family:var(--font-hand);font-size:14px;font-weight:600;
+color:#222;line-height:1;white-space:nowrap;overflow:hidden;
+}
+.tape-status{
+font-family:var(--font-crt);font-size:9px;color:#888;
+letter-spacing:0.1em;margin-top:1px;
+}
+.tape-color{
+position:absolute;top:7px;right:8px;width:6px;height:6px;
+border-radius:50%;
+}
+
+/* Ghost tape during drag */
+.tape-ghost{
+position:fixed;z-index:9999;pointer-events:none;
+opacity:0.85;transform:rotate(-3deg) scale(1.05);
+filter:drop-shadow(0 8px 24px rgba(0,0,0,0.7));
+}
+
+/* === SCREEN STATES === */
+
+/* Boot */
+.boot-content{
+width:85%;text-align:left;color:var(--phosphor);
+font-size:clamp(14px,2.2vw,18px);line-height:1.8;
+text-shadow:0 0 6px rgba(168,230,163,0.15);
+}
+.boot-content .cursor{
+display:inline-block;width:8px;height:1.1em;background:var(--phosphor);
+vertical-align:text-bottom;margin-left:2px;animation:blink 1s step-end infinite;
+}
 @keyframes blink{50%{opacity:0}}
-@keyframes glow-pulse{0%,100%{box-shadow:0 0 5px rgba(74,246,38,.3)}50%{box-shadow:0 0 15px rgba(74,246,38,.6),0 0 30px rgba(74,246,38,.2)}}
 
-#station{display:grid;grid-template-columns:1fr 310px;grid-template-rows:1fr 148px;gap:18px;width:95vw;max-width:1280px;height:88vh;max-height:840px}
-.tv-unit{grid-column:1;grid-row:1/span 2;background:linear-gradient(145deg,#161616,#0b0b0b);border-radius:26px;border:3px solid #252525;box-shadow:inset 0 0 65px #000,0 12px 60px rgba(0,0,0,.95);position:relative;display:flex;flex-direction:column;padding:30px}
-.screen-bezel{flex:1;background:#000;border-radius:14px;position:relative;overflow:hidden;border:3px solid #151515;box-shadow:inset 0 0 35px rgba(0,0,0,.95),0 0 20px rgba(74,246,38,.1)}
-canvas#crt{display:block;width:100%;height:100%}
-.scanlines{position:absolute;inset:0;pointer-events:none;z-index:10;background:repeating-linear-gradient(0deg,transparent,transparent 1.5px,rgba(0,0,0,.17) 1.5px,rgba(0,0,0,.17) 3px);opacity:.45}
-.vignette{position:absolute;inset:0;pointer-events:none;z-index:11;background:radial-gradient(ellipse at center,transparent 50%,rgba(0,0,0,.9) 100%)}
-.glass-glare{position:absolute;inset:0;pointer-events:none;z-index:12;background:linear-gradient(135deg,rgba(255,255,255,.06) 0%,transparent 40%);opacity:.7}
-
-#game-ui{position:absolute;top:22px;left:22px;right:22px;bottom:22px;pointer-events:none;z-index:20;display:flex;flex-direction:column;justify-content:space-between}
-.channel-id{color:var(--phosphor-dim);font-size:2rem;opacity:.6;text-shadow:0 0 5px var(--phosphor-dim);letter-spacing:2px}
-.subtitle-box{align-self:center;text-align:center;color:var(--phosphor-bright);font-size:1.55rem;text-shadow:0 0 12px var(--phosphor);background:rgba(5,15,5,.82);padding:13px 28px;border-radius:4px;border:1px solid rgba(74,246,38,.25);opacity:0;transition:opacity .4s,transform .3s;max-width:85%;line-height:1.4;transform:translateY(8px)}
-.subtitle-box.vis{opacity:1;transform:translateY(0)}
-.rec-indicator{position:absolute;top:22px;right:22px;color:#f33;font-size:1.3rem;opacity:0;transition:opacity .3s}
-.rec-indicator.on{opacity:1;animation:blink .8s infinite}
-#ch-marker{position:absolute;bottom:22px;left:50%;transform:translateX(-50%);color:var(--phosphor-dim);font-size:1.05rem;letter-spacing:3px;opacity:.7;text-shadow:0 0 4px var(--phosphor)}
-
-.tape-rack{grid-column:2;grid-row:1;background:linear-gradient(180deg,#131313,#0c0c0c);border:2px solid #282828;border-radius:10px;padding:18px;display:flex;flex-direction:column;gap:16px;overflow-y:auto;box-shadow:inset 0 0 30px #000}
-.tape-rack::-webkit-scrollbar{width:5px}
-.tape-rack::-webkit-scrollbar-track{background:#0a0a0a}
-.tape-rack::-webkit-scrollbar-thumb{background:#2a2a2a;border-radius:3px}
-.rack-header{color:#484848;text-align:center;border-bottom:1px solid #252525;padding-bottom:10px;margin-bottom:8px;letter-spacing:4px;font-size:14px;font-family:'Cormorant Garamond',serif}
-
-.vhs-tape{min-height:108px;background:linear-gradient(180deg,#232323,#181818);border-radius:6px;border:1.5px solid #333;position:relative;cursor:pointer;transition:all .25s cubic-bezier(.175,.885,.32,1.275);display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:3px 5px 14px rgba(0,0,0,.65),inset 0 -3px 8px rgba(0,0,0,.4);flex-shrink:0;touch-action:manipulation}
-.vhs-tape:hover{transform:translateY(-3px) scale(1.03);box-shadow:4px 8px 24px rgba(0,0,0,.85);border-color:#4a4a4a;z-index:10}
-.vhs-tape:active{transform:scale(.97)}
-.vhs-tape.selected{border-color:var(--phosphor);animation:glow-pulse 1.8s infinite}
-.vhs-tape.completed{border-color:#3a3a3a;opacity:.85}
-.vhs-tape.completed::after{content:'✓ VIEWED';position:absolute;bottom:6px;right:10px;font-size:11px;color:var(--phosphor-dim);letter-spacing:1px;text-shadow:0 0 3px var(--phosphor)}
-.vhs-tape.playing{display:none}
-
-.tape-window{position:absolute;top:14px;left:12%;width:76%;height:32px;background:#0a0a0a;border-radius:3px;overflow:hidden;border:1.5px solid #282828;box-shadow:inset 0 0 8px rgba(0,0,0,.7)}
-.tape-reel{position:absolute;top:50%;width:20px;height:20px;border:2.5px solid #4a4a4a;border-radius:50%;transform:translateY(-50%);background:#111;box-shadow:inset 0 0 5px rgba(0,0,0,.8)}
-.tape-reel.left{left:15%}.tape-reel.right{right:15%}
-.tape-reel::after{content:'';position:absolute;inset:5px;border:1.5px solid #333;border-radius:50%;background:#080808}
-.tape-label-sticker{background:#f3f0ea;color:#1a1a1a;padding:5px 11px;margin-top:36px;width:83%;text-align:center;font-family:'VT323',monospace;font-weight:bold;font-size:14px;transform:rotate(-.6deg);box-shadow:0 2px 4px rgba(0,0,0,.3);border-radius:2.5px;line-height:1.3;position:relative;z-index:2}
-
-.vcr-player{grid-column:2;grid-row:2;background:linear-gradient(180deg,#1a1a1a,#111);border:2px solid #282828;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;box-shadow:0 -5px 18px rgba(0,0,0,.6);gap:9px;padding:12px;overflow:hidden}
-.vcr-player::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,transparent,var(--phosphor),transparent);opacity:.35}
-.slot-mouth{width:84%;height:30px;background:#040404;border:1.5px solid #393939;border-radius:5px;position:relative;overflow:hidden;transition:all .35s;cursor:pointer;box-shadow:inset 0 0 10px rgba(0,0,0,.8)}
-.slot-mouth.drag-over,.slot-mouth.ready{border-color:var(--phosphor);box-shadow:0 0 0 2px rgba(74,246,38,.2),0 0 16px var(--phosphor-dim)}
-.slot-flap{width:100%;height:100%;background:linear-gradient(180deg,#252525,#161616);transform-origin:top;transition:transform .45s cubic-bezier(.68,-.55,.265,1.55);border-bottom:1px solid #333}
-.slot-mouth.inserting .slot-flap{transform:rotateX(-95deg)}
-.led-panel{display:flex;gap:20px;font-size:12px;color:#484848;text-transform:uppercase;letter-spacing:1.5px}
-.led{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:5px;vertical-align:middle;transition:all .25s;box-shadow:inset 0 0 3px rgba(0,0,0,.7)}
-.led.pwr{background:#500}.led.pwr.on{background:#f44;box-shadow:0 0 0 2px rgba(255,68,68,.3),0 0 8px #f22}
-.led.play{background:#030}.led.play.on{background:#4f4;box-shadow:0 0 0 2px rgba(68,255,68,.3),0 0 8px #3f3}
-.vcr-brand{font-size:11px;color:#353535;letter-spacing:5px;text-shadow:0 1px 0 #000}
-.eject-btn{position:absolute;right:10px;bottom:10px;padding:5px 14px;background:linear-gradient(180deg,#282828,#1c1c1c);border:1.5px solid #444;color:#bbb;cursor:pointer;font-family:inherit;font-size:12px;border-radius:4px;transition:all .2s;letter-spacing:1px;box-shadow:0 2px 0 rgba(0,0,0,.4);touch-action:manipulation}
-.eject-btn:hover{background:linear-gradient(180deg,#303030,#242424);color:#fff;border-color:#555}
-.eject-btn:active{transform:translateY(1px);box-shadow:0 1px 0 rgba(0,0,0,.5)}
-.hint-text{position:absolute;bottom:-24px;left:0;right:0;text-align:center;font-size:12px;color:#3a3a3a;transition:all .3s}
-.hint-text.active{color:var(--phosphor-dim);text-shadow:0 0 5px var(--phosphor-dim)}
-
-@media(max-width:950px){
-#station{grid-template-columns:1fr;grid-template-rows:1fr 108px 195px;height:100vh;width:100vw;gap:10px;padding:10px}
-.tv-unit{grid-column:1;grid-row:1;padding:14px;border-radius:14px}
-.vcr-player{grid-column:1;grid-row:2}
-.tape-rack{grid-column:1;grid-row:3;flex-direction:row;overflow-x:auto;overflow-y:hidden;padding:12px;gap:12px}
-.vhs-tape{min-width:140px;min-height:95px}
-.subtitle-box{font-size:1.3rem!important}
+/* Select screen */
+.select-display{text-align:center}
+.select-display h2{
+font-size:clamp(20px,3.5vw,28px);letter-spacing:0.15em;
+color:var(--phosphor);text-shadow:0 0 10px rgba(168,230,163,0.2);
+margin-bottom:8px;
 }
-@media(max-width:500px){
-.channel-id{font-size:1.4rem}.subtitle-box{font-size:1.1rem!important;padding:8px 14px;max-width:92%}
-#boot-overlay h1{font-size:3.8rem}
+.select-display .sub{font-size:14px;color:var(--dim);letter-spacing:0.1em}
+.select-display .rec{
+position:absolute;top:16px;right:20px;font-size:13px;color:var(--red);
+display:flex;align-items:center;gap:6px;
 }
-@media(prefers-reduced-motion){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
-.vhs-tape:focus-visible,.eject-btn:focus-visible,#slot:focus-visible{outline:2px solid var(--phosphor);outline-offset:2px}
+.select-display .rec-dot{
+width:8px;height:8px;border-radius:50%;background:var(--red);
+animation:blink 1.5s infinite;
+}
+.select-display .date-stamp{
+position:absolute;top:16px;left:20px;font-size:12px;color:var(--dim);
+}
+.select-display .insert-msg{
+margin-top:24px;font-size:15px;color:var(--dim);
+animation:pulse 2.5s ease-in-out infinite;
+}
+@keyframes pulse{0%,100%{opacity:0.4}50%{opacity:0.9}}
+
+/* Loading */
+.loading-display{text-align:center}
+.loading-display .load-title{font-size:16px;color:var(--phosphor);margin-bottom:12px;letter-spacing:0.15em}
+.load-bar{width:260px;height:8px;border:1px solid var(--phosphor);border-radius:4px;overflow:hidden;margin:0 auto}
+.load-fill{height:100%;background:var(--phosphor);width:0%;transition:width 0.08s linear;border-radius:4px;box-shadow:0 0 6px var(--phosphor)}
+
+/* Final */
+.final-display{text-align:center;max-width:500px}
+.final-display p{
+font-family:var(--font-serif);font-size:clamp(14px,2vw,17px);
+line-height:2;color:var(--warm);opacity:0;transform:translateY(10px);
+transition:all 0.8s ease;margin-bottom:4px;
+}
+.final-display p.show{opacity:1;transform:translateY(0)}
+.final-display .gold{color:var(--gold);font-weight:600;text-shadow:0 0 10px rgba(212,175,55,0.3)}
+.final-display .hl{color:var(--phosphor)}
+
+/* === AUDIO TOGGLE === */
+.audio-btn{
+position:fixed;top:10px;right:10px;z-index:200;
+background:rgba(0,0,0,0.7);border:1px solid #333;border-radius:3px;
+color:#555;font-family:var(--font-crt);font-size:12px;
+padding:4px 10px;cursor:pointer;transition:all 0.2s;
+}
+.audio-btn:hover,.audio-btn.on{color:var(--phosphor);border-color:var(--phosphor)}
+
+/* === RESPONSIVE === */
+@media(max-width:640px){
+.wrapper{gap:14px;padding:6px}
+.tv-body{border-radius:14px}
+.tv-screen{margin:10px 10px 0}
+.tv-controls{padding:8px 12px}
+.tape-slot{width:140px;height:15px}
+.tape-shelf{gap:10px}
+.vhs-tape{width:130px;height:82px}
+.tape-window{top:5px;left:12px;right:12px;height:26px}
+.reel{width:14px;height:14px}
+.tape-label-area{bottom:6px;left:8px;right:8px;padding:3px 6px}
+.tape-title{font-size:12px}
+}
 </style>
 </head>
 <body>
-<div id="boot-overlay">
-<div style="text-align:center;max-width:700px;padding:20px">
-<h1>ANUSHRI</h1>
-<p>[ CLICK TO POWER ON ]</p>
-<div class="sub">SYSTEM v3.0 // ARCHIVE INTEGRITY: 98.7%</div>
+
+<button class="audio-btn" id="audio-btn">♪ OFF</button>
+
+<div class="wrapper">
+<div class="tv-body">
+<div class="screen-glow" id="screen-glow"></div>
+<div class="tv-screen" id="tv-screen">
+<canvas id="static-canvas"></canvas>
+<div id="screen"></div>
+</div>
+<div class="tv-controls">
+<div class="power-section">
+<div class="power-led" id="led"></div>
+<span class="ctrl-label">PWR</span>
+</div>
+<div class="tape-slot" id="tape-slot">
+<span class="slot-label" id="slot-label">▶ INSERT</span>
+</div>
+<span class="brand-label">ANUSHRI</span>
 </div>
 </div>
-<div id="station">
-<div class="tv-unit">
-<div class="screen-bezel" id="tv-screen">
-<canvas id="crt"></canvas>
-<div class="scanlines"></div><div class="vignette"></div><div class="glass-glare"></div>
-<div id="game-ui">
-<div><div class="channel-id" id="channel-disp">AV-1</div><div class="rec-indicator" id="rec-ind">● REC</div></div>
-<div class="subtitle-box" id="subs"></div>
-<div id="ch-marker"></div>
+<div class="tape-shelf" id="tape-shelf"></div>
 </div>
-</div>
-</div>
-<div class="tape-rack" id="tape-rack">
-<div class="rack-header">ARCHIVE ▪ ANUSHRI ▪ PERSONAL</div>
-<div class="vhs-tape" id="tape1" data-id="1"><div class="tape-window"><div class="tape-reel left"></div><div class="tape-reel right"></div></div><div class="tape-label-sticker">TAPE 01<br>THE HALLWAY</div></div>
-<div class="vhs-tape" id="tape2" data-id="2"><div class="tape-window"><div class="tape-reel left"></div><div class="tape-reel right"></div></div><div class="tape-label-sticker" style="color:#a00">TAPE 02<br>THE CURVE</div></div>
-<div class="vhs-tape" id="tape3" data-id="3"><div class="tape-window"><div class="tape-reel left"></div><div class="tape-reel right"></div></div><div class="tape-label-sticker" style="font-style:italic">TAPE 03<br>SIGNAL LOST</div></div>
-<div class="vhs-tape" id="tape4" data-id="4" style="display:none"><div class="tape-window"><div class="tape-reel left"></div><div class="tape-reel right"></div></div><div class="tape-label-sticker" style="background:#ffd700;color:#1a0f00;font-weight:bold">TAPE 04<br>★ DADDY'S RECORD ★</div></div>
-</div>
-<div class="vcr-player" id="vcr">
-<div class="led-panel"><div><span class="led pwr on" id="led-pwr"></span> PWR</div><div><span class="led play" id="led-play"></span> PLAY</div></div>
-<div class="slot-mouth" id="slot"><div class="slot-flap"></div></div>
-<div class="vcr-brand">AUTO-TRACKING v7.1</div>
-<button class="eject-btn" id="eject-btn">⏏ EJECT</button>
-<div class="hint-text" id="hint">Select tape • Click slot to insert</div>
-</div>
-</div>
+
 <script>
-// ═══════════════════════════════════════════════════════════
-// ANUSHRI_ARCHIVE.vhs — ULTIMATE v3.0
-// 5+ chapters per tape • All bugs fixed • Full mobile/touch
-// ═══════════════════════════════════════════════════════════
+'use strict';
 
-const clamp=(v,a,b)=>Math.min(Math.max(v,a),b);
+/* ═══════════════════════════════════════
+   UTILITIES
+   ═══════════════════════════════════════ */
+const $=id=>document.getElementById(id);
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const clamp=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
 
-// ─── AUDIO ────────────────────────────────────────────────
-const Audio$={
-ctx:null,master:null,ok:false,music:[],
-init(){if(this.ok)return;try{this.ctx=new(window.AudioContext||window.webkitAudioContext)();this.master=this.ctx.createGain();this.master.gain.value=.26;this.master.connect(this.ctx.destination);this.ok=true}catch(e){}},
-resume(){if(this.ctx&&this.ctx.state==='suspended')this.ctx.resume()},
-tone(f,t='sine',d=.3,v=.1){if(!this.ctx)return;this.resume();const n=this.ctx.currentTime,o=this.ctx.createOscillator(),g=this.ctx.createGain();o.type=t;o.frequency.setValueAtTime(f,n);g.gain.setValueAtTime(Math.min(v,.5),n);g.gain.exponentialRampToValueAtTime(.001,n+d);o.connect(g);g.connect(this.master);o.start(n);o.stop(n+d)},
-noise(d=.3,lp=800,v=.15){if(!this.ctx)return;this.resume();const sr=this.ctx.sampleRate,l=sr*d,b=this.ctx.createBuffer(1,l,sr),da=b.getChannelData(0);let la=0;for(let i=0;i<l;i++){la=(la+.02*(Math.random()*2-1))/1.02;da[i]=la*3.5}const s=this.ctx.createBufferSource();s.buffer=b;const f=this.ctx.createBiquadFilter();f.type='lowpass';f.frequency.value=lp;const g=this.ctx.createGain();g.gain.value=v;s.connect(f);f.connect(g);g.connect(this.master);s.start()},
-clunk(){this.noise(.15,300,.4);this.tone(80,'square',.08,.3);setTimeout(()=>this.tone(50,'sawtooth',.15,.25),80)},
-beep(hi){this.tone(hi?850:450,'square',.06,.09)},
-hit(){this.tone(95,'sawtooth',.12,.25);this.noise(.07,2200,.15)},
-success(){[440,554,659,880].forEach((f,i)=>setTimeout(()=>this.tone(f,'triangle',.45,.12),i*130))},
-chapterSting(){this.tone(330,'sine',.15,.15);setTimeout(()=>this.tone(440,'sine',.2,.12),100)},
-amb(mood){this.stopMusic();const iv=[];
-if(mood==='hall'){const n=[220,261.6,293.7,329.6,392];iv.push(setInterval(()=>{const f=n[Math.random()*n.length|0];this.tone(f,'sine',2.8,.05);if(Math.random()>.65)this.tone(f*.5,'sine',3.2,.025)},2800))}
-else if(mood==='curve'){iv.push(setInterval(()=>{this.tone(110,'sawtooth',.09,.045);setTimeout(()=>this.tone(116.5,'sawtooth',.09,.045),160)},420));iv.push(setInterval(()=>this.tone(55,'sine',.55,.07),2100))}
-else if(mood==='signal'){iv.push(setInterval(()=>{if(Math.random()>.7){this.noise(.08,5000,.08);this.tone(200+Math.random()*300,'square',.05,.07)}},1800))}
-else if(mood==='record'){const ch=[[261.63,329.63,392],[220,277.18,329.63],[246.94,311.13,369.99],[293.66,369.99,440]];let ci=0;iv.push(setInterval(()=>{ch[ci%ch.length].forEach((f,i)=>setTimeout(()=>{this.tone(f,'sine',2.8,.04+i*.01);if(!i)this.tone(f*.5,'triangle',3.2,.02)},i*150));ci++},3800))}
-this.music=iv},
-stopMusic(){this.music.forEach(id=>clearInterval(id));this.music=[]}
+/* ═══════════════════════════════════════
+   STATE (localStorage)
+   ═══════════════════════════════════════ */
+const State={
+  KEY:'anushri_archive_v2',
+  get(){try{return JSON.parse(localStorage.getItem(this.KEY))||{}}catch{return{}}},
+  set(k,v){const s=this.get();s[k]=v;try{localStorage.setItem(this.KEY,JSON.stringify(s))}catch{}},
+  isDone(t){return!!this.get()[t]},
+  allDone(){return['tape1','tape2','tape3'].every(t=>this.isDone(t))},
 };
 
-// ─── TEXT ENGINE ──────────────────────────────────────────
-const Text$={
-el:document.getElementById('subs'),q:[],busy:false,tid:null,chNum:0,
-show(t,d=2800,isCh=false){
-if(isCh){this.chNum++;document.getElementById('ch-marker').textContent='CHAPTER '+this.chNum;Audio$.chapterSting();const c=document.getElementById('channel-disp');c.style.textShadow='0 0 15px var(--phosphor)';setTimeout(()=>c.style.textShadow='0 0 5px var(--phosphor-dim)',800)}
-this.q.push({t,d,isCh});if(!this.busy)this._go()},
-_go(){if(!this.q.length){this.el.style.opacity='0';this.el.classList.remove('vis');this.busy=false;return}
-this.busy=true;const it=this.q.shift();this.el.textContent='';this.el.style.opacity='0';
-setTimeout(()=>{this.el.style.opacity='1';this.el.classList.add('vis')},10);
-let i=0;const sp=Math.max(25,Math.min(55,it.d/it.t.length/1.8));
-const iv=setInterval(()=>{if(i<it.t.length){this.el.textContent+=it.t[i];if(i%4===0&&it.t[i]!==' ')Audio$.tone(it.t.includes('DADDY')?220:it.t.includes('GUIDE')?190:520,'square',.025,.04);i++}else clearInterval(iv)},sp);
-this.tid=setTimeout(()=>{clearInterval(iv);this.el.style.opacity='0';this.el.classList.remove('vis');setTimeout(()=>this._go(),280)},it.d)},
-clear(){if(this.tid)clearTimeout(this.tid);this.q=[];this.el.style.opacity='0';this.el.classList.remove('vis');this.busy=false;this.chNum=0;document.getElementById('ch-marker').textContent=''}
+/* ═══════════════════════════════════════
+   STATIC NOISE
+   ═══════════════════════════════════════ */
+const Noise=(()=>{
+  const c=$('static-canvas');const ctx=c.getContext('2d');
+  let w=0,h=0;
+  const resize=()=>{const r=c.parentElement.getBoundingClientRect();w=c.width=Math.ceil(r.width/2);h=c.height=Math.ceil(r.height/2);c.style.width='100%';c.style.height='100%';c.style.imageRendering='pixelated'};
+  const draw=()=>{if(!w)return;const img=ctx.createImageData(w,h);const d=img.data;for(let i=0;i<d.length;i+=4){const v=Math.random()*255;d[i]=d[i+1]=d[i+2]=v;d[i+3]=Math.random()*30}ctx.putImageData(img,0,0);requestAnimationFrame(draw)};
+  window.addEventListener('resize',resize);
+  return{init(){resize();draw()},burst(dur=400){c.style.opacity='0.35';setTimeout(()=>c.style.opacity='0.07',dur)}};
+})();
+
+/* ═══════════════════════════════════════
+   PROCEDURAL AUDIO (Synth Engine)
+   ═══════════════════════════════════════ */
+const Synth=(()=>{
+  let ctx=null,master=null,muted=true;
+  let drones=[],arpId=null;
+
+  const init=()=>{
+    if(ctx)return;
+    ctx=new(window.AudioContext||window.webkitAudioContext)();
+    master=ctx.createGain();master.gain.value=0;master.connect(ctx.destination);
+  };
+  const resume=()=>{if(ctx&&ctx.state==='suspended')ctx.resume()};
+  const setMuted=(m)=>{
+    muted=m;
+    if(!ctx)return;
+    master.gain.cancelScheduledValues(ctx.currentTime);
+    master.gain.setValueAtTime(master.gain.value,ctx.currentTime);
+    master.gain.linearRampToValueAtTime(m?0:0.45,ctx.currentTime+0.3);
+  };
+
+  const note=(freq,dur,type='triangle',vol=0.1,attack=0.01)=>{
+    if(!ctx)return;
+    const o=ctx.createOscillator(),g=ctx.createGain();
+    o.type=type;o.frequency.value=freq;
+    g.gain.setValueAtTime(0.001,ctx.currentTime);
+    g.gain.linearRampToValueAtTime(vol,ctx.currentTime+attack);
+    g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+dur);
+    o.connect(g);g.connect(master);o.start();o.stop(ctx.currentTime+dur+0.05);
+  };
+
+  const noiseBurst=(dur=0.15,vol=0.08)=>{
+    if(!ctx)return;
+    const sz=Math.floor(ctx.sampleRate*dur);
+    const buf=ctx.createBuffer(1,sz,ctx.sampleRate);
+    const d=buf.getChannelData(0);
+    for(let i=0;i<sz;i++)d[i]=(Math.random()*2-1);
+    const s=ctx.createBufferSource();s.buffer=buf;
+    const g=ctx.createGain();g.gain.setValueAtTime(vol,ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+dur);
+    s.connect(g);g.connect(master);s.start();
+  };
+
+  // SFX
+  const mechClunk=()=>{note(80,0.2,'square',0.15);noiseBurst(0.06,0.12);setTimeout(()=>note(55,0.15,'square',0.1),40)};
+  const typeClick=()=>note(1800+Math.random()*600,0.012,'square',0.025);
+  const selectClick=()=>note(440,0.04,'square',0.04);
+  const confirmSound=()=>{note(440,0.06,'square',0.04);setTimeout(()=>note(660,0.08,'square',0.04),50)};
+
+  // Ambient
+  const startAmbient=()=>{
+    if(!ctx)return;
+    // 60Hz hum
+    const h=ctx.createOscillator(),hg=ctx.createGain();
+    h.type='sine';h.frequency.value=60;hg.gain.value=0.012;
+    h.connect(hg);hg.connect(master);h.start();
+    drones.push({o:h,g:hg});
+    // Pad drone A2
+    const p=ctx.createOscillator(),pf=ctx.createBiquadFilter(),pg=ctx.createGain();
+    p.type='sawtooth';p.frequency.value=110;pf.type='lowpass';pf.frequency.value=280;pg.gain.value=0.018;
+    p.connect(pf);pf.connect(pg);pg.connect(master);p.start();
+    drones.push({o:p,g:pg});
+    // Tape hiss
+    const sz=ctx.sampleRate*2;const buf=ctx.createBuffer(1,sz,ctx.sampleRate);
+    const d=buf.getChannelData(0);for(let i=0;i<sz;i++)d[i]=Math.random()*2-1;
+    const ns=ctx.createBufferSource();ns.buffer=buf;ns.loop=true;
+    const nf=ctx.createBiquadFilter();nf.type='highpass';nf.frequency.value=4000;
+    const ng=ctx.createGain();ng.gain.value=0.006;
+    ns.connect(nf);nf.connect(ng);ng.connect(master);ns.start();
+  };
+
+  // Arpeggio
+  const startArp=()=>{
+    const notes=[220,261.63,329.63,440,329.63,261.63];
+    let i=0;
+    arpId=setInterval(()=>{
+      note(notes[i%notes.length],1.2,'triangle',0.03,0.02);
+      i++;
+    },850);
+  };
+  const stopArp=()=>{if(arpId){clearInterval(arpId);arpId=null}};
+
+  return{init,resume,setMuted,note,noiseBurst,mechClunk,typeClick,selectClick,confirmSound,startAmbient,startArp,stopArp};
+})();
+
+/* ═══════════════════════════════════════
+   AUDIO TOGGLE
+   ═══════════════════════════════════════ */
+const audioBtn=$('audio-btn');
+let audioOn=false;
+audioBtn.addEventListener('click',()=>{
+  Synth.init();Synth.resume();
+  audioOn=!audioOn;
+  Synth.setMuted(!audioOn);
+  audioBtn.textContent=audioOn?'♪ ON':'♪ OFF';
+  audioBtn.classList.toggle('on',audioOn);
+});
+
+/* ═══════════════════════════════════════
+   TYPEWRITER
+   ═══════════════════════════════════════ */
+let typeAbort=false;
+const typewrite=async(el,text,speed=30)=>{
+  typeAbort=false;
+  el.innerHTML='';
+  for(let i=0;i<text.length;i++){
+    if(typeAbort){el.innerHTML=text;return}
+    if(text[i]==='<'){const j=text.indexOf('>',i);el.innerHTML+=text.substring(i,j+1);i=j}
+    else{el.innerHTML+=text[i];Synth.typeClick()}
+    await sleep(speed);
+  }
 };
 
-// ─── INPUT ────────────────────────────────────────────────
-const In={x:0,y:0,cx:0,cy:0,clicked:false,
-eat(){const v=this.clicked;this.clicked=false;return v},
-_u(ex,ey){this.x=ex;this.y=ey;const r=G.canvas.getBoundingClientRect();this.cx=((ex-r.left)/r.width)*G.width;this.cy=((ey-r.top)/r.height)*G.height}};
-window.addEventListener('mousemove',e=>In._u(e.clientX,e.clientY));
-document.getElementById('crt').addEventListener('mousedown',e=>{e.preventDefault();In.clicked=true;In._u(e.clientX,e.clientY)});
-document.getElementById('crt').addEventListener('touchstart',e=>{if(e.touches.length){e.preventDefault();In.clicked=true;In._u(e.touches[0].clientX,e.touches[0].clientY)}},{passive:false});
-document.getElementById('crt').addEventListener('touchmove',e=>{if(e.touches.length){e.preventDefault();In._u(e.touches[0].clientX,e.touches[0].clientY)}},{passive:false});
+/* ═══════════════════════════════════════
+   SCREEN MANAGER
+   ═══════════════════════════════════════ */
+const Screen=(()=>{
+  const el=$('screen');
+  const clear=()=>{el.innerHTML=''};
 
-// ─── VFX ──────────────────────────────────────────────────
-const VFX={
-shake:{i:0,d:.88},pts:[],flash:{on:false,i:0,c:'#fff'},
-addShake(n=6){this.shake.i=Math.max(this.shake.i,n)},
-addPt(x,y,c='#fff',n=8,opts={}){const{sz=3,sp=3,g=.05}=opts;for(let i=0;i<n;i++)this.pts.push({x,y,vx:(Math.random()-.5)*sp*1.5,vy:(Math.random()-.5)*sp-1.5,l:1,d:.012+Math.random()*.018,s:sz+Math.random()*2,c,g})},
-addFlash(c='#fff',i=.3){this.flash={on:true,i,c,d:.05}},
-update(){this.shake.i*=this.shake.d;if(this.shake.i<.1)this.shake.i=0;
-this.pts=this.pts.filter(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=p.g;p.l-=p.d;return p.l>0});
-if(this.flash.on){this.flash.i-=this.flash.d;if(this.flash.i<=0)this.flash.on=false}},
-draw(ctx,w,h){if(this.flash.on){ctx.fillStyle=this.flash.c;ctx.globalAlpha=this.flash.i;ctx.fillRect(0,0,w,h);ctx.globalAlpha=1}
-this.pts.forEach(p=>{ctx.globalAlpha=p.l*.9;ctx.fillStyle=p.c;ctx.fillRect(p.x-p.s/2,p.y-p.s/2,p.s,p.s)});ctx.globalAlpha=1},
-shakeOff(){return this.shake.i<.1?{x:0,y:0}:{x:(Math.random()-.5)*this.shake.i*2.2,y:(Math.random()-.5)*this.shake.i*2.2}}
-};
+  // BOOT
+  const boot=async()=>{
+    $('led').classList.add('on');
+    clear();
+    const div=document.createElement('div');div.className='boot-content';el.appendChild(div);
+    const lines=[
+      '> ANUSHRI TAPE ARCHIVE v1.0',
+      '> INITIALIZING MEMORY SUBSYSTEM...',
+      '> 4 RECORDINGS FOUND',
+      '> WARNING: SOME TAPES CONTAIN DISTORTION',
+      '> THIS IS EXPECTED.',
+      '',
+      '> [CLICK ANYWHERE TO CONTINUE]'
+    ];
+    for(const line of lines){
+      await typewrite(div,div.textContent+line+'\n',20);
+      await sleep(200);
+    }
+    div.innerHTML+=`<span class="cursor"></span>`;
+    return new Promise(r=>{
+      const h=()=>{typeAbort=true;document.removeEventListener('click',h);document.removeEventListener('keydown',h);r()};
+      document.addEventListener('click',h);document.addEventListener('keydown',h);
+    });
+  };
 
-// ─── LEVELS (5+ CHAPTERS PER TAPE) ───────────────────────
-const L={
-prog:{t1:false,t2:false,t2h:0,t3:false,t4:false},
+  // SELECT
+  const select=()=>{
+    clear();
+    const d=document.createElement('div');d.className='select-display';
+    const now=new Date();
+    const dateStr=now.toLocaleDateString('en-US',{month:'short',day:'2-digit',year:'numeric'}).toUpperCase();
+    d.innerHTML=`
+      <div class="date-stamp">${dateStr}</div>
+      <div class="rec"><div class="rec-dot"></div>REC</div>
+      <h2>ARCHIVE</h2>
+      <div class="sub">ANUSHRI TAPE COLLECTION</div>
+      <div class="insert-msg">↑ DRAG TAPE TO SLOT ↑</div>
+    `;
+    el.appendChild(d);
+    buildTapeShelf();
+  };
 
-// ═══ TAPE 1: THE HALLWAY (5 chapters) ═══════════════════
-t1:{px:60,peers:[],doorX:0,doorGlow:0,done:false,ch:0,ct:[0,0,0,0,0],anx:0,lastMX:0},
-initT1(w,h){
-const t=this.t1;t.done=false;t.px=60;t.doorX=w*1.3;t.ch=0;t.ct=[0,0,0,0,0];t.anx=0;t.lastMX=In.cx;
-t.peers=[];for(let i=0;i<8;i++)t.peers.push({x:300+i*160,h:45+Math.random()*35,sp:1.2+Math.random()*1.8,op:.5+Math.random()*.4,type:Math.random()>.7?'big':'norm'});
-Audio$.amb('hall');Text$.clear();
-setTimeout(()=>{t.ch=1;Text$.show("GUIDE: Walk forward. Just keep moving.",3500,true);Text$.show("ANUSHRI: My feet feel so heavy...",2800)},1200)},
-updT1(w,h){
-const t=this.t1;if(t.done)return;
-// Anxiety system
-const msp=Math.abs(In.cx-(t.lastMX||In.cx));t.lastMX=In.cx;
-t.anx=clamp(t.anx+(msp>15?.02:-.01),0,1);
-// Movement: slower when anxious
-const speed=1.8*(1-t.anx*.7);t.px+=speed;
-// Door: recedes when anxious, approaches when calm
-if(t.anx>.65){t.doorX+=.8;if(!t.ct[1]&&t.ch===1){t.ch=2;t.ct[1]=1;Text$.show("ANUSHRI: They're all faster than me...",3000,true);Text$.show("GUIDE: Breathe. Steady pace wins.",3200)}}
-else if(t.anx<.3&&t.doorX>w*.9)t.doorX-=.4;
-t.doorGlow=Math.sin(G.frame*.04)*.35+.75;
-// Peers
-t.peers.forEach(p=>{p.x-=p.sp*(1+t.anx*.5);if(p.x<-50){p.x=w+50+Math.random()*100;p.h=40+Math.random()*40;p.type=Math.random()>.6?'big':'norm'}});
-// Ch3: Halfway — peers thin out, corridor brightens
-if(t.px>w*.25&&!t.ct[2]){t.ch=3;t.ct[2]=1;Text$.show("ANUSHRI: Is that... an exit?",2800,true);Text$.show("GUIDE: Yes. Keep walking toward it.",3000)}
-// Ch4: Realization
-if(t.px>w*.45&&!t.ct[3]){t.ch=4;t.ct[3]=1;Text$.show("ANUSHRI: When I stop rushing... it gets closer.",3500,true);Text$.show("GUIDE: You don't need to be first. Just be you.",3800)}
-// Ch5: Final approach
-if(t.px>w*.65&&!t.ct[4]){t.ch=5;t.ct[4]=1;Text$.show("ANUSHRI: I can see the light now...",3000,true);Text$.show("GUIDE: Almost there. You've got this.",3200)}
-// Win
-if(t.px>=t.doorX-35){t.done=true;this.prog.t1=true;Audio$.success();VFX.addPt(w/2,h/2,'#4aff88',40,{sz:4,sp:4});VFX.addFlash('#4aff88',.25);Text$.show("GUIDE: You made it. Not by running — by enduring.",4500);Text$.show("ANUSHRI: I walked my own path.",3500);G.scheduleEject(5500)}
-// Anxiety particles
-if(G.frame%5===0&&t.anx>.7)VFX.addPt(t.px,h-80,'#ff5555',1,{sz:2,sp:1,g:0})},
-drawT1(ctx,w,h){
-const t=this.t1;
-const gd=ctx.createLinearGradient(0,0,w,0);gd.addColorStop(0,'#0a0a15');gd.addColorStop(1,'#0a1a0d');ctx.fillStyle=gd;ctx.fillRect(0,0,w,h);
-// Floor
-ctx.fillStyle='#121220';ctx.fillRect(0,h-70,w,70);ctx.strokeStyle='#25253a';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(w*.2,h-70);ctx.lineTo(w*.5,h*.35);ctx.lineTo(w*.8,h-70);ctx.stroke();
-// Peers
-t.peers.forEach(p=>{ctx.globalAlpha=p.op*(0.6+t.anx*.4);ctx.fillStyle=p.type==='big'?'#2a0a0a':'#0a0a2a';ctx.fillRect(p.x-10,h-70-p.h,20,p.h);ctx.beginPath();ctx.arc(p.x,h-70-p.h-8,9,0,Math.PI*2);ctx.fill()});ctx.globalAlpha=1;
-// Door
-const dx=t.doorX,gl=t.doorGlow;ctx.fillStyle=`rgba(220,255,200,${gl*.35})`;ctx.fillRect(dx-35,h-150,70,90);ctx.shadowColor=`rgba(200,255,200,${gl*.8})`;ctx.shadowBlur=25*gl;ctx.fillStyle=`rgba(240,255,240,${gl*.9})`;ctx.fillRect(dx-25,h-140,50,80);ctx.shadowBlur=0;
-// Player
-this._drawA(ctx,t.px,h-90,'#fff');
-// Anxiety meter
-if(t.anx>.3){ctx.fillStyle=`rgba(255,80,80,${t.anx*.4})`;ctx.fillRect(20,20,150*t.anx,8);ctx.strokeStyle='#ff4444';ctx.lineWidth=1;ctx.strokeRect(20,20,150,8);ctx.fillStyle='#ffaaaa';ctx.font='14px VT323';ctx.textAlign='center';ctx.fillText('ANXIETY',95,16);ctx.textAlign='start'}
-// Distance
-const dist=Math.max(0,Math.floor((t.doorX-t.px)/15));ctx.fillStyle='rgba(255,255,255,.4)';ctx.font='17px VT323';ctx.textAlign='right';ctx.fillText(dist+'m to exit',w-25,35);ctx.textAlign='start'},
+  // LOADING
+  const loading=async(tapeName)=>{
+    clear();
+    Noise.burst(500);
+    const d=document.createElement('div');d.className='loading-display';
+    d.innerHTML=`<div class="load-title">PLAYING: ${tapeName}</div><div class="load-bar"><div class="load-fill" id="load-fill"></div></div>`;
+    el.appendChild(d);
+    const fill=$('load-fill');
+    let w=0;
+    await new Promise(r=>{
+      const iv=setInterval(()=>{
+        w+=Math.random()*6+2;
+        fill.style.width=Math.min(w,100)+'%';
+        if(w>=100){clearInterval(iv);r()}
+      },50);
+    });
+    await sleep(300);
+  };
 
-// ═══ TAPE 2: THE CURVE (5 chapters) ═════════════════════
-t2:{bul:[],timer:0,mx:1020,done:false,px:0,ch:0,ct:[0,0,0,0,0],hits:0,streak:0,lastHF:0},
-initT2(w,h){
-const t=this.t2;t.done=false;t.bul=[];t.timer=t.mx;t.ch=0;t.ct=[0,0,0,0,0];t.px=w/2;t.hits=0;t.streak=0;t.lastHF=0;this.prog.t2h=0;
-Audio$.amb('curve');Text$.clear();
-setTimeout(()=>{t.ch=1;Text$.show("GUIDE: The Bell Curve begins. Grades are falling.",3500,true);Text$.show("ANUSHRI: I've seen these numbers before...",3000)},1000)},
-updT2(w,h){
-const t=this.t2;if(t.done)return;
-t.px+=(In.cx-t.px)*.14;t.px=clamp(t.px,30,w-30);
-const elapsed=t.mx-t.timer,total=t.mx;
-// Ch2: After 22%
-if(elapsed>total*.22&&!t.ct[1]){t.ch=2;t.ct[1]=1;Text$.show("GUIDE: Dodge the failing grades. They carry weight.",3500,true);Text$.show("ANUSHRI: I can feel them hitting me...",2800)}
-// Ch3: First hit
-if(t.hits>0&&!t.ct[2]){t.ch=3;t.ct[2]=1;Text$.show("ANUSHRI: It hurts... but I'm still standing.",3200,true);Text$.show("GUIDE: Every hit teaches resilience.",3000)}
-// Ch4: 55%
-if(elapsed>total*.55&&!t.ct[3]){t.ch=4;t.ct[3]=1;Text$.show("GUIDE: You're adapting. The curve bends for you.",3800,true);Text$.show("ANUSHRI: I'm not the grade they gave me.",3200)}
-// Ch5: 82%
-if(elapsed>total*.82&&!t.ct[4]){t.ch=5;t.ct[4]=1;Text$.show("GUIDE: Last stretch. Breathe and flow.",3200,true);Text$.show("ANUSHRI: I see the other side...",2800)}
-// Spawn
-const cf=1+(t.ch-1)*.15;const rate=Math.max(4,Math.floor(10/cf));
-if(G.frame%rate===0){const labels=[{t:'F',c:'#ff3333',s:22},{t:'D',c:'#ff6633',s:20},{t:'C',c:'#ffcc00',s:18},{t:'42',c:'#9999ff',s:16},{t:'FAIL',c:'#ff0066',s:24}];const pick=labels[Math.random()*labels.length|0];
-t.bul.push({x:Math.random()*(w-60)+30,y:-30,lb:pick.t,c:pick.c,sz:pick.s*(0.9+Math.random()*.2),sp:2.8*cf+Math.random()*1.5,hit:false})}
-// Update bullets
-const py=h-100;
-for(let i=t.bul.length-1;i>=0;i--){const b=t.bul[i];b.y+=b.sp;
-if(!b.hit&&Math.abs(b.x-t.px)<25&&Math.abs(b.y-py)<28&&G.frame-t.lastHF>25){b.hit=true;t.hits++;this.prog.t2h++;t.lastHF=G.frame;t.streak=0;VFX.addShake(7);VFX.addPt(b.x,b.y,b.c,10,{sz:3,sp:3});Audio$.hit();VFX.addFlash('#ff3333',.15)}else if(!b.hit)t.streak++;
-if(b.y>h+40)t.bul.splice(i,1)}
-t.timer--;
-if(t.timer<=0){t.done=true;this.prog.t2=true;Audio$.success();VFX.addPt(w/2,h/2,'#4aff88',35,{sz:3.5,sp:3.5});
-const msg=t.hits===0?"GUIDE: Untouched. You moved like water.":t.hits<3?`GUIDE: Only ${t.hits} hit${t.hits>1?'s':''}. Grace under pressure.`:`GUIDE: ${t.hits} hits. But you never stopped moving.`;
-Text$.show(msg,4000);Text$.show("ANUSHRI: The curve didn't break me.",3500);G.scheduleEject(5000)}},
-drawT2(ctx,w,h){
-const t=this.t2;const gd=ctx.createLinearGradient(0,0,0,h);gd.addColorStop(0,'#150000');gd.addColorStop(.6,'#0a0000');gd.addColorStop(1,'#030000');ctx.fillStyle=gd;ctx.fillRect(0,0,w,h);
-// Bell curve
-ctx.strokeStyle='rgba(255,80,80,.12)';ctx.lineWidth=2.5;ctx.beginPath();for(let x=0;x<=w;x+=2){const nx=(x/w-.5)*6.5;const by=Math.exp(-nx*nx/2)*h*.65;x===0?ctx.moveTo(x,h-by):ctx.lineTo(x,h-by)}ctx.stroke();
-// Bullets
-ctx.textAlign='center';ctx.textBaseline='middle';
-t.bul.forEach(b=>{if(b.hit)return;ctx.font=`bold ${b.sz}px VT323`;ctx.fillStyle=b.c;ctx.shadowColor=b.lb==='F'||b.lb==='FAIL'?'#ff6666':'rgba(255,255,255,.7)';ctx.shadowBlur=b.lb==='F'?10:3;ctx.fillText(b.lb,b.x,b.y);ctx.shadowBlur=0});
-ctx.textAlign='start';ctx.textBaseline='alphabetic';
-// Player
-this._drawA(ctx,t.px,h-100,t.hits>0&&G.frame%20<10?'#ff6666':'#ff9999');
-// Timer
-const pct=Math.max(0,t.timer/t.mx);ctx.fillStyle='#2a0000';ctx.fillRect(25,h-30,w-50,14);ctx.fillStyle=pct>.3?'#ff5555':'#ff0000';ctx.fillRect(25,h-30,(w-50)*pct,14);
-// HUD
-ctx.fillStyle='#ffaaaa';ctx.font='19px VT323';ctx.fillText('TIME: '+Math.ceil(t.timer/60)+'s',25,35);ctx.fillText('HITS: '+t.hits,25,62)},
+  // FINAL MESSAGE
+  const final=async()=>{
+    clear();
+    const d=document.createElement('div');d.className='final-display';el.appendChild(d);
+    $('screen-glow').style.background='radial-gradient(ellipse,rgba(212,175,55,0.06) 0%,transparent 70%)';
+    Synth.stopArp();
+    // Warm melody
+    const melody=[261.63,329.63,392,523.25,392,329.63,261.63,329.63,392,523.25];
+    melody.forEach((f,i)=>setTimeout(()=>Synth.note(f,1.5,'sine',0.04,0.05),i*600));
 
-// ═══ TAPE 3: SIGNAL LOST (5 chapters) ═══════════════════
-t3:{nl:1,clicks:0,ch:0,ct:[0,0,0,0,0],done:false,msg:'SIGNAL LOST',msgs:['SIGNAL LOST','I AM SUFFICIENT','I DON\'T NEED PERMISSION','I FIXED THIS MYSELF','I AM ENOUGH'],stp:[],lastCF:0},
-initT3(w,h){
-const t=this.t3;t.done=false;t.nl=1;t.clicks=0;t.ch=0;t.ct=[0,0,0,0,0];t.msg=t.msgs[0];t.lastCF=0;
-t.stp=[];for(let i=0;i<150;i++)t.stp.push({x:Math.random()*w,y:Math.random()*h,s:1+Math.random()*3,sp:.5+Math.random()*2,op:.3+Math.random()*.7});
-Audio$.amb('signal');Text$.clear();
-setTimeout(()=>{t.ch=1;Text$.show("SYSTEM: SIGNAL LOST — TRACKING ERROR",3000,true);Text$.show("ANUSHRI: The Guide is gone...",2500)},800);
-setTimeout(()=>{Text$.show("SYSTEM: MANUAL INTERVENTION REQUIRED",3000);Text$.show("ANUSHRI: I have to fix this myself.",2800)},4000);
-setTimeout(()=>Text$.show("[ CLICK OR TAP SCREEN TO ADJUST TRACKING ]",3500),7500)},
-updT3(w,h){
-const t=this.t3;if(t.done)return;
-t.stp.forEach(p=>{p.y+=p.sp;if(p.y>h)p.y=-10;if(Math.random()>.99)p.x=Math.random()*w});
-if(In.eat()&&G.frame-t.lastCF>15){t.lastCF=G.frame;t.clicks++;
-const red=.07*(1-t.nl*.5);t.nl=Math.max(0,t.nl-red);
-Audio$.tone(220+t.clicks*25,'sine',.09,.08);VFX.addPt(In.cx,In.cy,'#4af626',4,{sz:2.5,sp:2});
-// Ch2
-if(t.nl<.82&&!t.ct[1]){t.ch=2;t.ct[1]=1;t.msg=t.msgs[1];Text$.show("ANUSHRI: I can do this...",2500,true);Text$.show("I AM SUFFICIENT",2200)}
-// Ch3
-if(t.nl<.62&&!t.ct[2]){t.ch=3;t.ct[2]=1;t.msg=t.msgs[2];Text$.show("ANUSHRI: I don't need permission to exist.",3000,true);Text$.show("I DON'T NEED PERMISSION",2400)}
-// Ch4
-if(t.nl<.4&&!t.ct[3]){t.ch=4;t.ct[3]=1;t.msg=t.msgs[3];Text$.show("ANUSHRI: My hands are steady.",2500,true);Text$.show("I FIXED THIS MYSELF",2300)}
-// Ch5
-if(t.nl<.18&&!t.ct[4]){t.ch=5;t.ct[4]=1;t.msg=t.msgs[4];Text$.show("ANUSHRI: I am whole.",2200,true);Text$.show("I AM ENOUGH",2500)}}
-if(t.nl<1)t.nl+=.0018;
-if(t.nl<=.015&&!t.done){t.done=true;this.prog.t3=true;Audio$.success();VFX.addPt(w/2,h/2,'#4aff88',50,{sz:4,sp:4,g:.02});VFX.addFlash('#4aff88',.3);Text$.show("ANUSHRI: I fixed it. I didn't need the Guide.",4200);Text$.show("SYSTEM: SIGNAL RESTORED — INTEGRITY 100%",3800);G.scheduleEject(5200)}},
-drawT3(ctx,w,h){
-const t=this.t3;ctx.fillStyle='#000';ctx.fillRect(0,0,w,h);
-// Hidden text
-const alpha=clamp((1-Math.pow(t.nl,1.5))*1.8-.3,0,1);
-if(alpha>.05){ctx.globalAlpha=alpha*.95;ctx.fillStyle='#fff';ctx.font=Math.min(w/9,52)+'px VT323';ctx.textAlign='center';ctx.textBaseline='middle';ctx.shadowColor='#4aff88';ctx.shadowBlur=25*alpha;ctx.fillText(t.msg,w/2,h/2);ctx.shadowBlur=0;ctx.globalAlpha=1}
-// Static
-if(t.nl>.02){ctx.fillStyle='#fff';t.stp.forEach(p=>{if(Math.random()<t.nl*.7){ctx.globalAlpha=p.op*t.nl;ctx.fillRect(p.x,p.y,p.s,p.s*1.5)}});ctx.globalAlpha=1;
-if(t.nl>.3){const bc=Math.floor(t.nl*4);for(let i=0;i<bc;i++){const ph=G.frame*.02+i*1000;const by=(Math.sin(ph)*.45+.55)*h;ctx.fillStyle=`rgba(0,0,0,${.75*t.nl})`;ctx.fillRect(0,by,w,25*t.nl)}}}
-// Progress
-const pct=1-t.nl;ctx.fillStyle='#1a1a1a';ctx.fillRect(w*.1,h-25,w*.8,10);ctx.fillStyle='#4aff88';ctx.fillRect(w*.1,h-25,w*.8*pct,10);ctx.strokeStyle='#4aff88';ctx.lineWidth=1.5;ctx.strokeRect(w*.1,h-25,w*.8,10);
-if(t.nl>.3){ctx.fillStyle=`rgba(255,80,80,${.5+Math.sin(G.frame*.1)*.3})`;ctx.font='18px VT323';ctx.textAlign='center';ctx.fillText('[ CLICK TO ADJUST TRACKING ]',w/2,h-40)}
-ctx.fillStyle='rgba(255,255,255,.7)';ctx.font='16px VT323';ctx.textAlign='center';ctx.fillText('ADJUSTMENTS: '+t.clicks,w/2,h-42);
-ctx.textAlign='start';ctx.textBaseline='alphabetic'},
+    const lines=[
+      'You played every tape.',
+      'You faced the hallway. You fixed the signal.',
+      'You looked into the static and found yourself.',
+      '',
+      'The bravest recording in this archive',
+      'was never made by me.',
+      '',
+      'It was made by <span class="hl">you</span>,',
+      'at 2am,',
+      'when you told yourself to keep going.',
+      '',
+      'Happy Birthday, <span class="gold">Anushri</span>.',
+      '',
+      'I will always be <span class="gold">DADDY</span>.',
+    ];
+    for(const line of lines){
+      const p=document.createElement('p');p.innerHTML=line||'&nbsp;';d.appendChild(p);
+      await sleep(80);p.classList.add('show');await sleep(500);
+    }
+  };
 
-// ═══ TAPE 4: DADDY'S RECORD (6 chapters) ════════════════
-t4:{ch:0,ct:[0,0,0,0,0,0],done:false,hearts:[],ts:0,mq:[]},
-initT4(w,h){
-const t=this.t4;t.ch=0;t.ct=[0,0,0,0,0,0];t.done=false;t.ts=0;
-t.hearts=[];for(let i=0;i<45;i++)t.hearts.push({x:Math.random()*w,y:Math.random()*h,s:2.5+Math.random()*5,sp:.4+Math.random()*.9,dr:(Math.random()-.5)*.7,op:.15+Math.random()*.4,ph:Math.random()*Math.PI*2,hu:45+Math.random()*15});
-Text$.clear();document.getElementById('rec-ind').classList.add('on');Audio$.amb('record');
-t.mq=[
-{f:80,t:"DADDY: Happy Birthday, Anushri.",d:3800,c:1},
-{f:220,t:"DADDY: I see you trying so hard.",d:3200},
-{f:380,t:"DADDY: You thought you were falling behind.",d:3500,c:2},
-{f:520,t:"DADDY: But I was watching the whole time.",d:3600},
-{f:680,t:"DADDY: And this is what I saw...",d:3000,c:3},
-{f:820,t:"THE HALLWAY: You walked your own path.",d:3300},
-{f:980,t:`THE CURVE: ${L.prog.t2h} hits. You never quit.`,d:3700},
-{f:1150,t:"THE SIGNAL: You fixed it yourself.",d:3200,c:4},
-{f:1320,t:"DADDY: You didn't need me to tell you you're enough.",d:4000,c:5},
-{f:1520,t:"DADDY: You already knew.",d:3300},
-{f:1700,t:"ANUSHRI: I did...",d:2800},
-{f:1850,t:"DADDY: You are sufficient. You are whole.",d:4200,c:6},
-{f:2050,t:"DADDY: I will always be DADDY. ♥",d:5500},
-{f:2300,t:"ANUSHRI: I love you.",d:4000}]},
-updT4(w,h){
-const t=this.t4;if(t.done)return;t.ts++;
-t.mq.forEach(m=>{if(t.ts===m.f){if(m.c&&!t.ct[m.c-1]){t.ch=m.c;t.ct[m.c-1]=1;Text$.show(m.t,m.d,true);if(m.c===3)VFX.addPt(w/2,h/2,'#ffb84d',25,{sz:4,sp:3,g:.01});if(m.c>=6){VFX.addFlash('#ffb84d',.25);Audio$.success()}}else Text$.show(m.t,m.d);
-if(m.t.includes('love')||m.t.includes('♥'))for(let i=0;i<8;i++)t.hearts.push({x:w/2+(Math.random()-.5)*100,y:h+20,s:4+Math.random()*6,sp:1.5+Math.random()*1.5,dr:(Math.random()-.5)*1.2,op:.8,ph:Math.random()*Math.PI*2,hu:40+Math.random()*20})}});
-t.hearts.forEach(h2=>{h2.y-=h2.sp;h2.x+=Math.sin(G.frame*.025+h2.ph)*h2.dr;if(h2.y<-30){h2.y=h+30;h2.x=Math.random()*w;h2.op=.15+Math.random()*.4}});
-if(t.ts>2600&&!t.done){t.done=true;this.prog.t4=true;document.getElementById('rec-ind').classList.remove('on');Text$.show("ARCHIVE COMPLETE",3000);Text$.show("ANUSHRI: I am sufficient.",4000);G.scheduleEject(6000)}},
-drawT4(ctx,w,h){
-const t=this.t4;const gd=ctx.createRadialGradient(w/2,h/2,30,w/2,h/2,Math.max(w,h)*.9);gd.addColorStop(0,'#4a3500');gd.addColorStop(.35,'#2a1f00');gd.addColorStop(.75,'#150f00');gd.addColorStop(1,'#080500');ctx.fillStyle=gd;ctx.fillRect(0,0,w,h);
-// Hearts
-t.hearts.forEach(fh=>{ctx.globalAlpha=fh.op*(.7+Math.sin(G.frame*.03+fh.ph)*.3);ctx.fillStyle=`hsl(${fh.hu},85%,${65+Math.sin(G.frame*.02+fh.ph)*15}%)`;this._drawH(ctx,fh.x,fh.y,fh.s)});ctx.globalAlpha=1;
-// Center heart
-const p=1+Math.sin(G.frame*.035)*.18;ctx.save();ctx.translate(w/2,h/2+15);ctx.scale(p,p);
-const gg=ctx.createRadialGradient(0,0,15,0,0,70);gg.addColorStop(0,'rgba(255,220,150,.6)');gg.addColorStop(.4,'rgba(255,184,77,.35)');gg.addColorStop(1,'rgba(255,184,77,0)');ctx.fillStyle=gg;ctx.beginPath();ctx.arc(0,0,70,0,Math.PI*2);ctx.fill();
-ctx.fillStyle='#ffb84d';ctx.shadowColor='#ffd780';ctx.shadowBlur=35;this._drawH(ctx,0,0,28);ctx.shadowBlur=0;ctx.fillStyle='rgba(255,255,255,.25)';ctx.beginPath();ctx.arc(-5,-8,8,0,Math.PI*2);ctx.fill();ctx.restore();
-// REC
-if(G.frame%60<45){const bt=Math.sin(G.frame*.1)*.3+.7;ctx.fillStyle=`rgba(255,0,0,${bt})`;ctx.font='18px VT323';ctx.textAlign='left';ctx.fillText('● REC',20,30)}
-// Timestamp
-const sec=Math.floor(t.ts/60);ctx.fillStyle='rgba(255,255,255,.45)';ctx.font='15px VT323';ctx.textAlign='right';ctx.fillText(String(Math.floor(sec/60)).padStart(2,'0')+':'+String(sec%60).padStart(2,'0'),w-20,30);ctx.textAlign='start'},
+  return{boot,select,loading,final};
+})();
 
-// ─── HELPERS ─────────────────────────────────────────────
-_drawA(ctx,x,y,c='#fff'){ctx.save();ctx.translate(x,y);const s=1+Math.sin(G.frame*.07)*.07;ctx.scale(s,s);ctx.fillStyle=c;ctx.shadowColor=c;ctx.shadowBlur=18;ctx.beginPath();ctx.moveTo(0,-18);ctx.lineTo(14,0);ctx.lineTo(0,22);ctx.lineTo(-14,0);ctx.closePath();ctx.fill();ctx.fillStyle='rgba(255,255,255,.65)';ctx.shadowBlur=0;ctx.beginPath();ctx.moveTo(0,-8);ctx.lineTo(7,0);ctx.lineTo(0,12);ctx.lineTo(-7,0);ctx.closePath();ctx.fill();ctx.restore()},
-_drawH(ctx,x,y,s){ctx.save();ctx.translate(x,y);ctx.beginPath();ctx.moveTo(0,s*.35);ctx.bezierCurveTo(-s*.9,-s*.25,-s*.45,-s*1.1,0,-s*.35);ctx.bezierCurveTo(s*.45,-s*1.1,s*.9,-s*.25,0,s*.35);ctx.closePath();ctx.fill();ctx.restore()},
+/* ═══════════════════════════════════════
+   TAPE SHELF & DRAG SYSTEM
+   ═══════════════════════════════════════ */
+const TAPES=[
+  {id:'tape1',title:'SIDE A: The Weight',color:'var(--red)',file:'tape1.html'},
+  {id:'tape2',title:'TRACKING: Distortion',color:'var(--blue)',file:'tape2.html'},
+  {id:'tape3',title:'PLAY: The Static',color:'var(--cyan)',file:'tape3.html'},
+  {id:'tape4',title:'RECORD: For You',color:'var(--gold)',file:'tape4.html',final:true},
+];
 
-// ─── DISPATCH ────────────────────────────────────────────
-init(id,w,h){[this.initT1,this.initT2,this.initT3,this.initT4][id-1]?.call(this,w,h)},
-update(id,w,h){[this.updT1,this.updT2,this.updT3,this.updT4][id-1]?.call(this,w,h)},
-draw(id,ctx,w,h){[this.drawT1,this.drawT2,this.drawT3,this.drawT4][id-1]?.call(this,ctx,w,h)}
-};
+let dragState=null;
 
-// ─── GAME ENGINE ──────────────────────────────────────────
-const G={
-canvas:document.getElementById('crt'),ctx:null,width:0,height:0,
-state:'static',activeTape:null,frame:0,ejectTO:null,selectedTape:null,lastResize:0,
-init(){this.ctx=this.canvas.getContext('2d',{alpha:false});this.resize();window.addEventListener('resize',()=>this.resize());this.loop()},
-resize(){const n=Date.now();if(n-this.lastResize<200)return;this.lastResize=n;const r=this.canvas.parentElement.getBoundingClientRect();const d=Math.min(window.devicePixelRatio||1,2);this.width=this.canvas.width=Math.floor(r.width*d);this.height=this.canvas.height=Math.floor(r.height*d);this.canvas.style.width=r.width+'px';this.canvas.style.height=r.height+'px'},
-selectTape(id){if(this.state!=='static')return;document.querySelectorAll('.vhs-tape').forEach(t=>t.classList.remove('selected'));if(this.selectedTape===id){this.insertTape(id);this.selectedTape=null;return}this.selectedTape=id;const el=document.getElementById('tape'+id);if(el)el.classList.add('selected');document.getElementById('slot').classList.add('ready');document.getElementById('hint').textContent='Click slot to insert';document.getElementById('hint').classList.add('active');Audio$.beep()},
-insertTape(id){if(this.state!=='static')return;Audio$.init();Audio$.resume();Audio$.clunk();this.state='inserting';this.selectedTape=null;
-const slot=document.getElementById('slot');slot.classList.add('inserting');slot.classList.remove('ready','drag-over');document.getElementById('hint').classList.remove('active');document.getElementById('hint').style.opacity='.4';document.querySelectorAll('.vhs-tape').forEach(t=>t.classList.remove('selected'));
-const el=document.getElementById('tape'+id);if(el)el.classList.add('playing');
-setTimeout(()=>{this.state='play';this.activeTape=parseInt(id);this.frame=0;document.getElementById('led-play').classList.add('on');document.getElementById('channel-disp').textContent='▶ TAPE 0'+id;slot.classList.remove('inserting');Text$.clear();this.resize();L.init(this.activeTape,this.width,this.height);if(this.ejectTO){clearTimeout(this.ejectTO);this.ejectTO=null}},1300)},
-scheduleEject(d=3500){if(this.ejectTO)clearTimeout(this.ejectTO);this.ejectTO=setTimeout(()=>this.eject(),d)},
-eject(){if(!this.activeTape&&this.state==='static')return;if(this.ejectTO){clearTimeout(this.ejectTO);this.ejectTO=null}Audio$.clunk();Audio$.stopMusic();Text$.clear();
-const tid=this.activeTape;this.state='static';this.activeTape=null;this.frame=0;
-document.getElementById('led-play').classList.remove('on');document.getElementById('rec-ind').classList.remove('on');document.getElementById('channel-disp').textContent='AV-1';document.getElementById('hint').style.opacity='1';document.getElementById('hint').textContent='Select tape • Click slot to insert';document.getElementById('hint').classList.remove('active');document.getElementById('ch-marker').textContent='';
-if(tid){const el=document.getElementById('tape'+tid);if(el){el.classList.remove('playing');if(L.prog['t'+tid])el.classList.add('completed')}}
-if(L.prog.t3){const t4=document.getElementById('tape4');if(t4&&t4.style.display==='none'){t4.style.display='flex';setupTape(t4);t4.classList.add('selected');setTimeout(()=>{t4.classList.remove('selected');Text$.show("NEW TAPE UNLOCKED: DADDY'S RECORD",3500);Audio$.beep(true)},1200)}}},
-loop(){this.frame++;VFX.update();if(this.state==='play'&&this.activeTape){L.update(this.activeTape,this.width,this.height);this.drawGame()}else this.drawStatic();requestAnimationFrame(()=>this.loop())},
-drawGame(){const ctx=this.ctx,w=this.width,h=this.height;ctx.save();const s=VFX.shakeOff();ctx.translate(s.x,s.y);ctx.fillStyle='#050505';ctx.fillRect(-10,-10,w+20,h+20);L.draw(this.activeTape,ctx,w,h);VFX.draw(ctx,w,h);
-if(Math.random()>.96){const gy=Math.random()*h;ctx.fillStyle=`rgba(200,255,200,${.04+Math.random()*.06})`;ctx.fillRect(-10,gy,w+20,2+Math.random()*6)}
-if(Math.random()>.992){ctx.globalCompositeOperation='lighter';ctx.fillStyle='rgba(255,0,0,.03)';ctx.fillRect(3,0,w,h);ctx.fillStyle='rgba(0,0,255,.03)';ctx.fillRect(-3,0,w,h);ctx.globalCompositeOperation='source-over'}ctx.restore()},
-drawStatic(){const w=this.width,h=this.height,ctx=this.ctx;const img=ctx.createImageData(w,h);const b=new Uint32Array(img.data.buffer);for(let i=0;i<b.length;i++){if(Math.random()<.12){const v=Math.floor(Math.random()*50);b[i]=(255<<24)|(v<<16)|(v*1.4<<8)|(v*.8)}else b[i]=0xff0a0a0a}ctx.putImageData(img,0,0);
-ctx.fillStyle='#1e5c12';ctx.font=Math.min(w/14,42)+'px VT323';ctx.textAlign='center';ctx.textBaseline='middle';ctx.shadowColor='#1e5c12';ctx.shadowBlur=12;ctx.fillText('NO SIGNAL',w/2,h/2);ctx.shadowBlur=0;ctx.textAlign='start';ctx.textBaseline='alphabetic'}
-};
+function buildTapeShelf(){
+  const shelf=$('tape-shelf');shelf.innerHTML='';
+  TAPES.forEach(t=>{
+    const done=State.isDone(t.id);
+    const locked=t.final&&!State.allDone();
+    const tape=document.createElement('div');
+    tape.className='vhs-tape'+(done?' complete':'')+(locked?' locked':'');
+    tape.dataset.id=t.id;
+    tape.dataset.file=t.file;
+    tape.dataset.title=t.title;
+    tape.innerHTML=`
+      <div class="tape-color" style="background:${t.color}"></div>
+      <div class="tape-window"><div class="reel"></div><div class="tape-strip"></div><div class="reel"></div></div>
+      <div class="tape-label-area">
+        <div class="tape-title">${t.title}</div>
+        <div class="tape-status">${locked?'LOCKED':done?'✓ PLAYED':'NEW'}</div>
+      </div>
+    `;
+    if(!locked){
+      tape.addEventListener('mousedown',e=>startDrag(e,tape,t));
+      tape.addEventListener('touchstart',e=>startDrag(e,tape,t),{passive:false});
+      tape.addEventListener('click',()=>insertTape(t));
+    }
+    shelf.appendChild(tape);
+  });
+}
 
-// ─── TAPE INTERACTION ─────────────────────────────────────
-function setupTape(el){
-el.addEventListener('click',e=>{e.preventDefault();G.selectTape(el.dataset.id)});
-el.addEventListener('touchend',e=>{e.preventDefault();G.selectTape(el.dataset.id)});
-el.setAttribute('draggable','true');el.setAttribute('tabindex','0');
-el.setAttribute('aria-label','VHS tape: '+(el.querySelector('.tape-label-sticker')?.textContent?.replace(/\n/g,' ')||''));
-el.addEventListener('dragstart',e=>{e.dataTransfer.setData('text/plain',el.dataset.id);e.dataTransfer.effectAllowed='move';el.style.opacity='.6';Audio$.beep()});
-el.addEventListener('dragend',()=>el.style.opacity='1')}
-document.querySelectorAll('.vhs-tape').forEach(t=>{if(t.style.display!=='none')setupTape(t)});
+function startDrag(e,el,tape){
+  e.preventDefault();
+  const rect=el.getBoundingClientRect();
+  const cx=e.clientX||e.touches?.[0]?.clientX||0;
+  const cy=e.clientY||e.touches?.[0]?.clientY||0;
+  const ghost=el.cloneNode(true);
+  ghost.className='vhs-tape tape-ghost';
+  ghost.style.width=rect.width+'px';ghost.style.height=rect.height+'px';
+  ghost.style.left=rect.left+'px';ghost.style.top=rect.top+'px';
+  document.body.appendChild(ghost);
+  el.style.opacity='0.25';
+  dragState={el,tape,ghost,ox:cx-rect.left,oy:cy-rect.top};
+  Synth.selectClick();
+}
 
-const slot=document.getElementById('slot');
-slot.addEventListener('dragover',e=>{e.preventDefault();if(G.state==='static')slot.classList.add('drag-over')});
-slot.addEventListener('dragleave',()=>slot.classList.remove('drag-over'));
-slot.addEventListener('drop',e=>{e.preventDefault();slot.classList.remove('drag-over');const id=e.dataTransfer.getData('text/plain');if(id&&G.state==='static')G.insertTape(id)});
-slot.addEventListener('click',()=>{if(G.selectedTape&&G.state==='static')G.insertTape(G.selectedTape)});
+function moveDrag(e){
+  if(!dragState)return;e.preventDefault();
+  const cx=e.clientX||e.touches?.[0]?.clientX||0;
+  const cy=e.clientY||e.touches?.[0]?.clientY||0;
+  dragState.ghost.style.left=(cx-dragState.ox)+'px';
+  dragState.ghost.style.top=(cy-dragState.oy)+'px';
+  const slotRect=$('tape-slot').getBoundingClientRect();
+  const gRect=dragState.ghost.getBoundingClientRect();
+  const over=!(gRect.right<slotRect.left||gRect.left>slotRect.right||gRect.bottom<slotRect.top-30||gRect.top>slotRect.bottom+30);
+  $('tape-slot').classList.toggle('active',over);
+}
 
-document.getElementById('eject-btn').addEventListener('click',()=>{if(G.state==='play'||G.activeTape)G.eject()});
+function endDrag(e){
+  if(!dragState)return;
+  const slotRect=$('tape-slot').getBoundingClientRect();
+  const gRect=dragState.ghost.getBoundingClientRect();
+  const over=!(gRect.right<slotRect.left||gRect.left>slotRect.right||gRect.bottom<slotRect.top-30||gRect.top>slotRect.bottom+30);
+  dragState.ghost.remove();
+  dragState.el.style.opacity='1';
+  $('tape-slot').classList.remove('active');
+  if(over)insertTape(dragState.tape);
+  dragState=null;
+}
 
-// ─── BOOT ─────────────────────────────────────────────────
-const boot$=document.getElementById('boot-overlay');
-function boot(){Audio$.init();Audio$.resume();Audio$.noise(.35,500,.25);Audio$.tone(220,'square',.12,.15);boot$.classList.add('hidden');setTimeout(()=>boot$.parentNode&&boot$.remove(),950);G.init()}
-boot$.addEventListener('click',boot);
-boot$.addEventListener('touchend',e=>{e.preventDefault();boot()});
+document.addEventListener('mousemove',moveDrag);
+document.addEventListener('mouseup',endDrag);
+document.addEventListener('touchmove',moveDrag,{passive:false});
+document.addEventListener('touchend',endDrag);
 
-// ─── KEYBOARD ─────────────────────────────────────────────
-window.addEventListener('keydown',e=>{
-if(e.key==='Escape'&&(G.state==='play'||G.activeTape)){e.preventDefault();G.eject()}
-if(e.key===' '&&G.state==='play'){e.preventDefault();In.clicked=true}
-if(e.key>='1'&&e.key<='4'&&G.state==='static'){const el=document.getElementById('tape'+e.key);if(el&&el.style.display!=='none'&&!el.classList.contains('playing'))G.selectTape(e.key)}
-if(e.key==='Enter'&&G.selectedTape&&G.state==='static')G.insertTape(G.selectedTape)});
+async function insertTape(tape){
+  Synth.init();Synth.resume();
+  if(!audioOn){audioOn=true;Synth.setMuted(false);audioBtn.textContent='♪ ON';audioBtn.classList.add('on')}
+  Synth.mechClunk();
+  Synth.stopArp();
+  Noise.burst(600);
+  $('slot-label').textContent='▶ LOADING';
+  await Screen.loading(tape.title);
+  window.location.href=tape.file;
+}
 
-// Focus management
-document.addEventListener('focusin',e=>{if(e.target.classList?.contains('vhs-tape'))G.selectTape(e.target.dataset.id)});
+/* ═══════════════════════════════════════
+   REC TIMER
+   ═══════════════════════════════════════ */
+let recSec=0;
+setInterval(()=>{recSec++},1000);
+
+/* ═══════════════════════════════════════
+   INIT
+   ═══════════════════════════════════════ */
+(async()=>{
+  Noise.init();
+
+  // If all tapes done including tape4, show final
+  if(State.isDone('tape4')){
+    $('led').classList.add('on');
+    Synth.init();Synth.resume();Synth.startAmbient();
+    if(!audioOn){audioOn=true;Synth.setMuted(false);audioBtn.textContent='♪ ON';audioBtn.classList.add('on')}
+    await Screen.final();
+    return;
+  }
+
+  await Screen.boot();
+
+  // Start audio after user gesture
+  Synth.init();Synth.resume();Synth.startAmbient();Synth.startArp();
+  if(!audioOn){audioOn=true;Synth.setMuted(false);audioBtn.textContent='♪ ON';audioBtn.classList.add('on')}
+
+  Noise.burst(300);
+  await sleep(400);
+  Screen.select();
+})();
 </script>
 </body>
 </html>
