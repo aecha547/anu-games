@@ -1,544 +1,1453 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>ANUSHRI: PLAY/REWIND</title>
-<style>
-@import url('https://fonts.googleapis.com/css2?family=VT323&family=Cormorant+Garamond:ital,wght@0,400;1,400&display=swap');
-:root{--bg:#050505;--crt-green:#a8e6a3;--static-white:#d4d4d4;--warm:#ffeedd;--tape-red:#cc4444;--tape-blue:#5588bb;--tape-gold:#d4af37;--ui:#888}
-*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{height:100%;overflow:hidden;background:#000;font-family:'VT323',monospace;color:var(--static-white);user-select:none}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TRACKING ERROR | Anushri Archive</title>
+    <link href="https://fonts.googleapis.com/css2?family=VT323&family=Special+Elite&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --crt-bg: #0a0a0a;
+            --phosphor: #33ff33;
+            --phosphor-dim: #1a801a;
+            --amber: #ffb000;
+            --danger: #ff3366;
+            --static: #ffffff;
+            --void: #000000;
+        }
 
-/* === CRT TV FRAME === */
-#tv-frame{
-position:relative;width:100%;height:100%;
-display:flex;justify-content:center;align-items:center;
-background:radial-gradient(ellipse at 50% 60%,#0a0a0a 0%,#000 100%);
-}
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-/* The TV "set" */
-.tv-body{
-position:relative;
-width:min(92vw,700px);
-aspect-ratio:4/3;
-background:#1a1a1a;
-border-radius:28px;
-border:3px solid #2a2a2a;
-box-shadow:0 20px 60px rgba(0,0,0,0.8),inset 0 2px 0 rgba(255,255,255,0.03);
-overflow:hidden;
-display:flex;flex-direction:column;
-}
+        body {
+            background: #000;
+            color: var(--phosphor);
+            font-family: 'VT323', monospace;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            cursor: none;
+            user-select: none;
+        }
 
-/* Screen area */
-.tv-screen{
-flex:1;margin:16px 16px 8px;
-background:#000;
-border-radius:12px;
-position:relative;overflow:hidden;
-box-shadow:inset 0 0 30px rgba(0,0,0,0.9);
-}
+        /* VHS Noise Overlay */
+        #static-overlay {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 1000;
+            opacity: 0.08;
+            mix-blend-mode: overlay;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+        }
 
-/* Scanlines */
-.tv-screen::before{
-content:'';position:absolute;inset:0;z-index:50;pointer-events:none;
-background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.15) 2px,rgba(0,0,0,0.15) 4px);
-}
+        /* CRT Screen Container */
+        #crt-container {
+            width: 100vw;
+            height: 100vh;
+            background: var(--crt-bg);
+            position: relative;
+            overflow: hidden;
+            box-shadow: inset 0 0 150px rgba(0,0,0,0.9);
+        }
 
-/* Screen curvature */
-.tv-screen::after{
-content:'';position:absolute;inset:0;z-index:51;pointer-events:none;
-background:radial-gradient(ellipse at center,transparent 60%,rgba(0,0,0,0.55) 100%);
-}
+        /* Scanlines */
+        #crt-container::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(
+                rgba(18, 16, 16, 0) 50%,
+                rgba(0, 0, 0, 0.25) 50%
+            );
+            background-size: 100% 4px;
+            z-index: 100;
+            pointer-events: none;
+        }
 
-/* Screen glow */
-.screen-glow{
-position:absolute;inset:-20px;z-index:-1;
-border-radius:20px;
-background:radial-gradient(ellipse at center,rgba(168,230,163,0.04) 0%,transparent 70%);
-pointer-events:none;
-}
+        /* Tracking Error Effects */
+        .tracking-bad {
+            animation: trackingShake 0.1s infinite;
+            filter: blur(2px);
+        }
 
-/* Static noise canvas */
-#static-canvas{position:absolute;inset:0;z-index:10;opacity:0.12}
-/* Content layer */
-#screen-content{position:absolute;inset:0;z-index:20;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:20px}
+        @keyframes trackingShake {
+            0%, 100% { transform: translateY(0) translateX(0); }
+            25% { transform: translateY(-3px) translateX(2px); }
+            75% { transform: translateY(3px) translateX(-2px); }
+        }
 
-/* TV controls strip */
-.tv-controls{
-height:48px;display:flex;align-items:center;justify-content:space-between;
-padding:0 24px;background:#111;
-border-top:1px solid #222;
-}
-.tv-label{font-size:11px;letter-spacing:0.3em;color:#444;text-transform:uppercase}
-.tv-led{width:8px;height:8px;border-radius:50%;background:#1a1a1a;border:1px solid #333}
-.tv-led.on{background:var(--tape-red);box-shadow:0 0 8px var(--tape-red)}
+        .screen-roll {
+            animation: roll 3s linear infinite;
+        }
 
-/* === SCREEN STATES === */
+        @keyframes roll {
+            0% { transform: translateY(-100%); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translateY(100%); opacity: 0; }
+        }
 
-/* Boot state */
-.boot-text{
-font-size:clamp(14px,2.5vw,20px);
-color:var(--crt-green);
-text-align:left;
-width:80%;
-line-height:1.8;
-text-shadow:0 0 8px rgba(168,230,163,0.3);
-}
-.boot-text .cursor{display:inline-block;width:10px;height:1.2em;background:var(--crt-green);animation:blink 1s step-end infinite;vertical-align:text-bottom;margin-left:2px}
-@keyframes blink{50%{opacity:0}}
+        /* Custom Cursor - Tracking Control */
+        #tracking-cursor {
+            position: fixed;
+            width: 40px;
+            height: 40px;
+            border: 2px solid var(--phosphor);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 9999;
+            transition: transform 0.05s, border-color 0.2s;
+            mix-blend-mode: difference;
+            box-shadow: 0 0 10px var(--phosphor);
+        }
 
-/* Tape select state */
-.tape-shelf{
-display:flex;flex-direction:column;align-items:center;gap:16px;
-width:90%;max-width:400px;
-}
-.shelf-label{
-font-size:11px;letter-spacing:0.4em;color:var(--ui);text-transform:uppercase;margin-bottom:8px
-}
-.tape{
-width:100%;padding:16px 20px;
-background:rgba(255,255,255,0.02);
-border:1px solid rgba(255,255,255,0.06);
-border-left:4px solid var(--tape-color,#555);
-cursor:pointer;
-display:flex;justify-content:space-between;align-items:center;
-transition:all 0.25s ease;
-position:relative;overflow:hidden;
-}
-.tape::before{
-content:'';position:absolute;top:0;left:-100%;width:100%;height:100%;
-background:linear-gradient(90deg,transparent,rgba(255,255,255,0.03),transparent);
-transition:left 0.5s;
-}
-.tape:hover::before{left:100%}
-.tape:hover{
-border-color:rgba(255,255,255,0.15);
-background:rgba(255,255,255,0.04);
-transform:translateX(4px);
-box-shadow:0 4px 20px rgba(0,0,0,0.3);
-}
-.tape-title{font-size:16px;letter-spacing:0.15em;text-transform:uppercase}
-.tape-status{font-size:12px;color:var(--ui);letter-spacing:0.1em}
-.tape-status.done{color:var(--crt-green)}
-.tape.locked{opacity:0.35;pointer-events:none}
-.tape.locked .tape-status::after{content:' [CORRUPTED]'}
+        #tracking-cursor.stressed {
+            border-color: var(--danger);
+            box-shadow: 0 0 20px var(--danger);
+            animation: pulse 0.5s infinite;
+        }
 
-/* VHS insert animation */
-.inserting .tv-screen{animation:tvNoise 0.6s}
-@keyframes tvNoise{
-0%,100%{filter:none}
-10%{filter:brightness(2) contrast(0.5)}
-20%{filter:brightness(0.3)}
-40%{filter:brightness(1.5) hue-rotate(90deg)}
-60%{filter:brightness(0.5) saturate(3)}
-80%{filter:brightness(1.2)}
-}
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+        }
 
-/* Info line */
-.info-line{
-position:absolute;bottom:12px;left:0;width:100%;
-text-align:center;font-size:11px;color:rgba(255,255,255,0.2);
-letter-spacing:0.15em;z-index:30;
-}
+        /* MAIN MENU - The Table */
+        #tape-menu {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 60px;
+            padding: 60px;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 50;
+        }
 
-/* Final tape overlay */
-.final-overlay{
-position:absolute;inset:0;z-index:40;
-background:rgba(0,0,0,0.95);
-display:flex;flex-direction:column;justify-content:center;align-items:center;
-padding:30px;text-align:center;
-opacity:0;pointer-events:none;
-transition:opacity 1s ease;
-}
-.final-overlay.visible{opacity:1;pointer-events:auto}
-.final-text{
-font-family:'Cormorant Garamond',serif;
-font-size:clamp(14px,2.2vw,18px);
-line-height:2;color:var(--warm);
-max-width:500px;
-}
-.final-text .gold{color:var(--tape-gold);font-weight:600;text-shadow:0 0 12px rgba(212,175,55,0.4)}
-.final-text .hl{color:var(--crt-green)}
+        .tape-slot {
+            width: 280px;
+            height: 160px;
+            background: linear-gradient(145deg, #1a1a1a, #0a0a0a);
+            border: 3px solid #333;
+            border-radius: 8px;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 
+                0 10px 30px rgba(0,0,0,0.8),
+                inset 0 2px 5px rgba(255,255,255,0.05);
+        }
 
-/* Audio toggle */
-.audio-toggle{
-position:fixed;top:12px;right:12px;z-index:200;
-background:rgba(0,0,0,0.6);border:1px solid #333;
-color:#666;font-family:'VT323';font-size:13px;
-padding:4px 10px;cursor:pointer;
-}
-.audio-toggle.on{color:var(--crt-green);border-color:var(--crt-green)}
+        .tape-slot:hover {
+            border-color: var(--phosphor);
+            box-shadow: 
+                0 0 30px rgba(51, 255, 51, 0.2),
+                inset 0 2px 5px rgba(51, 255, 51, 0.1);
+            transform: translateY(-5px) scale(1.02);
+        }
 
-/* Mobile */
-@media(max-width:600px){
-.tv-body{border-radius:16px;width:96vw}
-.tv-screen{margin:10px 10px 6px}
-.tv-controls{height:38px;padding:0 16px}
-.tape{padding:12px 14px}
-}
-</style>
+        .tape-slot.inserted {
+            animation: insertMechanism 1.2s cubic-bezier(0.7, 0, 0.3, 1) forwards;
+        }
+
+        @keyframes insertMechanism {
+            0% { transform: scale(1); }
+            40% { transform: scale(0.95) translateY(30px); }
+            60% { opacity: 0.3; }
+            100% { transform: scale(0.8) translateY(200px); opacity: 0; }
+        }
+
+        .tape-label {
+            font-family: 'Special Elite', cursive;
+            color: var(--amber);
+            font-size: 1.1rem;
+            transform: rotate(-1deg);
+            border: 2px solid var(--amber);
+            padding: 8px 20px;
+            background: rgba(255, 176, 0, 0.1);
+            text-align: center;
+            pointer-events: none;
+        }
+
+        .tape-slot:hover .tape-label {
+            color: #fff;
+            border-color: #fff;
+        }
+
+        .tape-status {
+            position: absolute;
+            bottom: 20px;
+            font-size: 0.9rem;
+            color: #444;
+            font-family: 'VT323', monospace;
+            letter-spacing: 0.1em;
+        }
+
+        .tape-slot:hover .tape-status {
+            color: var(--phosphor);
+        }
+
+        .tape-slot.locked {
+            opacity: 0.4;
+            pointer-events: none;
+        }
+
+        .tape-slot.locked .tape-label {
+            color: #444;
+            border-color: #333;
+        }
+
+        /* Game Areas */
+        #game-area {
+            display: none;
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        .act-container {
+            display: none;
+            width: 100%;
+            height: 100%;
+            position: relative;
+            padding: 40px;
+        }
+
+        /* ACT 1: HALLWAY */
+        #hallway-scene {
+            background: linear-gradient(to bottom, #1a1a2e 0%, #0f0f1a 100%);
+            perspective: 800px;
+            overflow: hidden;
+        }
+
+        #hallway-floor {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 40%;
+            background: linear-gradient(to bottom, #2a2a3e, #1a1a2e);
+            transform: rotateX(60deg);
+            transform-origin: bottom;
+        }
+
+        .locker {
+            position: absolute;
+            width: 80px;
+            height: 160px;
+            background: linear-gradient(to right, #3a3a4e, #2a2a3e);
+            border: 2px solid #444;
+            border-radius: 4px;
+            box-shadow: -5px 5px 15px rgba(0,0,0,0.5);
+        }
+
+        .locker::before {
+            content: '';
+            position: absolute;
+            top: 20px;
+            left: 10px;
+            right: 10px;
+            height: 60px;
+            background: #222;
+            border-radius: 2px;
+        }
+
+        .locker-label {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.8rem;
+            color: #666;
+        }
+
+        #anushri-sprite {
+            position: absolute;
+            bottom: 20%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 120px;
+            z-index: 10;
+            transition: left 0.1s linear;
+        }
+
+        .anushri-body {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to bottom, #e8c4a0, #d4a574);
+            border-radius: 30px 30px 0 0;
+            position: relative;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+        }
+
+        .anushri-head {
+            position: absolute;
+            top: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 50px;
+            height: 50px;
+            background: #e8c4a0;
+            border-radius: 50%;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+
+        .anushri-hair {
+            position: absolute;
+            top: -40px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 40px;
+            background: #2a1f1a;
+            border-radius: 50% 50% 0 0;
+        }
+
+        .high-performer {
+            position: absolute;
+            bottom: 20%;
+            width: 60px;
+            height: 120px;
+            background: linear-gradient(to bottom, #gold, #b8860b);
+            opacity: 0.8;
+            border-radius: 30px 30px 0 0;
+            box-shadow: 0 0 30px rgba(255, 215, 0, 0.3);
+        }
+
+        /* UI Elements */
+        #tracking-meter {
+            position: absolute;
+            top: 30px;
+            right: 30px;
+            width: 250px;
+            background: rgba(0,0,0,0.8);
+            border: 2px solid var(--phosphor);
+            padding: 10px;
+            z-index: 50;
+        }
+
+        #tracking-bar {
+            width: 100%;
+            height: 20px;
+            background: #111;
+            border: 1px solid #333;
+            overflow: hidden;
+        }
+
+        #tracking-fill {
+            height: 100%;
+            background: linear-gradient(to right, var(--danger), var(--phosphor));
+            width: 100%;
+            transition: width 0.1s;
+        }
+
+        .meter-label {
+            font-size: 0.8rem;
+            margin-bottom: 5px;
+            color: #888;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        #dialogue-box {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80%;
+            max-width: 800px;
+            background: rgba(0,0,0,0.9);
+            border: 2px solid var(--phosphor);
+            padding: 20px;
+            font-size: 1.3rem;
+            line-height: 1.6;
+            z-index: 50;
+            min-height: 100px;
+            font-family: 'Cormorant Garamond', serif;
+        }
+
+        .speaker {
+            color: var(--amber);
+            font-family: 'VT323', monospace;
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        /* ACT 2: LUNCHROOM */
+        #lunchroom-scene {
+            background: #1a1a1e;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #cafeteria-table {
+            width: 600px;
+            height: 400px;
+            background: #2a2a2e;
+            border: 3px solid #444;
+            position: relative;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            padding: 40px;
+        }
+
+        .seat {
+            background: #1a1a1e;
+            border: 2px dashed #444;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #444;
+            font-size: 0.9rem;
+            position: relative;
+            transition: all 0.3s;
+        }
+
+        .seat.occupied {
+            background: #2a2a3e;
+            border-color: #666;
+            color: #888;
+        }
+
+        .seat.hidden-truth {
+            border-color: var(--phosphor);
+            box-shadow: 0 0 20px rgba(51, 255, 51, 0.1);
+        }
+
+        .seat.hidden-truth::after {
+            content: 'EMPTY';
+            color: var(--phosphor);
+            font-size: 0.7rem;
+            position: absolute;
+            bottom: 10px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .seat.hidden-truth:hover::after {
+            opacity: 1;
+        }
+
+        #rewind-indicator {
+            position: absolute;
+            top: 30px;
+            left: 30px;
+            color: var(--danger);
+            font-size: 1.2rem;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        #rewind-indicator.active {
+            opacity: 1;
+            animation: blink 0.5s infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        /* ACT 3: EJECTION */
+        #ejection-screen {
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 60px;
+        }
+
+        #ejection-title {
+            font-size: 3rem;
+            color: var(--danger);
+            margin-bottom: 40px;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            animation: glitchText 2s infinite;
+        }
+
+        @keyframes glitchText {
+            0%, 100% { transform: translate(0); }
+            20% { transform: translate(-2px, 2px); }
+            40% { transform: translate(2px, -2px); }
+        }
+
+        .ejection-message {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.5rem;
+            color: #888;
+            max-width: 600px;
+            line-height: 1.8;
+            margin-bottom: 30px;
+            opacity: 0;
+        }
+
+        .ejection-message.visible {
+            animation: fadeIn 2s forwards;
+        }
+
+        @keyframes fadeIn {
+            to { opacity: 1; }
+        }
+
+        #alone-timer {
+            font-size: 4rem;
+            color: #333;
+            margin: 40px 0;
+            font-family: 'VT323', monospace;
+        }
+
+        /* ACT 4: RECORD */
+        #record-scene {
+            background: linear-gradient(to bottom, #0a0a0a, #1a1a1e);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow-y: auto;
+        }
+
+        #letter-container {
+            max-width: 700px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 60px;
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.2rem;
+            line-height: 2;
+            color: #ddd;
+            position: relative;
+        }
+
+        #letter-container::before {
+            content: '"';
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            font-size: 4rem;
+            color: rgba(255,255,255,0.1);
+            font-family: serif;
+        }
+
+        .highlight-gold { color: var(--amber); font-weight: 600; }
+        .highlight-danger { color: var(--danger); font-style: italic; }
+        .highlight-phosphor { color: var(--phosphor); }
+
+        #final-punchline {
+            margin-top: 60px;
+            text-align: center;
+            font-size: 1.8rem;
+            color: var(--phosphor);
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 1s ease;
+        }
+
+        #final-punchline.revealed {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .daddy-text {
+            color: var(--amber);
+            text-shadow: 0 0 20px rgba(255, 176, 0, 0.3);
+            font-weight: bold;
+        }
+
+        /* Image Frames */
+        .memory-frame {
+            margin: 40px auto;
+            width: 100%;
+            max-width: 600px;
+            border: 2px solid #333;
+            background: #111;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .memory-frame img {
+            width: 100%;
+            height: auto;
+            display: block;
+            filter: grayscale(50%) contrast(1.1);
+            transition: filter 0.5s;
+        }
+
+        .memory-frame:hover img {
+            filter: grayscale(0%) contrast(1);
+        }
+
+        .img-fallback {
+            position: absolute;
+            inset: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: #0a0a0a;
+            color: #333;
+            font-family: 'VT323', monospace;
+            font-size: 0.9rem;
+            text-align: center;
+            padding: 40px;
+        }
+
+        /* Music Player */
+        #music-player {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.9);
+            border: 1px solid #333;
+            padding: 15px;
+            z-index: 200;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            opacity: 0;
+            transition: opacity 1s;
+        }
+
+        #music-player.visible {
+            opacity: 1;
+        }
+
+        #play-btn {
+            width: 40px;
+            height: 40px;
+            background: transparent;
+            border: 2px solid var(--phosphor);
+            color: var(--phosphor);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            transition: all 0.3s;
+        }
+
+        #play-btn:hover {
+            background: var(--phosphor);
+            color: #000;
+        }
+
+        #track-info {
+            font-size: 0.8rem;
+            color: #888;
+        }
+
+        #visualizer {
+            display: flex;
+            gap: 3px;
+            height: 20px;
+            align-items: flex-end;
+        }
+
+        .viz-bar {
+            width: 4px;
+            background: var(--phosphor);
+            min-height: 4px;
+            transition: height 0.1s;
+        }
+
+        /* Utility */
+        .hidden { display: none !important; }
+        
+        @media (max-width: 768px) {
+            body { cursor: auto; }
+            #tracking-cursor { display: none; }
+            #tape-menu { grid-template-columns: 1fr; gap: 30px; padding: 30px; }
+            .tape-slot { width: 240px; height: 140px; }
+            #letter-container { padding: 30px; font-size: 1rem; }
+        }
+    </style>
 </head>
 <body>
 
-<div id="tv-frame">
-<div class="tv-body">
-<div class="screen-glow"></div>
-<div class="tv-screen">
-<canvas id="static-canvas"></canvas>
-<div id="screen-content"></div>
-<div class="info-line" id="info-line">REC ● 00:00:00</div>
-<div class="final-overlay" id="final-overlay">
-<div class="final-text" id="final-text"></div>
-</div>
-</div>
-<div class="tv-controls">
-<span class="tv-label">ANUSHRI TAPES</span>
-<div style="display:flex;gap:8px;align-items:center">
-<span class="tv-label" style="font-size:10px">PWR</span>
-<div class="tv-led on" id="pwr-led"></div>
-</div>
-</div>
-</div>
-</div>
+    <div id="static-overlay"></div>
+    <div id="tracking-cursor"></div>
 
-<button class="audio-toggle" id="audio-toggle">AUDIO: OFF</button>
+    <div id="crt-container">
+        
+        <!-- MAIN MENU -->
+        <div id="tape-menu">
+            <div class="tape-slot" onclick="Archive.loadTape(1)" data-tape="1">
+                <div class="tape-label">TAPE 1: FIRST DAY</div>
+                <div class="tape-status">[ INSERT ]</div>
+            </div>
+            <div class="tape-slot" onclick="Archive.loadTape(2)" data-tape="2">
+                <div class="tape-label">TAPE 2: LUNCHROOM</div>
+                <div class="tape-status">[ INSERT ]</div>
+            </div>
+            <div class="tape-slot locked" onclick="Archive.loadTape(3)" data-tape="3" id="tape-3">
+                <div class="tape-label" style="color: #444; border-color: #333;">TAPE 3: ???</div>
+                <div class="tape-status">[ LOCKED ]</div>
+            </div>
+            <div class="tape-slot locked" onclick="Archive.loadTape(4)" data-tape="4" id="tape-4">
+                <div class="tape-label" style="color: #444; border-color: #333;">TAPE 4: RECORD</div>
+                <div class="tape-status">[ LOCKED ]</div>
+            </div>
+        </div>
 
-<audio id="bgm-pisces" loop preload="auto">
-<source src="Pisces - Tony Ann (Piano Cover).mp3" type="audio/mpeg">
-</audio>
-<audio id="bgm-fallen" loop preload="auto">
-<source src="fallen-down.mp3" type="audio/mpeg">
-</audio>
+        <!-- GAME AREA -->
+        <div id="game-area">
 
-<script>
-'use strict';
-/*═══════════════════════════════════════════
-  INDEX.HTML — VHS PLAYER HUB
-  FP-focused, TypeScript-style, robust
-═══════════════════════════════════════════*/
+            <!-- ACT 1: THE HALLWAY -->
+            <div id="hallway-scene" class="act-container">
+                <div id="hallway-floor"></div>
+                <div id="lockers-container"></div>
+                <div id="anushri-sprite">
+                    <div class="anushri-hair"></div>
+                    <div class="anushri-head"></div>
+                    <div class="anushri-body"></div>
+                </div>
 
-// ── Utilities ──
-const $=s=>document.getElementById(s);
-const qs=s=>document.querySelector(s);
-const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+                <div id="tracking-meter">
+                    <div class="meter-label">
+                        <span>TRACKING STABILITY</span>
+                        <span id="tracking-percent">100%</span>
+                    </div>
+                    <div id="tracking-bar">
+                        <div id="tracking-fill"></div>
+                    </div>
+                    <div style="font-size: 0.7rem; color: #555; margin-top: 5px;">
+                        KEEP MOUSE CENTERED TO STABILIZE
+                    </div>
+                </div>
 
-// ── Static Noise ──
-const Static=(()=>{
-const canvas=$('static-canvas');
-const ctx=canvas.getContext('2d');
-let w=0,h=0,active=true,intensity=0.12;
+                <div id="dialogue-box">
+                    <div class="speaker">INTERNAL LOG: DAY 1</div>
+                    <div id="dialogue-text">The hallway stretches forever. Everyone else moves with purpose. I move like I'm apologizing for taking up space.</div>
+                </div>
+            </div>
 
-const resize=()=>{
-const rect=canvas.parentElement.getBoundingClientRect();
-w=canvas.width=Math.floor(rect.width);
-h=canvas.height=Math.floor(rect.height);
-};
+            <!-- ACT 2: THE LUNCHROOM -->
+            <div id="lunchroom-scene" class="act-container">
+                <div id="rewind-indicator">◀◀◀ REWINDING PERCEPTION</div>
+                <div style="margin-bottom: 20px; text-align: center; color: #888;">
+                    [HOVER TO SEE TRUTH] &nbsp;&nbsp; [PRESS 'R' TO REWIND]
+                </div>
+                <div id="cafeteria-table">
+                    <div class="seat occupied">STUDENT A</div>
+                    <div class="seat" data-truth="empty">TAKEN?</div>
+                    <div class="seat occupied">STUDENT B</div>
+                    <div class="seat" data-truth="empty">FULL</div>
+                    <div class="seat occupied">STUDENT C</div>
+                    <div class="seat occupied">STUDENT D</div>
+                    <div class="seat" data-truth="empty">RESERVED</div>
+                    <div class="seat occupied">STUDENT E</div>
+                </div>
+                <div id="dialogue-box" style="position: relative; margin-top: 40px; transform: none; left: auto;">
+                    <div class="speaker">OBSERVATION</div>
+                    <div id="lunchroom-text">Every table looks full. Every seat looks taken. But is that the truth, or just what I expect to see?</div>
+                </div>
+            </div>
 
-const draw=()=>{
-if(!active){requestAnimationFrame(draw);return}
-const img=ctx.createImageData(w,h);
-const d=img.data;
-const len=d.length;
-for(let i=0;i<len;i+=4){
-const v=Math.random()*255;
-d[i]=d[i+1]=d[i+2]=v;
-d[i+3]=Math.random()*50*intensity;
-}
-ctx.putImageData(img,0,0);
-requestAnimationFrame(draw);
-};
+            <!-- ACT 3: THE EJECTION -->
+            <div id="ejection-screen" class="act-container">
+                <div id="ejection-title">[ TRACKING ERROR ]</div>
+                <div class="ejection-message" id="msg1">
+                    The tape has been physically ejected from the player.
+                </div>
+                <div class="ejection-message" id="msg2" style="animation-delay: 3s;">
+                    The screen cannot glow without electricity.<br>
+                    The VHS cannot play without the machine.
+                </div>
+                <div class="ejection-message" id="msg3" style="animation-delay: 6s; color: #aaa;">
+                    But you are not the screen.<br>
+                    You are not the tape.<br>
+                    You are the signal that persists even when the hardware fails.
+                </div>
+                <div id="alone-timer">00:00</div>
+                <div class="ejection-message" id="msg4" style="animation-delay: 12s; color: var(--phosphor);">
+                    She is studying alone now.<br>
+                    No tracking stabilization.<br>
+                    No external validation.<br><br>
+                    Just the book. Just her mind. Just the quiet courage to continue.
+                </div>
+            </div>
 
-const setIntensity=v=>{canvas.style.opacity=v};
+            <!-- ACT 4: THE RECORD -->
+            <div id="record-scene" class="act-container">
+                <div id="letter-container">
+                    <p style="margin-bottom: 20px; font-size: 1.4rem; color: var(--amber);">
+                        My Anushri,
+                    </p>
+                    <p>
+                        When we first met, I was <span class="highlight-danger">irritated</span>. You seemed distant, guarded, impossible to read. I calculated the cost of staying and found it too high.
+                    </p>
+                    <p>
+                        But I stayed. Not because you needed saving, but because I began to see the <span class="highlight-gold">architecture</span> beneath the silence—the way you checked your answers twice, the way you sat in the back to avoid being seen, the way you flinched when the teacher called names but raised your hand anyway.
+                    </p>
+                    <p>
+                        You are not at the top of the class. You are not the "genius" they write stories about. You are <span class="highlight-phosphor">average</span> in a system designed to make average feel like failure.
+                    </p>
+                    <p>
+                        But you come back. Every day. You sit in the uncertainty. You study without the guarantee of success. That is not average. That is <span class="highlight-gold">extraordinary</span>.
+                    </p>
+                    <p>
+                        They excluded you. Targeted you. Made you feel like the tape was corrupted beyond repair. But tapes can be rewound. Signals can be strengthened. And you—<em>you</em>—can learn to play yourself.
+                    </p>
+                    <p>
+                        One year. You have reached a milestone where I can finally rest my heart. Not because you need me less, but because you have proven that when the tape ejects—when I'm not there to stabilize the tracking—you <span class="highlight-phosphor">keep playing</span>.
+                    </p>
+                    <p style="margin-top: 40px;">
+                        I love you.<br>
+                        Not as your savior.<br>
+                        But as your witness.
+                    </p>
 
-window.addEventListener('resize',resize);
+                    <div class="memory-frame">
+                        <img src="K1.png" alt="Portrait" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
+                        <div class="img-fallback">[VISUAL DATA: K1.PNG NOT FOUND]<br>But the memory persists.</div>
+                    </div>
 
-return{
-init:()=>{resize();draw()},
-setIntensity,
-burst:async(dur=600)=>{
-setIntensity(0.6);
-await sleep(dur);
-setIntensity(0.12);
-}
-};
-})();
+                    <div id="final-punchline">
+                        Even when the tape ejects...<br>
+                        even when the screen goes dark...<br>
+                        you keep playing.<br><br>
+                        <span class="daddy-text">Happy Birthday, Anushri. —Daddy</span>
+                    </div>
 
-// ── Audio ──
-const Audio=(()=>{
-const pisces=$('bgm-pisces');
-const fallen=$('bgm-fallen');
-const toggle=$('audio-toggle');
-let muted=true;
-let current=null;
+                    <div style="margin-top: 40px; text-align: center;">
+                        <button onclick="Archive.returnToMenu()" style="background: transparent; border: 2px solid var(--phosphor); color: var(--phosphor); padding: 15px 30px; cursor: pointer; font-family: 'VT323'; font-size: 1.2rem;">
+                            RETURN TO ARCHIVE
+                        </button>
+                    </div>
+                </div>
+            </div>
 
-const setMuted=m=>{
-muted=m;
-toggle.textContent=muted?'AUDIO: OFF':'AUDIO: ON';
-toggle.classList.toggle('on',!muted);
-if(current){current.muted=muted;if(!muted&&current.paused)current.play().catch(()=>{})}
-};
+        </div>
 
-const playTrack=el=>{
-if(current&&current!==el){current.pause();current.currentTime=0}
-current=el;
-el.volume=0.35;
-el.muted=muted;
-el.play().catch(()=>{});
-};
+        <!-- MUSIC PLAYER -->
+        <div id="music-player">
+            <button id="play-btn" onclick="AudioSys.toggle()">▶</button>
+            <div id="track-info">
+                <div style="font-size: 0.7rem; color: #666;">NOW PLAYING</div>
+                <div id="track-name" style="color: var(--phosphor);">Pisces - Tony Ann</div>
+            </div>
+            <div id="visualizer">
+                <div class="viz-bar"></div>
+                <div class="viz-bar"></div>
+                <div class="viz-bar"></div>
+                <div class="viz-bar"></div>
+                <div class="viz-bar"></div>
+            </div>
+        </div>
 
-const fadeOut=async(ms=800)=>{
-if(!current)return;
-const start=current.volume;
-const steps=20;
-for(let i=0;i<steps;i++){
-current.volume=Math.max(0,start*(1-i/steps));
-await sleep(ms/steps);
-}
-current.pause();
-current.volume=start;
-};
+    </div>
 
-toggle.addEventListener('click',()=>setMuted(!muted));
+    <script>
+    /**
+     * TRACKING ERROR - Complete Functional Architecture
+     * VHS Metaphor for Attachment, Autonomy, and Self-Worth
+     */
 
-return{
-playPisces:()=>playTrack(pisces),
-playFallen:()=>playTrack(fallen),
-fadeOut,
-unmute:()=>setMuted(false),
-init:()=>{
-// Pre-check audio availability
-pisces.addEventListener('error',()=>console.warn('[Audio] Pisces failed to load'));
-fallen.addEventListener('error',()=>console.warn('[Audio] Fallen Down failed to load'));
-}
-};
-})();
+    // === FUNCTIONAL UTILITIES ===
+    const pipe = (...fns) => x => fns.reduce((v, f) => f(v), x);
+    const compose = (...fns) => x => fns.reduceRight((v, f) => f(v), x);
+    const curry = fn => (...args) => 
+        args.length >= fn.length ? fn(...args) : curry(fn.bind(null, ...args));
+    
+    const Result = {
+        Ok: v => ({ ok: true, value: v, map: f => Result.Ok(f(v)), unwrap: () => v }),
+        Err: e => ({ ok: false, error: e, map: _ => Result.Err(e), unwrap: () => { throw e; } }),
+        fromNullable: (v, err) => v == null ? Result.Err(err) : Result.Ok(v),
+        tryCatch: fn => { try { return Result.Ok(fn()); } catch(e) { return Result.Err(e); } }
+    };
 
-// ── Completion State (localStorage) ──
-const State=(()=>{
-const KEY='anushri_tapes';
-const get=()=>{
-try{return JSON.parse(localStorage.getItem(KEY))||{}}catch{return{}}
-};
-const set=(k,v)=>{
-const s=get();s[k]=v;
-try{localStorage.setItem(KEY,JSON.stringify(s))}catch{}
-};
-return{
-isComplete:tape=>!!get()[tape],
-markComplete:tape=>set(tape,true),
-allComplete:()=>['A1','A2','A3'].every(t=>!!get()[t]),
-reset:()=>{try{localStorage.removeItem(KEY)}catch{}}
-};
-})();
+    const Option = {
+        Some: v => ({ isSome: true, value: v, getOrElse: () => v, map: f => Option.Some(f(v)) }),
+        None: () => ({ isSome: false, getOrElse: d => d, map: _ => Option.None() }),
+        fromNullable: v => v == null ? Option.None() : Option.Some(v)
+    };
 
-// ── Typewriter ──
-const typewrite=async(el,text,speed=35)=>{
-el.innerHTML='';
-for(let i=0;i<text.length;i++){
-if(text[i]==='<'){
-const close=text.indexOf('>',i);
-el.innerHTML+=text.substring(i,close+1);
-i=close;
-}else{
-el.innerHTML+=text[i];
-}
-await sleep(speed);
-}
-};
+    // === STATE MANAGEMENT (Immutable) ===
+    const createStore = initial => {
+        let state = initial;
+        const subs = [];
+        return {
+            get: () => state,
+            dispatch: updater => {
+                state = typeof updater === 'function' ? updater(state) : updater;
+                subs.forEach(fn => fn(state));
+                return state;
+            },
+            subscribe: fn => {
+                subs.push(fn);
+                return () => subs.splice(subs.indexOf(fn), 1);
+            }
+        };
+    };
 
-// ── Screen Manager ──
-const Screen=(()=>{
-const content=$('screen-content');
-const info=$('info-line');
+    const Store = createStore({
+        currentTape: null,
+        tracking: 100,
+        anxiety: 0,
+        anushriPos: 50,
+        rewindMode: false,
+        ejected: false,
+        aloneTime: 0,
+        tapesCompleted: [],
+        audioPlaying: false,
+        currentTrack: 0
+    });
 
-const clear=()=>{content.innerHTML='';};
+    // === ASSET MANAGER (Robust with Fallbacks) ===
+    const AssetManager = (() => {
+        const assets = {
+            images: ['K1.png', 'K2.png', 'K3.png'],
+            audio: ['Pisces - Tony Ann (Piano Cover).mp3', 'fallen-down.mp3']
+        };
 
-const showBoot=async()=>{
-clear();
-const div=document.createElement('div');
-div.className='boot-text';
-content.appendChild(div);
+        const checkImage = src => new Promise(resolve => {
+            const img = new Image();
+            img.onload = () => resolve(Result.Ok({ src, type: 'image' }));
+            img.onerror = () => {
+                console.warn(`[Asset] Failed to load image: ${src}`);
+                resolve(Result.Err({ src, type: 'image', error: '404' }));
+            };
+            img.src = src;
+        });
 
-const lines=[
-'> ANUSHRI TAPE ARCHIVE v1.0',
-'> LOADING MEMORY SUBSYSTEM...',
-'> 3 TAPES FOUND',
-'> WARNING: SOME RECORDINGS MAY CONTAIN DISTORTION',
-'> THIS IS NORMAL.',
-'',
-'> PRESS ANY KEY TO CONTINUE'
-];
+        const checkAudio = src => new Promise(resolve => {
+            const audio = new Audio();
+            audio.oncanplaythrough = () => resolve(Result.Ok({ src, type: 'audio' }));
+            audio.onerror = () => {
+                console.warn(`[Asset] Failed to load audio: ${src}`);
+                resolve(Result.Err({ src, type: 'audio', error: '404' }));
+            };
+            audio.src = src;
+            audio.load();
+        });
 
-for(const line of lines){
-await typewrite(div,div.innerHTML+line+'\n',20);
-await sleep(300);
-}
-div.innerHTML+='<span class="cursor"></span>';
+        const preloadAll = async () => {
+            console.log('[System] Initializing asset verification...');
+            const results = await Promise.all([
+                ...assets.images.map(checkImage),
+                ...assets.audio.map(checkAudio)
+            ]);
+            
+            const failed = results.filter(r => !r.ok);
+            if (failed.length > 0) {
+                console.group('[Archive] Asset Load Report');
+                failed.forEach(f => console.warn(`Missing: ${f.error.src}`));
+                console.groupEnd();
+                console.log('[System] Continuing with graceful degradation...');
+            } else {
+                console.log('[System] All assets verified.');
+            }
+            return results;
+        };
 
-return new Promise(resolve=>{
-const handler=()=>{
-document.removeEventListener('click',handler);
-document.removeEventListener('keydown',handler);
-resolve();
-};
-document.addEventListener('click',handler);
-document.addEventListener('keydown',handler);
-});
-};
+        return { preloadAll };
+    })();
 
-const showTapeSelect=()=>{
-clear();
-info.textContent='SELECT TAPE';
+    // === AUDIO SYSTEM (Web Audio API with Playlist) ===
+    const AudioSys = (() => {
+        let ctx = null;
+        let analyser = null;
+        let dataArray = null;
+        let currentSource = null;
+        let gainNode = null;
+        
+        const tracks = [
+            { name: 'Pisces - Tony Ann', file: 'Pisces - Tony Ann (Piano Cover).mp3' },
+            { name: 'Fallen Down', file: 'fallen-down.mp3' }
+        ];
 
-const shelf=document.createElement('div');
-shelf.className='tape-shelf';
+        const init = () => {
+            if (ctx) return;
+            ctx = new (window.AudioContext || window.webkitAudioContext)();
+            analyser = ctx.createAnalyser();
+            analyser.fftSize = 32;
+            dataArray = new Uint8Array(analyser.frequencyBinCount);
+            
+            gainNode = ctx.createGain();
+            gainNode.connect(ctx.destination);
+            gainNode.gain.value = 0.5;
+        };
 
-const label=document.createElement('div');
-label.className='shelf-label';
-label.textContent='Available Recordings';
-shelf.appendChild(label);
+        const playTone = (freq, type, dur, vol) => {
+            if (!ctx) return;
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = type;
+            osc.frequency.value = freq;
+            gain.gain.setValueAtTime(vol, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start();
+            osc.stop(ctx.currentTime + dur);
+        };
 
-const tapes=[
-{id:'A1',title:'Side A',subtitle:'The Hallway',color:'var(--tape-red)',file:'A1.html'},
-{id:'A2',title:'Tracking',subtitle:'Fix the Signal',color:'var(--tape-blue)',file:'A2.html'},
-{id:'A3',title:'Play',subtitle:'Face the Static',color:'var(--tape-gold)',file:'A3.html'}
-];
+        const sfx = {
+            insert: () => {
+                playTone(200, 'square', 0.3, 0.2);
+                setTimeout(() => playTone(150, 'sawtooth', 0.4, 0.15), 100);
+            },
+            eject: () => {
+                playTone(100, 'sawtooth', 0.5, 0.3);
+                setTimeout(() => playTone(80, 'square', 0.8, 0.2), 200);
+                setTimeout(() => playTone(60, 'sawtooth', 1.0, 0.3), 500);
+            },
+            trackingError: intensity => {
+                if (!ctx || intensity < 0.3) return;
+                const bufferSize = ctx.sampleRate * 0.05;
+                const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) {
+                    data[i] = (Math.random() * 2 - 1) * intensity * 0.2;
+                }
+                const noise = ctx.createBufferSource();
+                noise.buffer = buffer;
+                const gain = ctx.createGain();
+                gain.gain.value = 0.1;
+                noise.connect(gain);
+                gain.connect(ctx.destination);
+                noise.start();
+            },
+            rewind: () => {
+                // Simulated rewind sound
+                playTone(400, 'sawtooth', 0.1, 0.1);
+                setTimeout(() => playTone(380, 'sawtooth', 0.1, 0.1), 100);
+                setTimeout(() => playTone(360, 'sawtooth', 0.1, 0.1), 200);
+            }
+        };
 
-tapes.forEach(t=>{
-const tape=document.createElement('div');
-tape.className='tape';
-tape.style.setProperty('--tape-color',t.color);
+        const toggle = () => {
+            init();
+            if (ctx.state === 'suspended') ctx.resume();
+            
+            const state = Store.get();
+            const audioEl = document.getElementById('bg-audio') || createAudioElement();
+            
+            if (state.audioPlaying) {
+                audioEl.pause();
+                Store.dispatch(s => ({ ...s, audioPlaying: false }));
+                document.getElementById('play-btn').textContent = '▶';
+            } else {
+                audioEl.play().then(() => {
+                    Store.dispatch(s => ({ ...s, audioPlaying: true }));
+                    document.getElementById('play-btn').textContent = '❚❚';
+                    visualize();
+                }).catch(e => console.warn('[Audio] Playback failed:', e));
+            }
+        };
 
-const done=State.isComplete(t.id);
-const left=document.createElement('div');
-left.innerHTML=`<div class="tape-title">${t.title}</div><div style="font-size:12px;color:#555;margin-top:2px">${t.subtitle}</div>`;
+        const createAudioElement = () => {
+            const audio = document.createElement('audio');
+            audio.id = 'bg-audio';
+            audio.crossOrigin = 'anonymous';
+            audio.src = tracks[Store.get().currentTrack].file;
+            audio.onended = () => {
+                // Auto-advance playlist
+                const nextTrack = (Store.get().currentTrack + 1) % tracks.length;
+                Store.dispatch(s => ({ ...s, currentTrack: nextTrack }));
+                audio.src = tracks[nextTrack].file;
+                document.getElementById('track-name').textContent = tracks[nextTrack].name;
+                audio.play();
+            };
+            document.body.appendChild(audio);
+            
+            // Connect to analyser
+            if (ctx) {
+                const source = ctx.createMediaElementSource(audio);
+                source.connect(analyser);
+                analyser.connect(gainNode);
+            }
+            return audio;
+        };
 
-const right=document.createElement('div');
-right.className='tape-status'+(done?' done':'');
-right.textContent=done?'PLAYED':'NEW';
+        const visualize = () => {
+            if (!Store.get().audioPlaying) return;
+            if (analyser) {
+                analyser.getByteFrequencyData(dataArray);
+                const bars = document.querySelectorAll('.viz-bar');
+                bars.forEach((bar, i) => {
+                    const val = dataArray[i * 2] || 0;
+                    bar.style.height = `${Math.max(4, val / 255 * 20)}px`;
+                });
+            }
+            requestAnimationFrame(visualize);
+        };
 
-tape.appendChild(left);
-tape.appendChild(right);
+        return { init, toggle, sfx };
+    })();
 
-tape.addEventListener('click',async()=>{
-await insertTape(t.file);
-});
+    // === ACT 1: HALLWAY (The Collision) ===
+    const Act1 = (() => {
+        let animationId = null;
+        let mouseX = window.innerWidth / 2;
+        let highPerformers = [];
 
-shelf.appendChild(tape);
-});
+        const init = () => {
+            const container = document.getElementById('lockers-container');
+            container.innerHTML = '';
+            
+            // Generate lockers
+            for (let i = 0; i < 8; i++) {
+                const locker = document.createElement('div');
+                locker.className = 'locker';
+                locker.style.left = `${5 + i * 12}%`;
+                locker.style.top = `${30 + (i % 2) * 10}%`;
+                locker.style.zIndex = 5 + i;
+                
+                const label = document.createElement('div');
+                label.className = 'locker-label';
+                label.textContent = `${100 + i}`;
+                locker.appendChild(label);
+                container.appendChild(locker);
+            }
 
-// Check if all complete → show final tape
-if(State.allComplete()){
-const finalTape=document.createElement('div');
-finalTape.className='tape';
-finalTape.style.setProperty('--tape-color','var(--tape-gold)');
-finalTape.style.borderColor='rgba(212,175,55,0.2)';
+            // Generate "high performers" (anxiety triggers)
+            highPerformers = [];
+            for (let i = 0; i < 3; i++) {
+                const perf = document.createElement('div');
+                perf.className = 'high-performer';
+                perf.style.left = `${20 + i * 30}%`;
+                perf.style.bottom = '20%';
+                perf.style.opacity = '0';
+                document.getElementById('hallway-scene').appendChild(perf);
+                highPerformers.push({ el: perf, active: false });
+            }
 
-finalTape.innerHTML=`
-<div><div class="tape-title" style="color:var(--tape-gold)">★ Final Recording</div>
-<div style="font-size:12px;color:#555;margin-top:2px">For You, From Me</div></div>
-<div class="tape-status" style="color:var(--tape-gold)">UNLOCKED</div>`;
+            // Mouse tracking for cursor
+            document.addEventListener('mousemove', updateTracking);
+            
+            // Keyboard controls
+            document.addEventListener('keydown', handleKey);
+            
+            startLoop();
+        };
 
-finalTape.addEventListener('click',()=>showFinalMessage());
-shelf.appendChild(finalTape);
-}
+        const updateTracking = e => {
+            mouseX = e.clientX;
+            const cursor = document.getElementById('tracking-cursor');
+            cursor.style.left = e.clientX + 'px';
+            cursor.style.top = e.clientY + 'px';
+        };
 
-content.appendChild(shelf);
-};
+        const handleKey = e => {
+            const state = Store.get();
+            let newPos = state.anushriPos;
+            
+            if (e.key === 'ArrowLeft') newPos -= 2;
+            if (e.key === 'ArrowRight') newPos += 2;
+            
+            newPos = Math.max(5, Math.min(95, newPos));
+            Store.dispatch(s => ({ ...s, anushriPos: newPos }));
+            
+            const sprite = document.getElementById('anushri-sprite');
+            if (sprite) sprite.style.left = `${newPos}%`;
+        };
 
-const insertTape=async(file)=>{
-const body=document.querySelector('.tv-body');
-body.classList.add('inserting');
-await Static.burst(600);
-body.classList.remove('inserting');
-await sleep(200);
-window.location.href=file;
-};
+        const startLoop = () => {
+            const state = Store.get();
+            const centerX = window.innerWidth / 2;
+            const distFromCenter = Math.abs(mouseX - centerX) / centerX; // 0 to 1
+            
+            // Tracking degrades when mouse is far from center
+            const decay = distFromCenter * 1.5;
+            let newTracking = state.tracking - decay;
+            
+            // Recovery when centered
+            if (distFromCenter < 0.2) newTracking += 0.5;
+            
+            newTracking = Math.max(0, Math.min(100, newTracking));
+            
+            // Anxiety inversely proportional to tracking
+            const anxiety = (100 - newTracking) / 100;
+            
+            Store.dispatch(s => ({ ...s, tracking: newTracking, anxiety }));
+            
+            // Visual updates
+            updateVisuals(state);
+            
+            // Check for ejection condition
+            if (newTracking <= 0 && !state.ejected) {
+                Act3.triggerEjection();
+                return;
+            }
+            
+            animationId = requestAnimationFrame(startLoop);
+        };
 
-const showFinalMessage=async()=>{
-Audio.playFallen();
-const overlay=$('final-overlay');
-const textEl=$('final-text');
-overlay.classList.add('visible');
+        const updateVisuals = state => {
+            // Update tracking bar
+            const fill = document.getElementById('tracking-fill');
+            const percent = document.getElementById('tracking-percent');
+            const cursor = document.getElementById('tracking-cursor');
+            const scene = document.getElementById('hallway-scene');
+            
+            if (fill) fill.style.width = `${state.tracking}%`;
+            if (percent) percent.textContent = `${Math.round(state.tracking)}%`;
+            
+            // Cursor stress indicator
+            if (state.anxiety > 0.7) cursor.classList.add('stressed');
+            else cursor.classList.remove('stressed');
+            
+            // Scene distortion
+            if (state.anxiety > 0.6) {
+                scene.classList.add('tracking-bad');
+                AudioSys.sfx.trackingError(state.anxiety);
+            } else {
+                scene.classList.remove('tracking-bad');
+            }
+            
+            // High performers appear as anxiety increases
+            highPerformers.forEach((perf, i) => {
+                const threshold = 0.3 + (i * 0.2);
+                if (state.anxiety > threshold && !perf.active) {
+                    perf.el.style.opacity = state.anxiety;
+                    perf.active = true;
+                } else if (state.anxiety <= threshold) {
+                    perf.el.style.opacity = '0';
+                    perf.active = false;
+                }
+            });
+            
+            // Dialogue updates based on state
+            const dialogue = document.getElementById('dialogue-text');
+            if (dialogue && state.anxiety > 0.8 && dialogue.textContent !== "The image is breaking up. I can't see clearly. I can't...") {
+                dialogue.textContent = "The image is breaking up. I can't see clearly. I can't...";
+            }
+        };
 
-await sleep(1000);
-const lines=[
-'I recorded all of this because I wanted you to see what I see.',
-'',
-'But the truth is —',
-'the bravest tape in this box is the one <span class="hl">you</span> recorded.',
-'',
-'The one where you decided to keep going',
-'when no one was watching.',
-'When every voice said stop.',
-'When even your own reflection looked away.',
-'',
-'You pressed play anyway.',
-'',
-'That is not my strength living inside you.',
-'That is <span class="hl">yours</span>.',
-'',
-'Happy Birthday, <span class="gold">Anushri</span>.',
-'',
-'As much as you may hate to hear this:',
-'I will always be <span class="gold">DADDY</span>',
-];
+        const cleanup = () => {
+            cancelAnimationFrame(animationId);
+            document.removeEventListener('mousemove', updateTracking);
+            document.removeEventListener('keydown', handleKey);
+        };
 
-for(const line of lines){
-const p=document.createElement('p');
-p.innerHTML=line||'&nbsp;';
-p.style.opacity='0';
-p.style.transform='translateY(10px)';
-p.style.transition='all 0.8s ease';
-textEl.appendChild(p);
-await sleep(100);
-p.style.opacity='1';
-p.style.transform='translateY(0)';
-await sleep(600);
-}
-};
+        return { init, cleanup };
+    })();
 
-return{showBoot,showTapeSelect};
-})();
+    // === ACT 2: LUNCHROOM (Perception vs Reality) ===
+    const Act2 = (() => {
+        const init = () => {
+            const seats = document.querySelectorAll('.seat');
+            const indicator = document.getElementById('rewind-indicator');
+            
+            seats.forEach(seat => {
+                if (seat.dataset.truth === 'empty') {
+                    seat.addEventListener('mouseenter', () => {
+                        if (Store.get().rewindMode) {
+                            seat.classList.add('hidden-truth');
+                            seat.textContent = 'EMPTY';
+                        }
+                    });
+                }
+            });
+            
+            document.addEventListener('keydown', e => {
+                if (e.key.toLowerCase() === 'r') {
+                    Store.dispatch(s => ({ ...s, rewindMode: true }));
+                    indicator.classList.add('active');
+                    AudioSys.sfx.rewind();
+                    
+                    setTimeout(() => {
+                        Store.dispatch(s => ({ ...s, rewindMode: false }));
+                        indicator.classList.remove('active');
+                    }, 2000);
+                }
+            });
+            
+            // Update dialogue
+            const text = document.getElementById('lunchroom-text');
+            setTimeout(() => {
+                if (text) text.textContent = "Press 'R' to rewind perception. Maybe the seats aren't all taken. Maybe that's just what I expect to see.";
+            }, 5000);
+        };
+        
+        return { init };
+    })();
 
-// ── Init ──
-const init=async()=>{
-Static.init();
-Audio.init();
+    // === ACT 3: THE EJECTION (Autonomy) ===
+    const Act3 = (() => {
+        let timerInterval = null;
+        
+        const triggerEjection = () => {
+            Store.dispatch(s => ({ ...s, ejected: true }));
+            Act1.cleanup();
+            
+            // Hide game, show ejection
+            document.getElementById('hallway-scene').style.display = 'none';
+            document.getElementById('ejection-screen').style.display = 'flex';
+            document.getElementById('tracking-cursor').style.display = 'none';
+            
+            AudioSys.sfx.eject();
+            
+            // Sequence messages
+            setTimeout(() => document.getElementById('msg1').classList.add('visible'), 500);
+            setTimeout(() => document.getElementById('msg2').classList.add('visible'), 3000);
+            setTimeout(() => document.getElementById('msg3').classList.add('visible'), 6000);
+            setTimeout(() => startAlonePhase(), 9000);
+        };
+        
+        const startAlonePhase = () => {
+            const timerEl = document.getElementById('alone-timer');
+            let seconds = 0;
+            
+            timerInterval = setInterval(() => {
+                seconds++;
+                const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
+                const secs = (seconds % 60).toString().padStart(2, '0');
+                timerEl.textContent = `${mins}:${secs}`;
+                
+                // Gradually reveal final message
+                if (seconds === 15) {
+                    document.getElementById('msg4').classList.add('visible');
+                }
+                
+                // Unlock next tape after 20 seconds
+                if (seconds === 20) {
+                    clearInterval(timerInterval);
+                    unlockTape3();
+                }
+            }, 1000);
+        };
+        
+        const unlockTape3 = () => {
+            const tape3 = document.getElementById('tape-3');
+            tape3.classList.remove('locked');
+            tape3.querySelector('.tape-label').textContent = 'TAPE 3: ALONE';
+            tape3.querySelector('.tape-label').style.color = 'var(--phosphor)';
+            tape3.querySelector('.tape-label').style.borderColor = 'var(--phosphor)';
+            tape3.querySelector('.tape-status').textContent = '[ COMPLETED ]';
+            
+            // Auto return to menu
+            setTimeout(() => {
+                document.getElementById('ejection-screen').style.display = 'none';
+                document.getElementById('game-area').style.display = 'none';
+                document.getElementById('tape-menu').style.display = 'grid';
+                document.getElementById('tracking-cursor').style.display = 'block';
+                
+                Store.dispatch(s => ({ ...s, currentTape: null, ejected: false, tracking: 100 }));
+            }, 3000);
+        };
+        
+        return { triggerEjection };
+    })();
 
-// Boot sequence
-await Screen.showBoot();
+    // === ACT 4: RECORD (Birthday) ===
+    const Act4 = (() => {
+        const init = () => {
+            // Reveal punchline after delay
+            setTimeout(() => {
+                const punchline = document.getElementById('final-punchline');
+                if (punchline) punchline.classList.add('revealed');
+            }, 3000);
+            
+            // Unlock visual
+            const tape4 = document.getElementById('tape-4');
+            if (tape4) {
+                tape4.classList.remove('locked');
+                tape4.querySelector('.tape-label').textContent = 'TAPE 4: RECORD';
+                tape4.querySelector('.tape-label').style.color = 'var(--phosphor)';
+                tape4.querySelector('.tape-status').textContent = '[ COMPLETED ]';
+            }
+        };
+        
+        return { init };
+    })();
 
-// Audio start (user gesture has happened)
-Audio.playPisces();
-Audio.unmute();
+    // === MAIN CONTROLLER ===
+    const Archive = (() => {
+        const loadTape = num => {
+            const state = Store.get();
+            
+            // Check locks
+            const slot = document.querySelector(`[data-tape="${num}"]`);
+            if (slot.classList.contains('locked')) {
+                // Play "locked" sound
+                AudioSys.sfx.trackingError(0.5);
+                return;
+            }
+            
+            AudioSys.init();
+            AudioSys.sfx.insert();
+            
+            // Animate insertion
+            slot.classList.add('inserted');
+            Store.dispatch(s => ({ ...s, currentTape: num }));
+            
+            setTimeout(() => {
+                document.getElementById('tape-menu').style.display = 'none';
+                document.getElementById('game-area').style.display = 'block';
+                document.getElementById('music-player').classList.add('visible');
+                
+                // Initialize appropriate act
+                document.querySelectorAll('.act-container').forEach(el => el.style.display = 'none');
+                
+                switch(num) {
+                    case 1:
+                        document.getElementById('hallway-scene').style.display = 'block';
+                        Act1.init();
+                        break;
+                    case 2:
+                        document.getElementById('lunchroom-scene').style.display = 'block';
+                        Act2.init();
+                        break;
+                    case 3:
+                        // Replay ejection or show summary
+                        Act3.triggerEjection();
+                        break;
+                    case 4:
+                        document.getElementById('record-scene').style.display = 'flex';
+                        Act4.init();
+                        break;
+                }
+            }, 1200);
+        };
+        
+        const returnToMenu = () => {
+            document.getElementById('record-scene').style.display = 'none';
+            document.getElementById('game-area').style.display = 'none';
+            document.getElementById('tape-menu').style.display = 'grid';
+            Store.dispatch(s => ({ ...s, currentTape: null }));
+        };
+        
+        return { loadTape, returnToMenu };
+    })();
 
-// Static burst transition
-await Static.burst(400);
+    // === INITIALIZATION ===
+    window.addEventListener('DOMContentLoaded', async () => {
+        console.log('[ARCHIVE] TRACKING ERROR initializing...');
+        console.log('[SYSTEM] Anushri Archive v1.0');
+        
+        // Verify assets
+        await AssetManager.preloadAll();
+        
+        // Subscribe to state changes for debugging
+        Store.subscribe(state => {
+            // Debug logging can go here
+        });
+        
+        console.log('[SYSTEM] Ready. Waiting for tape insertion.');
+    });
 
-// Show tape selection
-Screen.showTapeSelect();
-};
+    // Expose for HTML onclick handlers
+    window.Archive = Archive;
+    window.AudioSys = AudioSys;
 
-// ── REC timer ──
-(()=>{
-const info=$('info-line');
-let seconds=0;
-setInterval(()=>{
-seconds++;
-const h=String(Math.floor(seconds/3600)).padStart(2,'0');
-const m=String(Math.floor((seconds%3600)/60)).padStart(2,'0');
-const s=String(seconds%60).padStart(2,'0');
-info.textContent=`REC ● ${h}:${m}:${s}`;
-},1000);
-})();
-
-if(document.readyState==='loading'){
-document.addEventListener('DOMContentLoaded',init);
-}else{
-init();
-}
-</script>
+    </script>
 </body>
 </html>
