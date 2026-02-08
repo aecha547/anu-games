@@ -1,180 +1,481 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>FILE_01: THE AXIOM</title>
-    <style>
-        body { margin: 0; background: #080808; color: #00F3FF; font-family: monospace; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
-        canvas { border: 2px solid #00F3FF; box-shadow: 0 0 30px rgba(0, 243, 255, 0.2); background: #000; cursor: crosshair; }
-        #ui { position: absolute; top: 20px; text-align: center; pointer-events: none; width: 100%; }
-        h1 { font-size: 2rem; margin: 0; text-shadow: 0 0 10px #00F3FF; }
-        p { color: #888; font-size: 1rem; max-width: 600px; margin: 10px auto; background: rgba(0,0,0,0.8); padding: 10px; }
-        #back-btn { position: absolute; bottom: 20px; text-decoration: none; color: #00F3FF; border: 1px solid #00F3FF; padding: 10px 20px; opacity: 0; pointer-events: none; transition: opacity 1s; }
-        #back-btn.visible { opacity: 1; pointer-events: auto; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>SIDE A: The Hallway</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=VT323&family=Cormorant+Garamond:ital,wght@0,400;1,400&display=swap');
+:root{--bg:#050505;--green:#a8e6a3;--dim:#555;--warm:#ffeedd;--red:#cc4444;--gold:#d4af37;--blue:#5588bb;--static-w:#d4d4d4}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;overflow:hidden;background:#000;font-family:'VT323',monospace;color:var(--static-w);user-select:none}
+
+.tv-body{position:relative;width:min(94vw,720px);margin:auto;margin-top:max(2vh,10px);aspect-ratio:4/3;background:#1a1a1a;border-radius:24px;border:3px solid #2a2a2a;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.8)}
+.tv-screen{flex:1;margin:14px 14px 6px;background:#000;border-radius:10px;position:relative;overflow:hidden}
+.tv-screen::before{content:'';position:absolute;inset:0;z-index:50;pointer-events:none;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.12) 2px,rgba(0,0,0,0.12) 4px)}
+.tv-screen::after{content:'';position:absolute;inset:0;z-index:51;pointer-events:none;background:radial-gradient(ellipse at center,transparent 55%,rgba(0,0,0,0.5) 100%)}
+canvas#noise{position:absolute;inset:0;z-index:5;opacity:0.08}
+#game{position:absolute;inset:0;z-index:20;padding:20px;display:flex;flex-direction:column;overflow:hidden}
+.tv-bar{height:40px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;background:#111;border-top:1px solid #222}
+.tv-bar span{font-size:10px;letter-spacing:0.2em;color:#444;text-transform:uppercase}
+
+/* Game UI */
+.scene-text{
+font-size:clamp(15px,2.4vw,20px);
+line-height:1.7;
+color:var(--green);
+text-shadow:0 0 6px rgba(168,230,163,0.2);
+flex:1;
+overflow-y:auto;
+padding-right:8px;
+}
+.scene-text::-webkit-scrollbar{width:4px}
+.scene-text::-webkit-scrollbar-thumb{background:#333}
+
+.scene-text .narrator{color:var(--dim);font-style:italic}
+.scene-text .voice{color:var(--red);opacity:0.8}
+.scene-text .inner{color:var(--blue)}
+.scene-text .self{color:var(--warm)}
+.scene-text .gold{color:var(--gold)}
+.scene-text .green{color:var(--green)}
+
+.choices{
+display:flex;flex-direction:column;gap:8px;
+margin-top:12px;padding-top:12px;
+border-top:1px solid rgba(255,255,255,0.05);
+}
+.choice-btn{
+background:rgba(255,255,255,0.02);
+border:1px solid rgba(255,255,255,0.08);
+color:var(--static-w);
+padding:10px 16px;
+font-family:'VT323';font-size:16px;
+text-align:left;cursor:pointer;
+transition:all 0.2s;
+}
+.choice-btn:hover{
+background:rgba(255,255,255,0.06);
+border-color:var(--green);
+color:var(--green);
+transform:translateX(4px);
+}
+
+.continue-hint{
+font-size:12px;color:#444;text-align:center;
+margin-top:8px;animation:pulse 2s infinite;
+}
+@keyframes pulse{0%,100%{opacity:0.4}50%{opacity:0.8}}
+
+/* Glitch effect */
+.glitch-line{
+position:absolute;left:0;width:100%;height:3px;
+background:rgba(255,255,255,0.3);
+z-index:30;pointer-events:none;
+animation:glitchSlide 0.15s linear;
+}
+@keyframes glitchSlide{
+0%{transform:translateY(-100vh)}
+100%{transform:translateY(100vh)}
+}
+
+/* Rewind overlay */
+.rewind-overlay{
+position:absolute;inset:0;z-index:35;
+background:rgba(0,0,0,0.7);
+display:flex;justify-content:center;align-items:center;
+font-size:32px;color:var(--static-w);
+letter-spacing:0.2em;
+opacity:0;pointer-events:none;
+transition:opacity 0.3s;
+}
+.rewind-overlay.active{opacity:1}
+
+.back-btn{
+position:fixed;top:10px;left:10px;z-index:200;
+background:rgba(0,0,0,0.6);border:1px solid #333;
+color:#666;font-family:'VT323';font-size:13px;
+padding:4px 10px;cursor:pointer;text-decoration:none;
+}
+.back-btn:hover{color:var(--green);border-color:var(--green)}
+
+@media(max-width:600px){
+.tv-body{width:98vw;border-radius:12px;margin-top:4px}
+.tv-screen{margin:8px 8px 4px}
+#game{padding:14px}
+}
+</style>
 </head>
 <body>
-    <div id="ui">
-        <h1>THE AXIOM</h1>
-        <p id="msg">Your mind is a sanctuary of logic. Connect the nodes to restore the proofs. <br>[Click and Drag to connect]</p>
-    </div>
-    <canvas id="c"></canvas>
-    <a href="index.html" id="back-btn">DATA RECOVERED. RETURN TO ARCHIVE.</a>
+<a href="index.html" class="back-btn">◀ EJECT</a>
+<div class="tv-body">
+<div class="tv-screen">
+<canvas id="noise"></canvas>
+<div id="game">
+<div class="scene-text" id="scene"></div>
+<div class="choices" id="choices" style="display:none"></div>
+<div class="continue-hint" id="hint" style="display:none">[CLICK OR PRESS ENTER TO CONTINUE]</div>
+</div>
+<div class="rewind-overlay" id="rewind">◀◀ REWIND</div>
+</div>
+<div class="tv-bar">
+<span>SIDE A — THE HALLWAY</span>
+<span id="counter">00:00</span>
+</div>
+</div>
 
-    <script>
-        const c = document.getElementById('c');
-        const ctx = c.getContext('2d');
-        let w, h;
-        
-        // Game State
-        const nodes = [];
-        let connections = [];
-        let currentDrag = null;
-        let completed = false;
-        
-        // Math/Logic Theme: Create a perfect geometric shape (A Star within a Pentagton)
-        const setupLevel = () => {
-            nodes.length = 0;
-            connections.length = 0;
-            const r = 150;
-            const cx = w/2, cy = h/2;
-            for(let i=0; i<5; i++) {
-                const angle = (i * 2 * Math.PI / 5) - Math.PI/2;
-                nodes.push({
-                    x: cx + r * Math.cos(angle),
-                    y: cy + r * Math.sin(angle),
-                    id: i,
-                    connected: []
-                });
-            }
-        };
+<audio id="bgm" loop preload="auto">
+<source src="Pisces - Tony Ann (Piano Cover).mp3" type="audio/mpeg">
+</audio>
 
-        const resize = () => {
-            w = c.width = window.innerWidth > 800 ? 800 : window.innerWidth - 40;
-            h = c.height = 600;
-            setupLevel();
-        };
+<script>
+'use strict';
+/*═══════════════════════════════════════════
+  A1: SIDE A — THE HALLWAY
+  A narrative choice game about walking through
+  a school day while the tape distorts reality.
+═══════════════════════════════════════════*/
 
-        // Input
-        const getPos = (e) => {
-            const rect = c.getBoundingClientRect();
-            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-            return { x: clientX - rect.left, y: clientY - rect.top };
-        };
+const scene=$('scene');
+const choicesEl=$('choices');
+const hint=$('hint');
+const rewind=$('rewind');
+const bgm=$('bgm');
+const counter=$('counter');
 
-        const dist = (p1, p2) => Math.hypot(p1.x - p2.x, p1.y - p2.y);
+function $(id){return document.getElementById(id)}
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 
-        const onDown = (e) => {
-            if(completed) return;
-            const p = getPos(e);
-            const clicked = nodes.find(n => dist(p, n) < 20);
-            if(clicked) currentDrag = { start: clicked, curr: p };
-        };
+// ── Static Noise ──
+const noise=(()=>{
+const c=$('noise');
+const ctx=c.getContext('2d');
+let w=0,h=0;
+const resize=()=>{const r=c.parentElement.getBoundingClientRect();w=c.width=r.width;h=c.height=r.height};
+const draw=()=>{
+const img=ctx.createImageData(w,h);
+const d=img.data;
+for(let i=0;i<d.length;i+=4){const v=Math.random()*255;d[i]=d[i+1]=d[i+2]=v;d[i+3]=Math.random()*25}
+ctx.putImageData(img,0,0);
+requestAnimationFrame(draw);
+};
+window.addEventListener('resize',resize);
+return{init:()=>{resize();draw()}};
+})();
 
-        const onMove = (e) => {
-            if(currentDrag) currentDrag.curr = getPos(e);
-        };
+// ── Typewriter ──
+let typing=false;
+let skipType=false;
+const type=async(text,spd=28)=>{
+typing=true;skipType=false;
+const span=document.createElement('span');
+scene.appendChild(span);
+for(let i=0;i<text.length;i++){
+if(skipType){span.innerHTML=text;typing=false;return}
+if(text[i]==='<'){const j=text.indexOf('>',i);span.innerHTML+=text.substring(i,j+1);i=j}
+else{span.innerHTML+=text[i]}
+await sleep(spd);
+}
+typing=false;
+};
 
-        const onUp = (e) => {
-            if(!currentDrag) return;
-            const p = getPos(e);
-            const target = nodes.find(n => dist(p, n) < 20);
-            
-            if(target && target !== currentDrag.start) {
-                // Check if connection exists
-                const exists = connections.some(c => 
-                    (c.a === currentDrag.start && c.b === target) || 
-                    (c.a === target && c.b === currentDrag.start)
-                );
-                
-                if(!exists) {
-                    connections.push({ a: currentDrag.start, b: target });
-                    // Audio Feedback
-                    playTone(440 + (connections.length * 100), 'sine');
-                    checkWin();
-                }
-            }
-            currentDrag = null;
-        };
+const ln=async(text,cls='',spd=28)=>{
+const line=`<span class="${cls}">${text}</span>\n`;
+await type(line,spd);
+scene.scrollTop=scene.scrollHeight;
+};
 
-        c.addEventListener('mousedown', onDown);
-        c.addEventListener('mousemove', onMove);
-        window.addEventListener('mouseup', onUp);
-        c.addEventListener('touchstart', onDown);
-        c.addEventListener('touchmove', onMove);
-        window.addEventListener('touchend', onUp);
+const br=()=>{scene.innerHTML+='\n';scene.scrollTop=scene.scrollHeight};
+const clear=()=>{scene.innerHTML=''};
 
-        // Audio
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        const playTone = (freq, type) => {
-            if(audioCtx.state === 'suspended') audioCtx.resume();
-            const osc = audioCtx.createOscillator();
-            const g = audioCtx.createGain();
-            osc.type = type;
-            osc.frequency.value = freq;
-            g.gain.value = 0.1;
-            g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
-            osc.connect(g);
-            g.connect(audioCtx.destination);
-            osc.start();
-            osc.stop(audioCtx.currentTime + 0.5);
-        };
+// ── Wait for input ──
+const waitInput=()=>new Promise(resolve=>{
+hint.style.display='block';
+const handler=e=>{
+if(typing){skipType=true;return}
+hint.style.display='none';
+document.removeEventListener('click',handler);
+document.removeEventListener('keydown',handler);
+resolve();
+};
+document.addEventListener('click',handler);
+document.addEventListener('keydown',handler);
+});
 
-        const checkWin = () => {
-            // Need a pentagram (5 lines connecting alternating nodes) or pentagon + star (10 lines)
-            // Let's aim for 5 lines creating the inner star
-            if(connections.length >= 5) {
-                completed = true;
-                document.getElementById('msg').innerText = "Logic Verified. Your brilliance brings order to chaos.";
-                document.getElementById('back-btn').classList.add('visible');
-                playTone(880, 'triangle');
-            }
-        };
+// ── Show choices ──
+const showChoices=(options)=>new Promise(resolve=>{
+choicesEl.style.display='flex';
+choicesEl.innerHTML='';
+options.forEach((opt,i)=>{
+const btn=document.createElement('button');
+btn.className='choice-btn';
+btn.textContent=`> ${opt.text}`;
+btn.addEventListener('click',()=>{
+choicesEl.style.display='none';
+resolve(opt.value);
+});
+choicesEl.appendChild(btn);
+});
+});
 
-        const draw = () => {
-            ctx.fillStyle = 'rgba(0,0,0,0.2)';
-            ctx.fillRect(0,0,w,h);
+// ── Glitch effect ──
+const glitch=async(count=3)=>{
+const screen=document.querySelector('.tv-screen');
+for(let i=0;i<count;i++){
+const line=document.createElement('div');
+line.className='glitch-line';
+line.style.top=Math.random()*100+'%';
+screen.appendChild(line);
+setTimeout(()=>line.remove(),150);
+await sleep(80);
+}
+};
 
-            // Draw Nodes
-            nodes.forEach(n => {
-                ctx.beginPath();
-                ctx.arc(n.x, n.y, 10, 0, Math.PI*2);
-                ctx.fillStyle = '#00F3FF';
-                ctx.fill();
-                // Glow
-                ctx.shadowBlur = 15;
-                ctx.shadowColor = '#00F3FF';
-            });
-            ctx.shadowBlur = 0;
+// ── Rewind effect ──
+const doRewind=async(dur=1200)=>{
+rewind.classList.add('active');
+await glitch(5);
+await sleep(dur);
+rewind.classList.remove('active');
+};
 
-            // Draw Connections
-            ctx.strokeStyle = '#00F3FF';
-            ctx.lineWidth = 2;
-            connections.forEach(c => {
-                ctx.beginPath();
-                ctx.moveTo(c.a.x, c.a.y);
-                ctx.lineTo(c.b.x, c.b.y);
-                ctx.stroke();
-            });
+// ── Tape counter ──
+let secs=0;
+setInterval(()=>{
+secs++;
+const m=String(Math.floor(secs/60)).padStart(2,'0');
+const s=String(secs%60).padStart(2,'0');
+counter.textContent=`${m}:${s}`;
+},1000);
 
-            // Draw Drag
-            if(currentDrag) {
-                ctx.beginPath();
-                ctx.moveTo(currentDrag.start.x, currentDrag.start.y);
-                ctx.lineTo(currentDrag.curr.x, currentDrag.curr.y);
-                ctx.strokeStyle = '#888';
-                ctx.setLineDash([5, 5]);
-                ctx.stroke();
-                ctx.setLineDash([]);
-            }
+// ── State ──
+let resilience=0; // Tracks inner strength choices (0-10)
 
-            requestAnimationFrame(draw);
-        };
+// ── Story ──
+const story=async()=>{
+// Start music
+bgm.volume=0.3;
+bgm.play().catch(()=>{});
 
-        window.addEventListener('resize', resize);
-        resize();
-        draw();
-    </script>
+await sleep(600);
+await ln('> PLAYING TAPE: SIDE A','narrator',18);
+await ln('> RECORDED: [DATE CORRUPTED]','narrator',18);
+await sleep(800);
+clear();
+
+// === SCENE 1: MORNING ===
+await ln('The alarm goes off at 6:15.','narrator');
+await waitInput();
+await ln('Same sound. Same ceiling. Same weight on the chest.','narrator');
+await waitInput();
+await ln('You think: today could be different.','self');
+await ln('And then, quieter: ...but probably not.','voice');
+await waitInput();
+
+await br();
+await ln('You get ready. You check your notes one more time.','narrator');
+await ln('The exam is today.','narrator');
+await waitInput();
+
+const morning=await showChoices([
+{text:'Review the formulas again. You are not ready.',value:'doubt'},
+{text:'Close the notebook. You have done what you can.',value:'trust'}
+]);
+
+if(morning==='doubt'){
+await ln('You flip through pages with shaking hands.','narrator');
+await ln('None of it looks familiar anymore.','narrator');
+await ln('Was it ever really in your head, or were you just pretending?','voice');
+}else{
+resilience++;
+await ln('You close the notebook.','narrator');
+await ln('Your hands are still. Not confident — just... decided.','narrator');
+await ln('Whatever happens, you showed up.','self');
+}
+await waitInput();
+
+// === TAPE GLITCH 1 ===
+await glitch(4);
+await doRewind(800);
+clear();
+
+await ln('[TAPE DISTORTION — SKIPPING FORWARD]','narrator',15);
+await sleep(500);
+clear();
+
+// === SCENE 2: THE HALLWAY ===
+await ln('The hallway is loud.','narrator');
+await ln('Lockers slamming. Laughter that might be at you.','narrator');
+await ln('Probably not. But maybe.','voice');
+await waitInput();
+
+await br();
+await ln('A group walks past. One of them looks at you.','narrator');
+await waitInput();
+
+await ln('"Oh, she\'s in the top set now?"','voice');
+await ln('"Since when?"','voice');
+await ln('They laugh. Maybe not about you.','narrator');
+await ln('...but the tape recorded it anyway.','narrator');
+await waitInput();
+
+const hallway=await showChoices([
+{text:'Walk faster. Head down. Disappear.',value:'shrink'},
+{text:'Keep your pace. They do not decide your speed.',value:'steady'},
+{text:'Stop. Look at them. Say nothing. Then keep walking.',value:'stand'}
+]);
+
+if(hallway==='shrink'){
+await ln('Your shoes squeak too loud on the floor.','narrator');
+await ln('You wish you could be smaller.','narrator');
+await ln('You wish you could be invisible.','voice');
+await ln('...you almost are.','voice');
+}else if(hallway==='steady'){
+resilience++;
+await ln('Your pace does not change.','narrator');
+await ln('Not fast. Not slow.','narrator');
+await ln('Yours.','self');
+}else{
+resilience+=2;
+await ln('You stop.','narrator');
+await ln('The laughter fades.','narrator');
+await ln('They look away first.','narrator');
+await ln('You did not say a word.','self');
+await ln('You did not need to.','self');
+}
+await waitInput();
+
+// === SCENE 3: THE EXAM ===
+await br();
+await glitch(2);
+await ln('[TAPE TRACKING — ADJUSTING]','narrator',15);
+await sleep(400);
+clear();
+
+await ln('The exam paper is face down on the desk.','narrator');
+await ln('Your name is already written. That part, at least, you are sure of.','narrator');
+await waitInput();
+
+await ln('The teacher says "begin" and the room fills with the sound of turning pages.','narrator');
+await waitInput();
+
+await ln('Question 1 is fine.','narrator');
+await ln('Question 2 is fine.','narrator');
+await ln('Question 3...','narrator');
+await sleep(500);
+await ln('You do not know.','narrator');
+await waitInput();
+
+await ln('The voice is immediate:','narrator');
+await ln('"See? This is where you always break."','voice');
+await ln('"Everyone else is writing. You are stuck."','voice');
+await ln('"You do not belong in this set."','voice');
+await waitInput();
+
+const exam=await showChoices([
+{text:'Stare at the question. Freeze.',value:'freeze'},
+{text:'Skip it. Move to the next one. Come back later.',value:'skip'},
+{text:'Write something. Even if it is wrong. You are still here.',value:'write'}
+]);
+
+if(exam==='freeze'){
+await ln('The minutes drain.','narrator');
+await ln('The pen feels heavy. The room feels loud.','narrator');
+await ln('You do not fail because you are stupid.','narrator');
+await ln('You fail because the fear arrived before the answer could.','narrator');
+}else if(exam==='skip'){
+resilience++;
+await ln('You turn the page.','narrator');
+await ln('Question 4 — you know this one.','narrator');
+await ln('Question 5 — you know this too.','narrator');
+await ln('You come back to Question 3 later.','narrator');
+await ln('It is not perfect. But it is answered.','self');
+}else{
+resilience+=2;
+await ln('You write.','narrator');
+await ln('Not the full answer. Not the perfect answer.','narrator');
+await ln('But an answer.','narrator');
+await br();
+await ln('The voice says: "That is wrong."','voice');
+await ln('You say, quietly, to no one:','narrator');
+await ln('"Maybe. But I wrote it. That counts."','self');
+}
+await waitInput();
+
+// === TAPE GLITCH 2: THE TWIST ===
+await glitch(6);
+await doRewind(1500);
+clear();
+
+await ln('[TAPE CORRUPTED — UNKNOWN SEGMENT]','narrator',15);
+await sleep(600);
+
+await ln('...','narrator',100);
+await sleep(400);
+await ln('Wait.','narrator');
+await ln('This part of the tape is not a memory.','narrator');
+await waitInput();
+
+await ln('This is a recording you made yourself.','narrator');
+await ln('Late at night. When no one was listening.','narrator');
+await waitInput();
+
+await br();
+
+// What she says depends on resilience
+if(resilience>=4){
+await ln('"I do not know if I will make it to the top."','self');
+await ln('"But I showed up every single day this year."','self');
+await ln('"That has to mean something."','self');
+await ln('"Even if no one else counts it — I do."','self');
+await waitInput();
+await ln('The tape hisses.','narrator');
+await ln('But beneath the hiss, there is something steady.','narrator');
+await ln('A pulse. Quiet. Stubborn. Alive.','narrator');
+await ln('Yours.','gold');
+}else if(resilience>=2){
+await ln('"I am tired."','self');
+await ln('"I do not know if I am good enough."','self');
+await ln('"But I am still here."','self');
+await ln('"And that is not nothing."','self');
+await waitInput();
+await ln('The tape struggles. The tracking wavers.','narrator');
+await ln('But it does not stop.','narrator');
+await ln('Neither did you.','gold');
+}else{
+await ln('"I do not think I can do this."','self');
+await ln('"Everyone is better. Everyone knows it."','self');
+await sleep(800);
+await ln('...','narrator',100);
+await ln('"But I pressed play on this tape."','self');
+await ln('"Which means some part of me still wants to try."','self');
+await waitInput();
+await ln('That part is small. And scared.','narrator');
+await ln('But it is the part that matters most.','gold');
+}
+
+await waitInput();
+await br();
+
+await ln('> END OF TAPE: SIDE A','narrator',18);
+await ln(`> INNER STRENGTH DETECTED: ${resilience}/6`,'narrator',18);
+await sleep(600);
+
+// Mark complete
+try{
+const s=JSON.parse(localStorage.getItem('anushri_tapes')||'{}');
+s.A1=true;s.A1_resilience=resilience;
+localStorage.setItem('anushri_tapes',JSON.stringify(s));
+}catch{}
+
+await ln('> EJECTING...','narrator',18);
+await sleep(1500);
+
+window.location.href='index.html';
+};
+
+// ── Init ──
+noise.init();
+story();
+</script>
 </body>
 </html>
