@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>TRACKING: The Distortion</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=VT323&family=Cormorant+Garamond:ital,wght@0,400;1,400&display=swap');
+:root{--bg:#050505;--phosphor:#a8e6a3;--dim:#555;--warm:#ffeedd;--red:#cc4444;--gold:#d4af37;--blue:#5588bb;--cyan:#00d4aa;--white:#d4d4d4}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;background:#000;font-family:'VT323',monospace;color:var(--white);user-select:none}
+
+.tv-body{position:relative;width:min(94vw,740px);margin:auto;margin-top:max(1vh,6px);background:linear-gradient(145deg,#222,#181818,#111);border-radius:20px;border:2px solid #2a2a2a;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.8)}
+.tv-screen{position:relative;margin:14px 14px 0;aspect-ratio:4/3;background:#050508;border-radius:10px;overflow:hidden;box-shadow:inset 0 0 40px rgba(0,0,0,0.8)}
+.tv-screen::before{content:'';position:absolute;inset:0;z-index:90;pointer-events:none;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.12) 2px,rgba(0,0,0,0.12) 4px)}
+.tv-screen::after{content:'';position:absolute;inset:0;z-index:91;pointer-events:none;background:radial-gradient(ellipse at center,transparent 58%,rgba(0,0,0,0.55) 100%)}
+canvas#noise{position:absolute;inset:0;z-index:5;opacity:0.07;image-rendering:pixelated}
+#game{position:absolute;inset:0;z-index:20;display:flex;flex-direction:column;padding:14px;overflow:hidden}
+.tv-bar{display:flex;align-items:center;justify-content:space-between;padding:10px 18px;background:#111;border-top:1px solid #1a1a1a}
+.tv-bar span{font-size:10px;letter-spacing:0.2em;color:#444;text-transform:uppercase}
+
+/* HUD */
+.hud{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,0.04);flex-shrink:0}
+.hud-label{font-size:11px;letter-spacing:0.15em;color:var(--dim);text-transform:uppercase}
+.signal-bar{width:130px;height:6px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.08);border-radius:3px;overflow:hidden;margin-top:3px}
+.signal-fill{height:100%;background:linear-gradient(90deg,var(--red),var(--gold),var(--phosphor));border-radius:3px;transition:width 0.6s ease;box-shadow:0 0 6px rgba(168,230,163,0.2)}
+.hud-right{text-align:right}
+
+/* Content area */
+.content{flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:12px;overflow:hidden}
+
+/* Truth panel */
+.truth-panel{width:90%;max-width:420px;position:relative;min-height:56px}
+.truth-text{
+font-family:'Cormorant Garamond',serif;font-size:clamp(14px,2vw,17px);
+line-height:1.8;color:var(--warm);text-align:center;padding:12px 16px;
+background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04);
+opacity:0;transition:opacity 0.8s;
+}
+.truth-text.show{opacity:1}
+.truth-text .hl{color:var(--phosphor)}
+.truth-text .gold{color:var(--gold)}
+
+/* Static band over truth */
+.static-band{
+position:absolute;inset:0;z-index:5;
+background:repeating-linear-gradient(0deg,rgba(255,255,255,0.05) 0px,rgba(0,0,0,0.25) 2px,rgba(255,255,255,0.03) 4px,rgba(0,0,0,0.15) 6px);
+display:flex;justify-content:center;align-items:center;
+transition:opacity 0.8s;
+}
+.static-band.cleared{opacity:0;pointer-events:none}
+.static-band-text{font-size:12px;color:var(--red);letter-spacing:0.12em;opacity:0.7;text-shadow:0 0 4px var(--red);text-align:center;padding:0 10px}
+
+/* Puzzle box */
+.puzzle-box{
+width:90%;max-width:420px;background:rgba(0,0,0,0.25);
+border:1px dashed rgba(255,255,255,0.06);border-radius:4px;padding:14px;text-align:center;
+}
+.puzzle-type{font-size:10px;letter-spacing:0.2em;color:var(--blue);margin-bottom:6px;text-transform:uppercase}
+.puzzle-prompt{font-size:15px;color:var(--white);line-height:1.6;margin-bottom:10px}
+.puzzle-prompt .hl{color:var(--gold)}
+
+/* Input display */
+.input-display{
+font-size:22px;letter-spacing:0.12em;color:var(--white);
+min-width:140px;text-align:center;border-bottom:2px solid rgba(255,255,255,0.12);
+padding:4px;min-height:34px;transition:all 0.3s;margin:0 auto 8px;
+}
+.input-display.correct{color:var(--phosphor);border-color:var(--phosphor);text-shadow:0 0 8px var(--phosphor)}
+.input-display.wrong{color:var(--red);border-color:var(--red)}
+
+/* Keypad */
+.keypad{display:grid;gap:3px;margin:0 auto;max-width:320px}
+.keypad.num{grid-template-columns:repeat(3,1fr)}
+.keypad.alpha{grid-template-columns:repeat(7,1fr)}
+.keypad.tf{grid-template-columns:1fr 1fr}
+.key{
+padding:8px 3px;background:rgba(255,255,255,0.015);border:1px solid rgba(255,255,255,0.05);
+border-radius:2px;color:var(--cyan);font-family:'VT323';font-size:14px;cursor:pointer;
+text-align:center;transition:all 0.1s;
+}
+.key:hover{border-color:var(--cyan);box-shadow:0 0 8px rgba(0,212,170,0.1)}
+.key:active{transform:scale(0.94);background:var(--cyan);color:#000}
+.key.act-clear{color:var(--red);border-color:rgba(204,68,68,0.2)}
+.key.act-enter{color:var(--phosphor);border-color:rgba(168,230,163,0.2)}
+
+/* Hint */
+.puzzle-hint{font-size:12px;color:var(--dim);margin-top:8px;opacity:0;transition:opacity 0.5s}
+.puzzle-hint.show{opacity:1}
+
+/* Narrator */
+.narrator-line{font-size:13px;color:var(--dim);text-align:center;margin-top:6px;min-height:18px;font-style:italic;flex-shrink:0}
+
+/* Complete overlay */
+.complete-overlay{
+position:absolute;inset:0;z-index:40;background:rgba(0,0,0,0.93);
+display:flex;flex-direction:column;justify-content:center;align-items:center;
+padding:24px;text-align:center;opacity:0;pointer-events:none;transition:opacity 1s;
+}
+.complete-overlay.show{opacity:1;pointer-events:auto}
+.complete-title{font-size:22px;color:var(--phosphor);letter-spacing:0.2em;margin-bottom:14px;text-shadow:0 0 8px rgba(168,230,163,0.2)}
+.complete-text{font-family:'Cormorant Garamond',serif;font-size:16px;line-height:2;color:var(--warm);max-width:420px}
+.complete-text .gold{color:var(--gold)}
+.eject-btn{
+margin-top:20px;padding:8px 24px;background:transparent;border:1px solid var(--dim);
+color:var(--dim);font-family:'VT323';font-size:14px;cursor:pointer;letter-spacing:0.12em;transition:all 0.3s;
+}
+.eject-btn:hover{border-color:var(--phosphor);color:var(--phosphor)}
+
+.back{position:fixed;top:8px;left:8px;z-index:200;background:rgba(0,0,0,0.6);border:1px solid #333;color:#555;font-family:'VT323';font-size:12px;padding:4px 10px;cursor:pointer;text-decoration:none;border-radius:2px}
+.back:hover{color:var(--phosphor);border-color:var(--phosphor)}
+
+@media(max-width:640px){
+.tv-body{width:98vw;border-radius:12px;margin-top:2px}
+.tv-screen{margin:8px 8px 0}
+#game{padding:10px}
+.keypad.alpha{grid-template-columns:repeat(6,1fr)}
+.key{padding:10px 2px;font-size:13px}
+}
+</style>
+</head>
+<body>
+<a href="index.html" class="back">◀ EJECT</a>
+<div class="tv-body">
+<div class="tv-screen">
+<canvas id="noise"></canvas>
+<div id="game">
+<div class="hud">
+<div>
+<div class="hud-label">Signal Clarity</div>
+<div class="signal-bar"><div class="signal-fill" id="signal-fill" style="width:0%"></div></div>
+</div>
+<div class="hud-right">
+<div class="hud-label">Layer <span id="layer-num">1</span>/5</div>
+<div id="attempts-text" style="font-size:12px;color:var(--dim)"></div>
+</div>
+</div>
+<div class="content" id="content"></div>
+<div class="narrator-line" id="narrator"></div>
+</div>
+<div class="complete-overlay" id="complete">
+<div class="complete-title">SIGNAL RESTORED</div>
+<div class="complete-text" id="complete-text"></div>
+<button class="eject-btn" id="eject-btn">◀ EJECT TAPE</button>
+</div>
+</div>
+<div class="tv-bar">
+<span>TRACKING — FIX THE SIGNAL</span>
+<span id="counter">00:00</span>
+</div>
+</div>
+
+<script>
+'use strict';
+const $=id=>document.getElementById(id);
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+
+/* ═══ NOISE ═══ */
+const Noise=(()=>{const c=$('noise'),ctx=c.getContext('2d');let w=0,h=0;const resize=()=>{const r=c.parentElement.getBoundingClientRect();w=c.width=Math.ceil(r.width/2);h=c.height=Math.ceil(r.height/2)};const draw=()=>{if(!w)return;const img=ctx.createImageData(w,h);const d=img.data;for(let i=0;i<d.length;i+=4){const v=Math.random()*255;d[i]=d[i+1]=d[i+2]=v;d[i+3]=Math.random()*20}ctx.putImageData(img,0,0);requestAnimationFrame(draw)};window.addEventListener('resize',resize);return{init(){resize();draw()}}})();
+
+/* ═══ SYNTH ═══ */
+const Synth=(()=>{let ctx=null,m=null;const init=()=>{if(ctx)return;ctx=new(window.AudioContext||window.webkitAudioContext)();m=ctx.createGain();m.gain.value=0.4;m.connect(ctx.destination);if(ctx.state==='suspended')ctx.resume()};
+const note=(f,dur,type='triangle',vol=0.08,atk=0.01)=>{if(!ctx)return;const o=ctx.createOscillator(),g=ctx.createGain();o.type=type;o.frequency.value=f;g.gain.setValueAtTime(0.001,ctx.currentTime);g.gain.linearRampToValueAtTime(vol,ctx.currentTime+atk);g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+dur);o.connect(g);g.connect(m);o.start();o.stop(ctx.currentTime+dur+0.05)};
+const correctSfx=()=>{note(523,0.1,'triangle',0.06);setTimeout(()=>note(659,0.1,'triangle',0.06),80);setTimeout(()=>note(784,0.15,'triangle',0.06),160)};
+const wrongSfx=()=>{note(200,0.15,'sawtooth',0.05);note(180,0.2,'sawtooth',0.04)};
+const keyClick=()=>note(800+Math.random()*400,0.02,'square',0.02);
+const clearSfx=()=>{[523,587,659,698,784].forEach((f,i)=>setTimeout(()=>note(f,0.3,'sine',0.04,0.02),i*120))};
+const startBg=()=>{if(!ctx)return;const o=ctx.createOscillator(),f=ctx.createBiquadFilter(),g=ctx.createGain();o.type='sawtooth';o.frequency.value=110;f.type='lowpass';f.frequency.value=220;g.gain.value=0.01;o.connect(f);f.connect(g);g.connect(m);o.start()};
+return{init,note,correctSfx,wrongSfx,keyClick,clearSfx,startBg}})();
+
+/* ═══ COUNTER ═══ */
+let sec=0;setInterval(()=>{sec++;$('counter').textContent=`${String(Math.floor(sec/60)).padStart(2,'0')}:${String(sec%60).padStart(2,'0')}`},1000);
+
+/* ═══ PUZZLE DATA ═══ */
+const LAYERS=[
+{
+  lie:"She will never be good enough.",
+  puzzle:{type:'PATTERN',prompt:'The sequence: 2, 5, 10, 13, 18, ...<br><span class="hl">What comes next?</span>',answer:'21',mode:'num',hint:'Alternating +3 and +5. After 18, add 3.'},
+  truth:'Showing up <span class="hl">every single day</span> — even when you doubt yourself — is not weakness. It is the definition of strength.',
+  narratorIntro:'The first band hums with a familiar lie.',
+  narratorSolve:'The static peels away.'
+},
+{
+  lie:"Everyone else finds it easy.",
+  puzzle:{type:'UNSCRAMBLE',prompt:'Unscramble the word:<br><span class="hl">T O F F E R</span>',answer:'EFFORT',mode:'alpha',hint:'6 letters. The energy you put into something.'},
+  truth:'Nobody who achieved anything <span class="hl">real</span> found it easy. They chose not to stop. <span class="gold">So did you.</span>',
+  narratorIntro:'This lie is one you\'ve heard a thousand times.',
+  narratorSolve:'Nobody finds it easy. Some just hide the struggle better.'
+},
+{
+  lie:"One failure defines everything.",
+  puzzle:{type:'TRUE OR FALSE',prompt:'"A single exam result defines your entire future."<br><br><span class="hl">True or False?</span>',answer:'FALSE',mode:'tf',hint:'Does one moment truly erase hundreds of good ones?'},
+  truth:'A single result is a <span class="hl">moment</span>. Your trajectory is made of hundreds of moments. One bad day cannot erase them.',
+  narratorIntro:'This is the loudest lie. It echoes in exam halls and quiet bedrooms.',
+  narratorSolve:'One result is a data point. Not a verdict.'
+},
+{
+  lie:"You need someone else to be strong.",
+  puzzle:{type:'COMPLETE',prompt:'Complete the sentence:<br>"The person who kept going when nobody was watching was ___."',answer:'ME',mode:'alpha',hint:'Two letters. First person.'},
+  truth:'Love is not a crutch. It is a <span class="hl">witness</span>. The person who wakes up, studies, tries, fails, and tries again — that person is <span class="gold">you</span>.',
+  narratorIntro:'This one is quieter. Almost gentle. Almost true.',
+  narratorSolve:'He is there. But the engine has always been yours.'
+},
+{
+  lie:"Average people don\'t reach the stars.",
+  puzzle:{type:'REFRAME',prompt:'What do you call someone average who refuses to quit?',answer:'UNSTOPPABLE',mode:'alpha',hint:'11 letters. Starts with U. Nothing can hold them back.'},
+  truth:'"Average" describes where you <span class="hl">started</span>. It has never described where you are <span class="gold">going</span>.',
+  narratorIntro:'The final band. The thickest. The oldest.',
+  narratorSolve:'Average is a starting point. Never a ceiling.'
+}
+];
+
+/* ═══ GAME STATE ═══ */
+let currentLayer=0,input='',attempts=0,totalAttempts=0,hintShown=false;
+const contentEl=$('content');
+const narratorEl=$('narrator');
+const signalFill=$('signal-fill');
+const layerNum=$('layer-num');
+const attemptsText=$('attempts-text');
+
+const updateSignal=()=>{signalFill.style.width=Math.round((currentLayer/LAYERS.length)*100)+'%'};
+const setNarrator=t=>{narratorEl.textContent=t};
+
+/* ═══ RENDER LAYER ═══ */
+function renderLayer(idx){
+  const L=LAYERS[idx];
+  input='';attempts=0;hintShown=false;
+  layerNum.textContent=idx+1;attemptsText.textContent='';
+  contentEl.innerHTML='';
+
+  // Truth panel
+  const tp=document.createElement('div');tp.className='truth-panel';
+  const tt=document.createElement('div');tt.className='truth-text';tt.innerHTML=L.truth;
+  const sb=document.createElement('div');sb.className='static-band';sb.id='static-band';
+  const sbt=document.createElement('div');sbt.className='static-band-text';sbt.textContent=L.lie;
+  sb.appendChild(sbt);tp.appendChild(tt);tp.appendChild(sb);contentEl.appendChild(tp);
+
+  // Puzzle
+  const pb=document.createElement('div');pb.className='puzzle-box';
+  const pt=document.createElement('div');pt.className='puzzle-type';pt.textContent=L.puzzle.type;
+  const pp=document.createElement('div');pp.className='puzzle-prompt';pp.innerHTML=L.puzzle.prompt;
+  const id=document.createElement('div');id.className='input-display';id.id='input-display';
+  pb.appendChild(pt);pb.appendChild(pp);pb.appendChild(id);
+
+  // Keypad
+  const kp=document.createElement('div');kp.className='keypad';
+  if(L.puzzle.mode==='num'){
+    kp.classList.add('num');
+    '123456789'.split('').forEach(k=>kp.appendChild(makeKey(k)));
+    kp.appendChild(makeKey('CLR','act-clear'));kp.appendChild(makeKey('0'));kp.appendChild(makeKey('OK','act-enter'));
+  }else if(L.puzzle.mode==='alpha'){
+    kp.classList.add('alpha');
+    'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').forEach(k=>kp.appendChild(makeKey(k)));
+    kp.appendChild(makeKey('CLR','act-clear'));kp.appendChild(makeKey('OK','act-enter'));
+  }else if(L.puzzle.mode==='tf'){
+    kp.classList.add('tf');
+    kp.appendChild(makeKey('TRUE'));kp.appendChild(makeKey('FALSE'));
+  }
+  pb.appendChild(kp);
+
+  const ph=document.createElement('div');ph.className='puzzle-hint';ph.id='puzzle-hint';ph.textContent='HINT: '+L.puzzle.hint;
+  pb.appendChild(ph);contentEl.appendChild(pb);
+
+  setNarrator(L.narratorIntro);
+}
+
+function makeKey(label,cls=''){
+  const btn=document.createElement('button');btn.className='key'+(cls?' '+cls:'');btn.textContent=label;
+  btn.addEventListener('click',()=>handleInput(label));return btn;
+}
+
+function handleInput(key){
+  Synth.keyClick();
+  const L=LAYERS[currentLayer];
+  if(L.puzzle.mode==='tf'){checkAnswer(key);return}
+  if(key==='CLR'){input='';updateInput();return}
+  if(key==='OK'){checkAnswer(input);return}
+  if(input.length<16){input+=key;updateInput()}
+}
+
+function updateInput(){const el=$('input-display');if(el){el.textContent=input;el.className='input-display'}}
+
+async function checkAnswer(given){
+  const L=LAYERS[currentLayer];
+  const correct=L.puzzle.answer.toUpperCase();
+  given=(given||'').toUpperCase().trim();
+  attempts++;totalAttempts++;
+
+  if(given===correct){
+    Synth.correctSfx();
+    const el=$('input-display');if(el){el.textContent='✓ CORRECT';el.className='input-display correct'}
+    setNarrator(L.narratorSolve);
+    await sleep(400);
+    const band=$('static-band');if(band)band.classList.add('cleared');
+    await sleep(500);
+    const truth=contentEl.querySelector('.truth-text');if(truth)truth.classList.add('show');
+    await sleep(2200);
+    currentLayer++;updateSignal();
+    if(currentLayer>=LAYERS.length){showCompletion()}else{renderLayer(currentLayer)}
+  }else{
+    Synth.wrongSfx();
+    const el=$('input-display');if(el){el.textContent='✗ TRY AGAIN';el.className='input-display wrong'}
+    attemptsText.textContent='Attempts: '+attempts;
+    if(attempts>=2&&!hintShown){hintShown=true;const h=$('puzzle-hint');if(h)h.classList.add('show');setNarrator('It\'s okay to need a hint. Asking for help is not failure.')}
+    else{setNarrator('Not quite. But you\'re still trying. That matters.')}
+    await sleep(700);input='';updateInput();
+  }
+}
+
+function showCompletion(){
+  Synth.clearSfx();
+  const overlay=$('complete');const textEl=$('complete-text');
+  let msg;
+  if(totalAttempts<=LAYERS.length+2){
+    msg='You cleared every layer with barely a stumble.<br><br>But the point was never speed. The point is you didn\'t walk away from a single one.';
+  }else if(totalAttempts<=LAYERS.length+8){
+    msg='Some of those took more than one try.<br><br>You know what that means? It means you <span class="gold">tried more than once</span>.<br><br>That is the entire definition of persistence.';
+  }else{
+    msg='That was hard. Some layers fought back.<br><br>You could have ejected the tape. But you stayed. You tried again.<br><br>And now the signal is <span class="gold">clear</span>. Just like it will be for you.';
+  }
+  // Add the twist
+  msg+='<br><br><em style="color:var(--dim)">The timestamp on the original recording reads: 3 months ago.<br>Recorded by: ANUSHRI.<br><br>You made this tape yourself during a late night moment of clarity. You forgot.</em>';
+  textEl.innerHTML=msg;overlay.classList.add('show');
+
+  $('eject-btn').addEventListener('click',()=>{
+    try{const s=JSON.parse(localStorage.getItem('anushri_archive_v2')||'{}');s.tape2={complete:true,attempts:totalAttempts};localStorage.setItem('anushri_archive_v2',JSON.stringify(s))}catch{}
+    window.location.href='index.html';
+  });
+}
+
+// Keyboard
+document.addEventListener('keydown',e=>{
+  const key=e.key.toUpperCase();
+  if(key==='BACKSPACE'){input='';updateInput();return}
+  if(key==='ENTER'){const L=LAYERS[currentLayer];if(L.puzzle.mode==='tf')return;checkAnswer(input);return}
+  if(/^[A-Z0-9]$/.test(key)){const L=LAYERS[currentLayer];if(L.puzzle.mode==='num'&&!/[0-9]/.test(key))return;if(input.length<16){input+=key;updateInput()}}
+});
+
+/* ═══ INIT ═══ */
+Noise.init();Synth.init();Synth.startBg();updateSignal();renderLayer(0);
+</script>
+</body>
+</html>
