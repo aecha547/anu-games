@@ -1,125 +1,780 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>FILE_03: THE PARADOX</title>
-    <style>
-        body { margin: 0; background: #000; color: #fff; font-family: 'Courier New', monospace; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
-        #stage { width: 800px; height: 400px; border-top: 2px solid #fff; border-bottom: 2px solid #fff; position: relative; display: flex; justify-content: space-between; align-items: center; padding: 0 100px; }
-        
-        .entity { width: 60px; height: 60px; border-radius: 50%; position: relative; transition: all 0.5s; }
-        #me { background: #00F3FF; box-shadow: 0 0 20px #00F3FF; } /* The User */
-        #her { background: #FF2A6D; box-shadow: 0 0 20px #FF2A6D; border: 4px solid #fff; } /* Anushri (Tough) */
-        
-        #dialogue { margin-top: 30px; height: 100px; width: 800px; text-align: center; font-size: 1.2rem; }
-        #btn { background: transparent; border: 1px solid #fff; color: #fff; padding: 10px 30px; cursor: pointer; font-family: inherit; display: none; margin-top: 20px;}
-        #btn:hover { background: #fff; color: #000; }
-        
-        .spark { position: absolute; background: yellow; width: 4px; height: 4px; pointer-events: none; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>PLAY: Face the Static</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=VT323&family=Cormorant+Garamond:ital,wght@0,400;1,400&display=swap');
+:root{--bg:#050505;--green:#a8e6a3;--dim:#555;--warm:#ffeedd;--red:#cc4444;--gold:#d4af37;--blue:#5588bb;--cyan:#00d4aa;--static-w:#d4d4d4;--soul:#00ffaa}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;background:#000;font-family:'VT323',monospace;color:var(--static-w);user-select:none}
+
+.tv-body{position:relative;width:min(94vw,720px);margin:auto;margin-top:max(1vh,6px);aspect-ratio:4/3;background:#1a1a1a;border-radius:24px;border:3px solid #2a2a2a;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.8)}
+.tv-screen{flex:1;margin:12px 12px 6px;background:#000;border-radius:10px;position:relative;overflow:hidden}
+.tv-screen::before{content:'';position:absolute;inset:0;z-index:90;pointer-events:none;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.12) 2px,rgba(0,0,0,0.12) 4px)}
+.tv-screen::after{content:'';position:absolute;inset:0;z-index:91;pointer-events:none;background:radial-gradient(ellipse at center,transparent 55%,rgba(0,0,0,0.5) 100%)}
+
+canvas#noise{position:absolute;inset:0;z-index:5;opacity:0.07;transition:opacity 0.5s}
+
+/* Game layers */
+#arena{position:absolute;inset:0;z-index:10}
+#ui{position:absolute;inset:0;z-index:20;display:flex;flex-direction:column;padding:12px}
+#bullet-box{position:absolute;z-index:30;display:none;border:3px solid var(--static-w);background:#000}
+
+/* HUD */
+.hud{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px}
+.hp-section{display:flex;align-items:center;gap:8px}
+.hp-label{font-size:18px;color:var(--gold)}
+.hp-bar-outer{width:120px;height:14px;border:2px solid #fff;background:#222}
+.hp-bar-inner{height:100%;background:var(--gold);transition:width 0.2s}
+.hp-text{font-size:14px;color:var(--dim)}
+.enemy-bar-outer{width:200px;height:8px;border:1px solid #444;background:#222;display:none}
+.enemy-bar-inner{height:100%;background:var(--static-w);transition:width 0.5s}
+.enemy-label{font-size:11px;color:var(--dim);letter-spacing:0.1em;margin-bottom:3px}
+
+/* Actor area */
+.actors{flex:1;display:flex;justify-content:space-between;align-items:center;padding:0 40px;position:relative}
+.actor-self,.actor-enemy{width:120px;height:140px;display:flex;justify-content:center;align-items:center}
+
+/* Simple SVG characters on CRT */
+.self-sprite{width:80px;height:100px}
+.enemy-sprite{width:100px;height:120px;transition:filter 0.5s,opacity 0.5s}
+.enemy-glitch{animation:eGlitch 0.15s infinite}
+.enemy-calm{animation:float 3s ease-in-out infinite}
+@keyframes eGlitch{0%{transform:translate(0)}20%{transform:translate(-2px,2px)}40%{transform:translate(2px,-1px)}60%{transform:translate(-1px,-2px)}80%{transform:translate(1px,1px)}100%{transform:translate(0)}}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+
+/* Dialogue */
+.dialogue-box{
+min-height:130px;
+border:3px solid var(--static-w);
+background:rgba(0,0,0,0.95);
+padding:14px;
+position:relative;
+}
+.dialogue-text{font-size:clamp(16px,2.5vw,22px);line-height:1.5;min-height:50px}
+.dialogue-text .voice{color:var(--red);opacity:0.85}
+.dialogue-text .self{color:var(--warm)}
+.dialogue-text .narrator{color:var(--dim);font-style:italic}
+.dialogue-text .green{color:var(--green)}
+.dialogue-text .gold{color:var(--gold)}
+
+.continue-prompt{position:absolute;bottom:8px;right:12px;font-size:14px;color:var(--gold);animation:blink 1s infinite}
+@keyframes blink{50%{opacity:0}}
+
+/* Menu */
+.menu-grid{
+display:grid;grid-template-columns:1fr 1fr;gap:8px;
+margin-top:8px;
+}
+.menu-btn{
+border:2px solid var(--red);color:var(--red);
+padding:8px 12px;font-size:20px;font-family:'VT323';
+cursor:pointer;text-transform:uppercase;text-align:left;
+transition:all 0.1s;background:transparent;
+}
+.menu-btn:hover,.menu-btn.active{background:var(--red);color:#000;box-shadow:0 0 10px var(--red)}
+.menu-btn.mercy-btn{border-color:var(--gold);color:var(--gold)}
+.menu-btn.mercy-btn:hover,.menu-btn.mercy-btn.active{background:var(--gold);color:#000;box-shadow:0 0 10px var(--gold)}
+
+/* ACT submenu */
+.act-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.act-btn{
+border:2px solid var(--blue);color:var(--blue);
+padding:8px 12px;font-size:18px;font-family:'VT323';
+cursor:pointer;text-align:left;transition:all 0.1s;background:transparent;
+}
+.act-btn:hover{background:var(--blue);color:#000}
+
+/* Soul in bullet box */
+.soul{
+position:absolute;width:12px;height:12px;
+background:var(--soul);border-radius:50%;
+box-shadow:0 0 8px var(--soul);
+z-index:35;
+}
+.soul.inv{animation:soulBlink 0.08s infinite}
+@keyframes soulBlink{50%{opacity:0.3}}
+
+/* Bullets */
+.bullet{
+position:absolute;background:#fff;border-radius:50%;
+z-index:34;
+}
+
+/* Shake */
+.shake{animation:shake 0.4s}
+@keyframes shake{10%,90%{transform:translate(-4px,0)}20%,80%{transform:translate(6px,0)}30%,50%,70%{transform:translate(-7px,0)}40%,60%{transform:translate(7px,0)}}
+
+/* Mobile controls */
+#mobile-dpad{position:absolute;bottom:12px;right:12px;z-index:60;display:none}
+.dp-row{display:flex;justify-content:center}
+.dp-btn{width:40px;height:40px;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.3);color:#fff;font-size:16px;display:flex;justify-content:center;align-items:center;border-radius:6px;margin:2px;touch-action:manipulation}
+.dp-btn:active{background:rgba(255,255,255,0.4)}
+
+/* Win/Lose overlays */
+.overlay{position:absolute;inset:0;z-index:50;background:rgba(0,0,0,0.92);display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:24px;opacity:0;pointer-events:none;transition:opacity 1s}
+.overlay.visible{opacity:1;pointer-events:auto}
+.overlay h2{font-size:28px;letter-spacing:0.15em;margin-bottom:16px}
+.overlay p{font-family:'Cormorant Garamond',serif;font-size:17px;line-height:2;max-width:460px;color:var(--warm)}
+.overlay p .gold{color:var(--gold)}
+.overlay p .green{color:var(--green)}
+.overlay button{margin-top:20px;padding:10px 28px;background:transparent;border:1px solid var(--dim);color:var(--dim);font-family:'VT323';font-size:15px;cursor:pointer;letter-spacing:0.15em;transition:all 0.3s}
+.overlay button:hover{border-color:var(--green);color:var(--green)}
+
+.tv-bar{height:36px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;background:#111;border-top:1px solid #222}
+.tv-bar span{font-size:10px;letter-spacing:0.2em;color:#444;text-transform:uppercase}
+
+.back-btn{position:fixed;top:10px;left:10px;z-index:200;background:rgba(0,0,0,0.6);border:1px solid #333;color:#666;font-family:'VT323';font-size:13px;padding:4px 10px;cursor:pointer;text-decoration:none}
+.back-btn:hover{color:var(--green);border-color:var(--green)}
+
+@media(max-width:600px){
+.tv-body{width:98vw;border-radius:12px;margin-top:2px}
+.tv-screen{margin:8px 8px 4px}
+.actors{padding:0 20px}
+#mobile-dpad{display:block}
+}
+</style>
 </head>
 <body>
-    <div id="stage">
-        <div id="me" class="entity"></div>
-        <div id="clash-zone" style="flex-grow: 1"></div>
-        <div id="her" class="entity"></div>
-    </div>
-    <div id="dialogue"></div>
-    <button id="btn">CONTINUE</button>
-    <a href="index.html" id="exit" style="display:none; margin-top:20px; color:#aaa">ARCHIVE</a>
+<a href="index.html" class="back-btn">◀ EJECT</a>
 
-    <script>
-        const dialogue = [
-            { s: "SYSTEM", t: "Simulating First Contact..." },
-            { s: "ME", t: "Variable detected. Status: Rude. Value: Unknown." },
-            { s: "HER", t: "Stay away. I am sharp. I will cut you." },
-            { s: "ME", t: "I was pissed. I almost walked away." },
-            { s: "ACTION", t: "*Clash*" }, // 4
-            { s: "ME", t: "But the math didn't add up. Why build walls if there's nothing to protect?" },
-            { s: "ACTION", t: "*Wait*" }, // 6
-            { s: "ME", t: "I looked closer. Beneath the rudeness... a Gem." },
-            { s: "HER", t: "Why are you still here?" },
-            { s: "ME", t: "Because I solved for X. And X is you." },
-            { s: "SYSTEM", t: "Status Updated: CONSTANT THOUGHT." }
-        ];
+<div class="tv-body">
+<div class="tv-screen" id="tv-screen">
+<canvas id="noise"></canvas>
 
-        let idx = 0;
-        const dEl = document.getElementById('dialogue');
-        const btn = document.getElementById('btn');
-        const me = document.getElementById('me');
-        const her = document.getElementById('her');
+<div id="ui">
+<div class="hud">
+<div>
+<div class="hp-section">
+<span class="hp-label">HP</span>
+<div class="hp-bar-outer"><div class="hp-bar-inner" id="hp-fill" style="width:100%"></div></div>
+<span class="hp-text" id="hp-text">20/20</span>
+</div>
+</div>
+<div>
+<div class="enemy-label" id="enemy-label">THE STATIC</div>
+<div class="enemy-bar-outer" id="enemy-bar"><div class="enemy-bar-inner" id="enemy-fill" style="width:100%"></div></div>
+</div>
+</div>
 
-        const type = (txt) => {
-            dEl.innerText = "";
-            let i = 0;
-            const timer = setInterval(() => {
-                dEl.innerText += txt.charAt(i);
-                i++;
-                if(i >= txt.length) {
-                    clearInterval(timer);
-                    btn.style.display = 'inline-block';
-                }
-            }, 30);
-        };
+<div class="actors">
+<!-- Self: simple heart shape -->
+<div class="actor-self">
+<svg class="self-sprite" viewBox="0 0 80 100">
+<ellipse cx="40" cy="85" rx="25" ry="4" fill="rgba(0,0,0,0.4)"/>
+<rect x="24" y="40" width="32" height="42" rx="6" fill="#4455aa"/>
+<circle cx="40" cy="28" r="16" fill="#ddb896"/>
+<path d="M20,20 Q40,4 60,20 L60,38 Q40,28 20,38 Z" fill="#1a1a1a"/>
+<circle cx="34" cy="28" r="2.5" fill="#111"/>
+<circle cx="46" cy="28" r="2.5" fill="#111"/>
+<path d="M36,36 Q40,39 44,36" stroke="#555" stroke-width="1.5" fill="none"/>
+</svg>
+</div>
 
-        const clash = () => {
-            // Animation of them hitting
-            me.style.transform = "translateX(200px)";
-            her.style.transform = "translateX(-200px)";
-            setTimeout(() => {
-                me.style.transform = "translateX(0)";
-                her.style.transform = "translateX(0)";
-                // Sparks
-                createSparks();
-            }, 300);
-        };
+<!-- Enemy: distorted version -->
+<div class="actor-enemy" id="enemy-actor">
+<svg class="enemy-sprite enemy-glitch" id="enemy-svg" viewBox="0 0 100 120">
+<g opacity="0.85">
+<polygon points="50,10 85,90 15,90" fill="#111" stroke="var(--static-w)" stroke-width="1.5"/>
+<polygon points="20,60 35,75 10,85" fill="#0a0a0a" stroke="rgba(255,255,255,0.5)" stroke-width="1"/>
+<polygon points="80,50 90,80 65,70" fill="#0a0a0a" stroke="rgba(255,255,255,0.5)" stroke-width="1"/>
+<circle cx="50" cy="55" r="10" fill="rgba(204,68,68,0.7)">
+<animate attributeName="r" values="10;9;11;10" dur="1.2s" repeatCount="indefinite"/>
+</circle>
+<circle cx="50" cy="55" r="3" fill="#1a0000"/>
+<rect x="25" y="38" width="8" height="6" fill="#fff" opacity="0.25">
+<animate attributeName="x" values="25;28;23;25" dur="0.2s" repeatCount="indefinite"/>
+</rect>
+</g>
+</svg>
+</div>
+</div>
 
-        const merge = () => {
-            me.style.background = "#FFD700"; // Gold
-            her.style.background = "#FFD700"; // Gold
-            her.style.borderColor = "#FFD700";
-            me.style.boxShadow = "0 0 50px #FFD700";
-            her.style.boxShadow = "0 0 50px #FFD700";
-        };
+<div class="dialogue-box" id="dialogue-box">
+<div class="dialogue-text" id="dialogue-text">* The tape stutters. A shape forms in the static.</div>
+<div class="continue-prompt" id="continue-prompt" style="display:none">[Z]</div>
+<div class="menu-grid" id="main-menu" style="display:none">
+<button class="menu-btn" data-act="fight">Fight</button>
+<button class="menu-btn" data-act="act">Act</button>
+<button class="menu-btn" data-act="item">Item</button>
+<button class="menu-btn mercy-btn" data-act="mercy">Mercy</button>
+</div>
+<div class="act-grid" id="act-menu" style="display:none">
+<button class="act-btn" data-act="check">Check</button>
+<button class="act-btn" data-act="listen">Listen</button>
+<button class="act-btn" data-act="reassure">Reassure</button>
+<button class="act-btn" data-act="back">Back</button>
+</div>
+</div>
+</div>
 
-        const createSparks = () => {
-            const stage = document.getElementById('stage');
-            for(let i=0; i<20; i++) {
-                const s = document.createElement('div');
-                s.className = 'spark';
-                s.style.left = '50%'; s.style.top = '50%';
-                stage.appendChild(s);
-                const angle = Math.random() * Math.PI * 2;
-                const dist = Math.random() * 100;
-                s.animate([
-                    { transform: 'translate(0,0)' },
-                    { transform: `translate(${Math.cos(angle)*dist}px, ${Math.sin(angle)*dist}px)`, opacity: 0 }
-                ], { duration: 500, fill: 'forwards' });
-            }
-        };
+<!-- Bullet hell box -->
+<canvas id="bullet-box" width="220" height="220"></canvas>
 
-        const next = () => {
-            btn.style.display = 'none';
-            if(idx >= dialogue.length) {
-                document.getElementById('exit').style.display = 'block';
-                return;
-            }
-            
-            const line = dialogue[idx];
-            if(line.s === "ACTION") {
-                if(line.t === "*Clash*") clash();
-                if(line.t === "*Wait*") merge();
-                idx++;
-                setTimeout(next, 1000);
-            } else {
-                type(`${line.s}: ${line.t}`);
-                idx++;
-            }
-        };
+<!-- Mobile controls for dodge -->
+<div id="mobile-dpad">
+<div class="dp-row"><div class="dp-btn" data-dir="up">▲</div></div>
+<div class="dp-row"><div class="dp-btn" data-dir="left">◀</div><div class="dp-btn" style="opacity:0"></div><div class="dp-btn" data-dir="right">▶</div></div>
+<div class="dp-row"><div class="dp-btn" data-dir="down">▼</div></div>
+</div>
 
-        btn.addEventListener('click', next);
-        setTimeout(next, 1000);
+<!-- Overlays -->
+<div class="overlay" id="win-overlay">
+<h2 style="color:var(--gold)">SIGNAL CLEAR</h2>
+<p id="win-text"></p>
+<button id="win-btn">◀ EJECT TAPE</button>
+</div>
+<div class="overlay" id="lose-overlay">
+<h2 style="color:var(--red)">TAPE JAMMED</h2>
+<p>The static won this time.<br>But the tape can always be replayed.</p>
+<button id="retry-btn">REWIND</button>
+</div>
+</div>
+<div class="tv-bar">
+<span>PLAY — FACE THE STATIC</span>
+<span>CH-03</span>
+</div>
+</div>
 
-    </script>
+<audio id="bgm" loop preload="auto">
+<source src="fallen-down.mp3" type="audio/mpeg">
+</audio>
+
+<script>
+'use strict';
+/*═══════════════════════════════════════════
+  A3: PLAY — FACE THE STATIC
+  Undertale-inspired RPG encounter.
+  FIGHT/ACT/ITEM/MERCY with pressure system.
+  Violence = harder. Understanding = path to win.
+═══════════════════════════════════════════*/
+
+const $=id=>document.getElementById(id);
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+
+// ── Noise ──
+const NoiseLayer=(()=>{
+const c=$('noise');const ctx=c.getContext('2d');let w=0,h=0;
+const resize=()=>{const r=c.parentElement.getBoundingClientRect();w=c.width=r.width;h=c.height=r.height};
+const draw=()=>{const img=ctx.createImageData(w,h);const d=img.data;for(let i=0;i<d.length;i+=4){const v=Math.random()*255;d[i]=d[i+1]=d[i+2]=v;d[i+3]=Math.random()*18}ctx.putImageData(img,0,0);requestAnimationFrame(draw)};
+window.addEventListener('resize',resize);
+return{init:()=>{resize();draw()},setIntensity:v=>{c.style.opacity=v}};
+})();
+
+// ── Audio ──
+const bgm=$('bgm');
+bgm.volume=0.3;bgm.play().catch(()=>{});
+
+// ── Synth SFX ──
+const SFX=(()=>{
+let ctx=null;
+const init=()=>{if(!ctx)ctx=new(window.AudioContext||window.webkitAudioContext)();if(ctx.state==='suspended')ctx.resume()};
+const tone=(f,type='sine',dur=0.08,vol=0.06)=>{
+if(!ctx)return;
+const o=ctx.createOscillator();const g=ctx.createGain();
+o.type=type;o.frequency.setValueAtTime(f,ctx.currentTime);
+g.gain.setValueAtTime(Math.max(0.0001,vol),ctx.currentTime);
+g.gain.exponentialRampToValueAtTime(0.0001,ctx.currentTime+dur);
+o.connect(g);g.connect(ctx.destination);o.start();o.stop(ctx.currentTime+dur);
+};
+return{
+init,
+text:()=>{init();tone(210,'square',0.04,0.02)},
+hit:()=>{init();tone(100,'sawtooth',0.15,0.08);tone(80,'sawtooth',0.12,0.06)},
+heal:()=>{init();tone(440,'sine',0.15,0.05);setTimeout(()=>tone(660,'sine',0.2,0.05),80)},
+select:()=>{init();tone(440,'square',0.05,0.04)},
+confirm:()=>{init();tone(660,'square',0.06,0.05)},
+dodge:()=>{init();tone(300,'triangle',0.06,0.03)},
+win:()=>{init();tone(523,'triangle',0.1,0.06);setTimeout(()=>tone(659,'triangle',0.12,0.06),90);setTimeout(()=>tone(784,'triangle',0.15,0.06),190)}
+};
+})();
+
+// ── Input ──
+const Keys={};
+window.addEventListener('keydown',e=>{Keys[e.key]=true});
+window.addEventListener('keyup',e=>{Keys[e.key]=false});
+
+// Mobile dpad
+document.querySelectorAll('.dp-btn').forEach(btn=>{
+const dir=btn.dataset.dir;
+if(!dir)return;
+const key={up:'ArrowUp',down:'ArrowDown',left:'ArrowLeft',right:'ArrowRight'}[dir];
+btn.addEventListener('touchstart',e=>{e.preventDefault();Keys[key]=true},{passive:false});
+btn.addEventListener('touchend',e=>{e.preventDefault();Keys[key]=false},{passive:false});
+});
+
+// ── Game State ──
+const G={
+state:'dialogue',// dialogue, menu, act_menu, dodge, gameover, win
+hp:20,maxHp:20,
+enemyHp:80,enemyMax:80,
+empathy:0,// progress toward mercy (0-5)
+pressure:0,// violence counter, makes dodges harder
+items:{breath:2},
+invulnUntil:0,
+textQueue:[],
+textCallback:null,
+typing:false,
+skipType:false,
+dodgeRaf:null,
+};
+
+// ── DOM ──
+const dialogueText=$('dialogue-text');
+const mainMenu=$('main-menu');
+const actMenu=$('act-menu');
+const continuePrompt=$('continue-prompt');
+const hpFill=$('hp-fill');
+const hpText=$('hp-text');
+const enemyBar=$('enemy-bar');
+const enemyFillEl=$('enemy-fill');
+const enemySvg=$('enemy-svg');
+const noiseCanvas=$('noise');
+const tvScreen=$('tv-screen');
+const bulletBox=$('bullet-box');
+const bCtx=bulletBox.getContext('2d');
+
+// ── HUD Update ──
+const updateHUD=()=>{
+hpFill.style.width=(G.hp/G.maxHp*100)+'%';
+hpText.textContent=`${Math.max(0,G.hp)}/${G.maxHp}`;
+enemyFillEl.style.width=(G.enemyHp/G.enemyMax*100)+'%';
+// Noise increases with pressure
+NoiseLayer.setIntensity(0.07+G.pressure*0.025);
+};
+
+// ── Typing ──
+const typeText=async(text,speed=28)=>{
+G.typing=true;G.skipType=false;
+dialogueText.innerHTML='';
+for(let i=0;i<text.length;i++){
+if(G.skipType){dialogueText.innerHTML=text;break}
+if(text[i]==='<'){const j=text.indexOf('>',i);dialogueText.innerHTML+=text.substring(i,j+1);i=j}
+else{dialogueText.innerHTML+=text[i];SFX.text()}
+await sleep(speed);
+}
+G.typing=false;
+};
+
+// ── Queue dialogue lines then callback ──
+const queueDialogue=(lines,cb)=>{
+G.state='dialogue';
+mainMenu.style.display='none';
+actMenu.style.display='none';
+continuePrompt.style.display='none';
+G.textQueue=[...lines];
+G.textCallback=cb||null;
+processQueue();
+};
+
+const processQueue=async()=>{
+if(G.textQueue.length===0){
+if(G.textCallback)G.textCallback();
+return;
+}
+const line=G.textQueue.shift();
+if(typeof line==='function'){line();processQueue();return}
+await typeText(line);
+continuePrompt.style.display='block';
+// Wait for input
+await new Promise(resolve=>{
+const handler=()=>{
+if(G.typing){G.skipType=true;return}
+continuePrompt.style.display='none';
+document.removeEventListener('click',handler);
+document.removeEventListener('keydown',kHandler);
+resolve();
+};
+const kHandler=e=>{if(e.key==='z'||e.key==='Z'||e.key==='Enter')handler()};
+document.addEventListener('click',handler);
+document.addEventListener('keydown',kHandler);
+});
+processQueue();
+};
+
+// ── Show Menu ──
+const showMenu=(text)=>{
+G.state='menu';
+if(text)dialogueText.innerHTML=text;
+mainMenu.style.display='grid';
+actMenu.style.display='none';
+};
+
+const showActMenu=()=>{
+G.state='act_menu';
+mainMenu.style.display='none';
+actMenu.style.display='grid';
+dialogueText.innerHTML='* What will you do?';
+// Update listen button text based on empathy
+const listenBtn=actMenu.querySelector('[data-act="listen"]');
+if(listenBtn)listenBtn.textContent=G.empathy>=3?'Remember':'Listen';
+};
+
+// ── Menu click handlers ──
+mainMenu.addEventListener('click',e=>{
+const act=e.target.dataset.act;if(!act||G.state!=='menu')return;
+SFX.confirm();
+mainMenu.style.display='none';
+if(act==='fight')doFight();
+else if(act==='act')showActMenu();
+else if(act==='item')doItem();
+else if(act==='mercy')doMercy();
+});
+
+actMenu.addEventListener('click',e=>{
+const act=e.target.dataset.act;if(!act||G.state!=='act_menu')return;
+SFX.confirm();
+actMenu.style.display='none';
+if(act==='check')doCheck();
+else if(act==='listen')doListen();
+else if(act==='reassure')doReassure();
+else if(act==='back')showMenu('* The Static waits.');
+});
+
+// ── Actions ──
+const doFight=()=>{
+G.enemyHp=Math.max(0,G.enemyHp-8);
+G.pressure=Math.min(8,G.pressure+2);
+updateHUD();
+queueDialogue([
+'<span class="narrator">* You strike the static.</span>',
+'<span class="narrator">* It cracks. But the crack sounds like your own voice screaming.</span>',
+'<span class="voice">* "See? Violence is all you know."</span>',
+'<span class="narrator">* The static grows thicker.</span>',
+],()=>startDodge('hard'));
+};
+
+const doCheck=()=>{
+queueDialogue([
+'<span class="narrator">* THE STATIC — ATK varies / DEF 0</span>',
+'<span class="narrator">* It is not a monster. It is a recording of every doubt you ever had, played on loop.</span>',
+'<span class="narrator">* It cannot be destroyed. Only understood.</span>',
+],()=>showMenu('* The Static waits.'));
+};
+
+const doListen=()=>{
+G.empathy++;
+G.enemyHp=Math.max(0,G.enemyHp-10);
+G.pressure=Math.max(0,G.pressure-1);
+updateHUD();
+
+const lines=G.empathy<=2?[
+'<span class="narrator">* You listen to the static instead of fighting it.</span>',
+'<span class="voice">* "Everyone is ahead of you. You started too late."</span>',
+'<span class="self">* You whisper: "Late is not the same as never."</span>',
+]:[
+'<span class="narrator">* You listen deeper. Past the noise.</span>',
+'<span class="narrator">* You remember a night you studied until 2am. Not because anyone asked you to.</span>',
+'<span class="self">* Because you wanted to prove something to yourself.</span>',
+'<span class="narrator">* The static softens.</span>',
+];
+queueDialogue(lines,()=>startDodge('easy'));
+};
+
+const doReassure=()=>{
+G.empathy++;
+G.enemyHp=Math.max(0,G.enemyHp-18);
+G.pressure=Math.max(0,G.pressure-2);
+updateHUD();
+
+const msgs=[
+'<span class="self">* "I know you are scared. So am I."</span>',
+'<span class="self">* "Being average is not a death sentence. It is a starting line."</span>',
+'<span class="self">* "I do not need to be the best. I need to be better than I was yesterday."</span>',
+'<span class="self">* "You tried to protect me by keeping my expectations low."</span>',
+'<span class="self">* "But I do not need protection anymore. I need permission to try."</span>',
+];
+const msg=msgs[Math.min(G.empathy-1,msgs.length-1)];
+
+queueDialogue([
+msg,
+'<span class="voice">* "..."</span>',
+'<span class="narrator">* The static trembles. Not with anger. With recognition.</span>',
+],()=>startDodge('easy'));
+};
+
+const doItem=()=>{
+if(G.items.breath<=0){
+queueDialogue(['<span class="narrator">* (Nothing left to use.)</span>'],()=>showMenu());
+return;
+}
+if(G.hp>=G.maxHp){
+queueDialogue(['<span class="narrator">* Your HP is full.</span>'],()=>showMenu());
+return;
+}
+G.items.breath--;
+G.hp=Math.min(G.maxHp,G.hp+8);
+G.pressure=Math.max(0,G.pressure-1);
+updateHUD();
+SFX.heal();
+queueDialogue([
+'<span class="narrator">* You take a deep breath.</span>',
+`<span class="narrator">* (Breaths left: ${G.items.breath})</span>`,
+'<span class="narrator">* HP recovered.</span>',
+],()=>startDodge('easy'));
+};
+
+const doMercy=()=>{
+if(G.empathy>=4||G.enemyHp<=0){
+doWin();
+}else{
+queueDialogue([
+'<span class="narrator">* The Static is not ready to be quiet yet.</span>',
+'<span class="narrator">* It is still afraid of what silence means.</span>',
+'<span class="narrator">* Keep talking to it. Keep listening.</span>',
+],()=>startDodge('medium'));
+}
+};
+
+// ── Bullet Hell Dodge ──
+const startDodge=(difficulty)=>{
+G.state='dodge';
+dialogueText.innerHTML='';
+mainMenu.style.display='none';
+actMenu.style.display='none';
+
+const BW=220,BH=220;
+// Position bullet box
+const screenRect=tvScreen.getBoundingClientRect();
+const tvRect=tvScreen.getBoundingClientRect();
+bulletBox.style.display='block';
+bulletBox.style.left=((tvRect.width-BW)/2)+'px';
+bulletBox.style.top=((tvRect.height-BH)/2-10)+'px';
+bulletBox.width=BW;bulletBox.height=BH;
+
+SFX.dodge();
+
+let soul={x:BW/2,y:BH/2};
+let bullets=[];
+let frame=0;
+const p=G.pressure;
+
+const baseDur=difficulty==='easy'?280:difficulty==='medium'?360:420;
+const maxFrames=baseDur+p*8;
+
+const spawnBullets=()=>{
+if(difficulty==='easy'){
+if(frame%Math.max(14,18-p)===0){
+bullets.push({x:Math.random()*BW,y:-8,vx:0,vy:2.5+p*0.06,r:4});
+}
+if(G.pressure>=3&&frame%50===0){
+bullets.push({x:-8,y:30+Math.random()*160,vx:2.2,vy:0,r:4});
+}
+}else if(difficulty==='medium'){
+if(frame%Math.max(10,14-p)===0){
+const a=frame*0.1;
+bullets.push({x:BW/2,y:-8,vx:Math.sin(a)*(2+p*0.08),vy:2.8+p*0.05,r:4});
+}
+if(frame%60===0){
+const dx=soul.x-BW/2,dy=soul.y-0;
+const mag=Math.max(1,Math.hypot(dx,dy));
+bullets.push({x:BW/2,y:-8,vx:(dx/mag)*3,vy:(dy/mag)*3,r:4});
+}
+}else{
+// Hard: crossfire + aimed
+if(frame%Math.max(8,12-p)===0){
+const a=frame*0.12;
+bullets.push({x:BW/2,y:-8,vx:Math.sin(a)*(2.8+p*0.1),vy:3+p*0.05,r:4});
+}
+if(frame%40===0){
+bullets.push({x:0,y:Math.random()*180+20,vx:3+p*0.06,vy:0,r:4});
+bullets.push({x:BW,y:Math.random()*180+20,vx:-(3+p*0.06),vy:0,r:4});
+}
+if(p>=4&&frame%70===0){
+const dx=soul.x-BW/2,dy=soul.y-BH/2;
+const mag=Math.max(1,Math.hypot(dx,dy));
+bullets.push({x:BW/2,y:BH/2,vx:(dx/mag)*3.5,vy:(dy/mag)*3.5,r:5});
+}
+}
+};
+
+const loop=()=>{
+if(G.state!=='dodge')return;
+
+bCtx.fillStyle='rgba(0,0,0,0.35)';
+bCtx.fillRect(0,0,BW,BH);
+
+// Move soul
+const spd=3.5;
+if(Keys.ArrowUp||Keys.w||Keys.W)soul.y=Math.max(8,soul.y-spd);
+if(Keys.ArrowDown||Keys.s||Keys.S)soul.y=Math.min(BH-8,soul.y+spd);
+if(Keys.ArrowLeft||Keys.a||Keys.A)soul.x=Math.max(8,soul.x-spd);
+if(Keys.ArrowRight||Keys.d||Keys.D)soul.x=Math.min(BW-8,soul.x+spd);
+
+// Draw soul
+const now=performance.now();
+const inv=now<G.invulnUntil;
+if(!inv||Math.floor(now/80)%2===0){
+bCtx.fillStyle='#00ffaa';
+bCtx.shadowBlur=8;bCtx.shadowColor='#00ffaa';
+bCtx.beginPath();bCtx.arc(soul.x,soul.y,6,0,Math.PI*2);bCtx.fill();
+bCtx.shadowBlur=0;
+}
+
+spawnBullets();
+
+// Update bullets
+for(let i=bullets.length-1;i>=0;i--){
+const b=bullets[i];
+b.x+=b.vx;b.y+=b.vy;
+
+bCtx.fillStyle='#fff';
+bCtx.beginPath();bCtx.arc(b.x,b.y,b.r,0,Math.PI*2);bCtx.fill();
+
+// Collision
+const dx=soul.x-b.x,dy=soul.y-b.y;
+if(dx*dx+dy*dy<(b.r+6)*(b.r+6)){
+if(now>=G.invulnUntil){
+bullets.splice(i,1);
+G.hp-=2;
+G.invulnUntil=now+600;
+updateHUD();
+SFX.hit();
+tvScreen.classList.remove('shake');
+void tvScreen.offsetWidth;
+tvScreen.classList.add('shake');
+if(G.hp<=0){endDodge();doGameOver();return}
+}
+continue;
+}
+
+// OOB
+if(b.y>BH+20||b.y<-20||b.x<-20||b.x>BW+20)bullets.splice(i,1);
+}
+
+// Border
+bCtx.strokeStyle='#fff';bCtx.lineWidth=3;bCtx.strokeRect(0,0,BW,BH);
+
+frame++;
+if(frame<maxFrames){
+G.dodgeRaf=requestAnimationFrame(loop);
+}else{
+endDodge();
+// Enemy calms as empathy grows
+if(G.empathy>=3){
+enemySvg.classList.remove('enemy-glitch');
+enemySvg.classList.add('enemy-calm');
+}
+// Phase transitions
+maybeTransition(()=>showMenu('* The Static waits.'));
+}
+};
+
+if(G.dodgeRaf)cancelAnimationFrame(G.dodgeRaf);
+G.dodgeRaf=requestAnimationFrame(loop);
+};
+
+const endDodge=()=>{
+cancelAnimationFrame(G.dodgeRaf);
+bulletBox.style.display='none';
+};
+
+// ── Phase Transitions ──
+let phase2Shown=false,phase3Shown=false;
+const maybeTransition=(cb)=>{
+if(!phase2Shown&&G.enemyHp<=50){
+phase2Shown=true;
+queueDialogue([
+'<span class="narrator">* The static changes. The sharp edges round.</span>',
+'<span class="voice">* "I am not your enemy."</span>',
+'<span class="voice">* "I am the part of you that learned to expect disappointment."</span>',
+'<span class="voice">* "So you would never be caught off guard."</span>',
+'<span class="narrator">* The tape tracking stabilizes. Just a little.</span>',
+],cb);
+return;
+}
+if(!phase3Shown&&G.enemyHp<=20){
+phase3Shown=true;
+queueDialogue([
+'<span class="narrator">* The static is barely a whisper now.</span>',
+'<span class="voice">* "If you stop doubting yourself..."</span>',
+'<span class="voice">* "what happens to me?"</span>',
+'<span class="narrator">* You realize: it was never trying to destroy you.</span>',
+'<span class="narrator">* It was trying to keep you small enough to feel safe.</span>',
+],cb);
+return;
+}
+cb();
+};
+
+// ── Win ──
+const doWin=()=>{
+G.state='win';
+mainMenu.style.display='none';
+actMenu.style.display='none';
+SFX.win();
+
+enemySvg.classList.remove('enemy-glitch');
+enemySvg.classList.add('enemy-calm');
+enemySvg.style.opacity='0.4';
+NoiseLayer.setIntensity(0.03);
+
+queueDialogue([
+'<span class="narrator">* The Static stops fighting.</span>',
+'<span class="voice">* "I thought if I kept you afraid..."</span>',
+'<span class="voice">* "you would never have to feel the pain of failing."</span>',
+'<span class="narrator">* You place your hand on the screen.</span>',
+'<span class="narrator">* The static is warm.</span>',
+'<span class="self">* "You can stay. But we learn a kinder way to talk."</span>',
+'<span class="narrator">* The distortion aligns with you.</span>',
+'<span class="narrator">* Not perfect. Not clear.</span>',
+'<span class="narrator">* But <span class="green">yours</span>.</span>',
+],()=>{
+const overlay=$('win-overlay');
+const winText=$('win-text');
+
+let msg='The static is not gone. It never will be.<br><br>';
+if(G.pressure<=2){
+msg+='But you chose <span class="green">understanding</span> over force.<br>And the signal cleared — not because you fought it,<br>but because you <span class="gold">listened</span>.';
+}else if(G.pressure<=5){
+msg+='You fought some. You listened some.<br>That is honest. That is <span class="green">human</span>.<br>The signal is not perfect. But it is <span class="gold">yours</span>.';
+}else{
+msg+='You fought hard. The static fought back harder.<br>But even through all that noise —<br>you are still <span class="green">here</span>.<br>And that is the only thing that matters.';
+}
+
+winText.innerHTML=msg;
+overlay.classList.add('visible');
+
+$('win-btn').addEventListener('click',()=>{
+try{
+const s=JSON.parse(localStorage.getItem('anushri_tapes')||'{}');
+s.A3=true;s.A3_pressure=G.pressure;s.A3_empathy=G.empathy;
+localStorage.setItem('anushri_tapes',JSON.stringify(s));
+}catch{}
+window.location.href='index.html';
+});
+});
+};
+
+// ── Game Over ──
+const doGameOver=()=>{
+G.state='gameover';
+const overlay=$('lose-overlay');
+overlay.classList.add('visible');
+$('retry-btn').addEventListener('click',()=>location.reload());
+};
+
+// ── Story Start ──
+const startStory=()=>{
+enemyBar.style.display='block';
+queueDialogue([
+'<span class="narrator">* You press play.</span>',
+'<span class="narrator">* The screen fills with static. Familiar static.</span>',
+'<span class="narrator">* A shape forms. It looks like you — but wrong.</span>',
+'<span class="narrator">* Distorted. Sharper. Meaner.</span>',
+'<span class="voice">* "Oh. You came back."</span>',
+'<span class="voice">* "I thought you gave up after the last exam."</span>',
+'<span class="narrator">* Your Soul glows faintly green in the corner of the screen.</span>',
+'<span class="narrator">* FIGHT — ACT — ITEM — MERCY</span>',
+],()=>showMenu('* The Static hums, waiting.'));
+};
+
+// ── Init ──
+NoiseLayer.init();
+updateHUD();
+startStory();
+</script>
 </body>
 </html>
