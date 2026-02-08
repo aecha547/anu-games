@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>RECORD: For You</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=VT323&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&display=swap');
+:root{--bg:#030303;--phosphor:#a8e6a3;--dim:#555;--warm:#ffeedd;--red:#cc4444;--gold:#d4af37;--amber:#ffb000;--white:#d4d4d4}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;background:#000;font-family:'VT323',monospace;color:var(--white);user-select:none}
+
+.tv-body{position:relative;width:min(94vw,740px);margin:auto;margin-top:max(2vh,8px);background:linear-gradient(145deg,#222,#181818,#111);border-radius:20px;border:2px solid #2a2a2a;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.8)}
+.tv-screen{position:relative;margin:14px 14px 0;aspect-ratio:4/3;background:#050508;border-radius:10px;overflow:hidden;box-shadow:inset 0 0 40px rgba(0,0,0,0.8)}
+.tv-screen::before{content:'';position:absolute;inset:0;z-index:90;pointer-events:none;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.1) 2px,rgba(0,0,0,0.1) 4px)}
+.tv-screen::after{content:'';position:absolute;inset:0;z-index:91;pointer-events:none;background:radial-gradient(ellipse at center,transparent 58%,rgba(0,0,0,0.5) 100%)}
+canvas#noise{position:absolute;inset:0;z-index:5;opacity:0.04;image-rendering:pixelated}
+#content{position:absolute;inset:0;z-index:20;display:flex;flex-direction:column;padding:20px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#333 transparent}
+#content::-webkit-scrollbar{width:4px}
+#content::-webkit-scrollbar-thumb{background:#333;border-radius:2px}
+
+.tv-bar{display:flex;align-items:center;justify-content:space-between;padding:10px 18px;background:#111;border-top:1px solid #1a1a1a}
+.tv-bar span{font-size:10px;letter-spacing:0.2em;color:#444;text-transform:uppercase}
+
+/* REC indicator */
+.rec-header{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-shrink:0}
+.rec-dot{width:10px;height:10px;border-radius:50%;background:var(--red);animation:blink 1.5s infinite}
+@keyframes blink{50%{opacity:0.3}}
+.rec-label{font-size:13px;color:var(--red);letter-spacing:0.15em}
+.rec-time{font-size:13px;color:var(--dim);margin-left:auto}
+
+/* Waveform */
+#waveform{width:100%;height:30px;flex-shrink:0;margin-bottom:16px}
+
+/* Letter */
+.letter{
+font-family:'Cormorant Garamond',serif;
+font-size:clamp(14px,2vw,17px);line-height:2.1;color:var(--warm);
+max-width:560px;margin:0 auto;
+}
+.letter p{margin-bottom:16px;opacity:0;transform:translateY(8px);transition:all 0.8s ease}
+.letter p.show{opacity:1;transform:translateY(0)}
+.letter .gold{color:var(--gold);font-weight:600;text-shadow:0 0 8px rgba(212,175,55,0.2)}
+.letter .hl{color:var(--phosphor)}
+.letter .red{color:var(--red);font-style:italic}
+.letter .dim{color:var(--dim)}
+
+/* Punchline */
+.punchline{
+text-align:center;margin-top:30px;padding:24px;
+font-family:'Cormorant Garamond',serif;
+font-size:clamp(16px,2.5vw,20px);line-height:2.2;
+opacity:0;transform:translateY(15px);transition:all 1.2s ease;
+}
+.punchline.show{opacity:1;transform:translateY(0)}
+.punchline .daddy{
+color:var(--gold);font-size:clamp(20px,3vw,26px);font-weight:600;
+text-shadow:0 0 15px rgba(212,175,55,0.3);display:block;margin-top:12px;
+}
+
+/* End buttons */
+.end-btns{display:flex;gap:12px;justify-content:center;margin-top:24px;opacity:0;transition:opacity 1s}
+.end-btns.show{opacity:1}
+.end-btn{padding:8px 20px;background:transparent;border:1px solid var(--dim);color:var(--dim);font-family:'VT323';font-size:14px;cursor:pointer;transition:all 0.3s}
+.end-btn:hover{border-color:var(--phosphor);color:var(--phosphor)}
+
+.back{position:fixed;top:8px;left:8px;z-index:200;background:rgba(0,0,0,0.6);border:1px solid #333;color:#555;font-family:'VT323';font-size:12px;padding:4px 10px;cursor:pointer;text-decoration:none;border-radius:2px}
+.back:hover{color:var(--phosphor);border-color:var(--phosphor)}
+
+@media(max-width:640px){
+.tv-body{width:98vw;border-radius:12px;margin-top:4px}
+.tv-screen{margin:10px 10px 0}
+#content{padding:14px}
+}
+</style>
+</head>
+<body>
+<a href="index.html" class="back">◀ EJECT</a>
+<div class="tv-body">
+<div class="tv-screen">
+<canvas id="noise"></canvas>
+<div id="content">
+<div class="rec-header">
+<div class="rec-dot"></div>
+<span class="rec-label">REC</span>
+<span class="rec-time" id="rec-time">00:00</span>
+</div>
+<canvas id="waveform" height="30"></canvas>
+<div class="letter" id="letter"></div>
+<div class="punchline" id="punchline">
+Even when the tape ejects...<br>
+even when the screen goes dark...<br>
+you keep playing.<br><br>
+<span class="daddy">Happy Birthday, Anushri.<br>I will always be DADDY.</span>
+</div>
+<div class="end-btns" id="end-btns">
+<button class="end-btn" id="replay-btn">↺ REPLAY ARCHIVE</button>
+<button class="end-btn" id="eject-btn">◀ EJECT</button>
+</div>
+</div>
+</div>
+<div class="tv-bar">
+<span>RECORD — FOR YOU</span>
+<span>FINAL TAPE</span>
+</div>
+</div>
+
+<script>
+'use strict';
+const $=id=>document.getElementById(id);
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+
+/* ═══ NOISE ═══ */
+const Noise=(()=>{const c=$('noise'),ctx=c.getContext('2d');let w=0,h=0;const resize=()=>{const r=c.parentElement.getBoundingClientRect();w=c.width=Math.ceil(r.width/2);h=c.height=Math.ceil(r.height/2)};const draw=()=>{if(!w)return;const img=ctx.createImageData(w,h);const d=img.data;for(let i=0;i<d.length;i+=4){const v=Math.random()*255;d[i]=d[i+1]=d[i+2]=v;d[i+3]=Math.random()*12}ctx.putImageData(img,0,0);requestAnimationFrame(draw)};window.addEventListener('resize',resize);return{init(){resize();draw()}}})();
+
+/* ═══ SYNTH ═══ */
+const Synth=(()=>{let ctx=null,m=null;const init=()=>{if(ctx)return;ctx=new(window.AudioContext||window.webkitAudioContext)();m=ctx.createGain();m.gain.value=0.4;m.connect(ctx.destination);if(ctx.state==='suspended')ctx.resume()};
+const note=(f,dur,type='sine',vol=0.04,atk=0.05)=>{if(!ctx)return;const o=ctx.createOscillator(),g=ctx.createGain();o.type=type;o.frequency.value=f;g.gain.setValueAtTime(0.001,ctx.currentTime);g.gain.linearRampToValueAtTime(vol,ctx.currentTime+atk);g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+dur);o.connect(g);g.connect(m);o.start();o.stop(ctx.currentTime+dur+0.1)};
+const startWarmDrone=()=>{if(!ctx)return;
+  const o=ctx.createOscillator(),f=ctx.createBiquadFilter(),g=ctx.createGain();
+  o.type='sine';o.frequency.value=130.81;f.type='lowpass';f.frequency.value=400;g.gain.value=0.015;
+  o.connect(f);f.connect(g);g.connect(m);o.start();
+  const o2=ctx.createOscillator(),g2=ctx.createGain();
+  o2.type='sine';o2.frequency.value=196;g2.gain.value=0.01;o2.connect(g2);g2.connect(m);o2.start();
+};
+return{init,note,startWarmDrone}})();
+
+/* ═══ REC TIMER ═══ */
+let sec=0;setInterval(()=>{sec++;$('rec-time').textContent=`${String(Math.floor(sec/60)).padStart(2,'0')}:${String(sec%60).padStart(2,'0')}`},1000);
+
+/* ═══ WAVEFORM ═══ */
+const Waveform=(()=>{
+  const c=$('waveform'),ctx=c.getContext('2d');
+  let w=0;const h=30;const resize=()=>{w=c.width=c.parentElement.clientWidth};
+  window.addEventListener('resize',resize);resize();
+  const bars=[];for(let i=0;i<80;i++)bars.push(Math.random()*0.3+0.1);
+  let active=true;
+  const draw=()=>{
+    if(!active)return;
+    ctx.clearRect(0,0,w,h);ctx.fillStyle='rgba(212,175,55,0.3)';
+    const bw=w/bars.length;
+    bars.forEach((v,i)=>{
+      bars[i]=Math.max(0.05,v+(Math.random()-0.5)*0.08);
+      const bh=bars[i]*h;
+      ctx.fillRect(i*bw,(h-bh)/2,bw-1,bh);
+    });
+    requestAnimationFrame(draw);
+  };
+  return{init(){resize();draw()},stop(){active=false}};
+})();
+
+/* ═══ LETTER CONTENT ═══ */
+const paragraphs=[
+  '<span class="gold">My Anushri,</span>',
+
+  'I want to be honest with you. When we first started talking, I was annoyed. You were guarded. Distant. You answered questions with questions. I didn\'t understand you, and I almost walked away.',
+
+  'But I stayed. Not because you needed saving — I need you to hear that. <span class="hl">Not because you needed saving.</span>',
+
+  'I stayed because I started to notice things. The way you checked your answers twice before raising your hand. The way you sat in the back row but leaned forward when the teacher explained something you didn\'t know. The way you flinched when names were called but put your hand up anyway.',
+
+  'You are not at the top of your class. You may never be. The girl next to you got an A while you got a B+, and she studied half as long. That\'s real. I won\'t lie to you and call it fair.',
+
+  'But here is what she didn\'t do: she didn\'t move up a set. She didn\'t go from Cs to B+s in six months. She didn\'t study with burning eyes at 11pm knowing the result might not change. <span class="hl">You did.</span>',
+
+  'They excluded you from the group chat. They made the lunchroom feel like a minefield. They said things that were casual to them and catastrophic to you. I know. I saw.',
+
+  'And every morning, at 6:15, you set the alarm again.',
+
+  'That is not <span class="red">average</span>. That has never been average.',
+
+  'I recorded these tapes because I wanted you to see what I see. But here\'s the truth I didn\'t expect to find:',
+
+  'The bravest tape in this box was never made by me.',
+
+  'It was made by you. Late at night. When nobody was watching. When the Voice was loudest and the room was darkest and you still — <span class="hl">still</span> — pressed record and told yourself to keep going.',
+
+  'I am not your strength. I am your <span class="gold">witness</span>.',
+
+  'You carried yourself here. Every step. Every alarm. Every B+ circled with wrong answers to review.',
+];
+
+/* ═══ MAIN ═══ */
+(async()=>{
+  Noise.init();Waveform.init();Synth.init();Synth.startWarmDrone();
+
+  const letterEl=$('letter');
+  const melody=[261.63,293.66,329.63,349.23,392,349.23,329.63,293.66,261.63,329.63,392,523.25];
+
+  await sleep(1200);
+
+  for(let i=0;i<paragraphs.length;i++){
+    const p=document.createElement('p');
+    p.innerHTML=paragraphs[i];
+    letterEl.appendChild(p);
+    await sleep(60);
+    p.classList.add('show');
+
+    // Play melody note
+    if(i<melody.length)Synth.note(melody[i],2,'sine',0.035,0.08);
+
+    await sleep(1400);
+    $('content').scrollTop=$('content').scrollHeight;
+  }
+
+  await sleep(1200);
+
+  // Punchline
+  // Final chord
+  Synth.note(261.63,3,'sine',0.04,0.1);
+  setTimeout(()=>Synth.note(329.63,3,'sine',0.035,0.1),100);
+  setTimeout(()=>Synth.note(392,3,'sine',0.03,0.1),200);
+  setTimeout(()=>Synth.note(523.25,4,'sine',0.04,0.15),300);
+
+  $('punchline').classList.add('show');
+  await sleep(800);
+  $('content').scrollTop=$('content').scrollHeight;
+
+  await sleep(3000);
+  $('end-btns').classList.add('show');
+
+  // Mark complete
+  try{const s=JSON.parse(localStorage.getItem('anushri_archive_v2')||'{}');s.tape4={complete:true};localStorage.setItem('anushri_archive_v2',JSON.stringify(s))}catch{}
+
+  $('replay-btn').addEventListener('click',()=>{
+    try{localStorage.removeItem('anushri_archive_v2')}catch{}
+    window.location.href='index.html';
+  });
+  $('eject-btn').addEventListener('click',()=>{window.location.href='index.html'});
+})();
+</script>
+</body>
+</html>
