@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>SIDE A: The Weight</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=VT323&family=Cormorant+Garamond:ital,wght@0,400;1,400&display=swap');
+:root{--bg:#050505;--phosphor:#a8e6a3;--dim:#555;--warm:#ffeedd;--red:#cc4444;--gold:#d4af37;--blue:#5588bb;--cyan:#00d4aa;--white:#d4d4d4;--font-crt:'VT323',monospace;--font-serif:'Cormorant Garamond',serif}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;background:#000;font-family:var(--font-crt);color:var(--white);user-select:none}
+
+.tv-body{position:relative;width:min(94vw,740px);margin:auto;margin-top:max(1vh,6px);background:linear-gradient(145deg,#222,#181818,#111);border-radius:20px;border:2px solid #2a2a2a;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.8)}
+.tv-screen{position:relative;margin:14px 14px 0;aspect-ratio:4/3;background:#050508;border-radius:10px;overflow:hidden;box-shadow:inset 0 0 40px rgba(0,0,0,0.8)}
+.tv-screen::before{content:'';position:absolute;inset:0;z-index:90;pointer-events:none;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.12) 2px,rgba(0,0,0,0.12) 4px)}
+.tv-screen::after{content:'';position:absolute;inset:0;z-index:91;pointer-events:none;background:radial-gradient(ellipse at center,transparent 58%,rgba(0,0,0,0.55) 100%)}
+canvas#noise{position:absolute;inset:0;z-index:5;opacity:0.07;image-rendering:pixelated}
+#game{position:absolute;inset:0;z-index:20;display:flex;flex-direction:column;padding:16px;overflow:hidden}
+.tv-bar{display:flex;align-items:center;justify-content:space-between;padding:10px 18px;background:#111;border-top:1px solid #1a1a1a}
+.tv-bar span{font-size:10px;letter-spacing:0.2em;color:#444;text-transform:uppercase}
+
+/* Scene text */
+.scene{flex:1;overflow-y:auto;padding-right:6px;font-size:clamp(15px,2.3vw,19px);line-height:1.7;scrollbar-width:thin;scrollbar-color:#333 transparent}
+.scene::-webkit-scrollbar{width:4px}
+.scene::-webkit-scrollbar-thumb{background:#333;border-radius:2px}
+.narrator{color:var(--dim);font-style:italic}
+.voice{color:var(--red);opacity:0.85}
+.self{color:var(--warm)}
+.guide{color:var(--phosphor);opacity:0.6;font-size:0.85em}
+.priya{color:#cc88cc}
+.rao{color:var(--blue)}
+.green{color:var(--phosphor)}
+.gold{color:var(--gold)}
+
+/* Choices */
+.choices{display:flex;flex-direction:column;gap:6px;margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.04)}
+.choice{background:rgba(255,255,255,0.015);border:1px solid rgba(255,255,255,0.06);color:var(--white);padding:9px 14px;font-family:var(--font-crt);font-size:15px;text-align:left;cursor:pointer;transition:all 0.2s}
+.choice:hover{background:rgba(255,255,255,0.05);border-color:var(--phosphor);color:var(--phosphor);transform:translateX(4px)}
+
+/* Continue hint */
+.hint{font-size:12px;color:#333;text-align:center;margin-top:6px;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:0.3}50%{opacity:0.7}}
+
+/* Rewind overlay */
+.rewind-overlay{position:absolute;inset:0;z-index:35;background:rgba(0,0,0,0.8);display:flex;justify-content:center;align-items:center;font-size:28px;letter-spacing:0.2em;color:var(--white);opacity:0;pointer-events:none;transition:opacity 0.3s;z-index:80}
+.rewind-overlay.show{opacity:1}
+
+/* Scene indicator */
+.scene-tag{position:absolute;top:12px;right:14px;font-size:11px;color:var(--dim);letter-spacing:0.15em;z-index:25}
+
+/* SVG character area */
+.char-stage{height:140px;display:flex;justify-content:center;align-items:flex-end;gap:30px;margin-bottom:8px;flex-shrink:0;position:relative}
+.char-svg{transition:all 0.5s ease}
+
+/* Back button */
+.back{position:fixed;top:8px;left:8px;z-index:200;background:rgba(0,0,0,0.6);border:1px solid #333;color:#555;font-family:var(--font-crt);font-size:12px;padding:4px 10px;cursor:pointer;text-decoration:none;border-radius:2px}
+.back:hover{color:var(--phosphor);border-color:var(--phosphor)}
+
+@media(max-width:640px){
+.tv-body{width:98vw;border-radius:12px;margin-top:2px}
+.tv-screen{margin:8px 8px 0}
+.char-stage{height:110px;gap:16px}
+#game{padding:10px}
+}
+</style>
+</head>
+<body>
+<a href="index.html" class="back">◀ EJECT</a>
+<div class="tv-body">
+<div class="tv-screen">
+<canvas id="noise"></canvas>
+<div id="game">
+<div class="scene-tag" id="scene-tag">SCENE 1/6</div>
+<div class="char-stage" id="stage"></div>
+<div class="scene" id="scene"></div>
+<div id="ui-area"></div>
+</div>
+<div class="rewind-overlay" id="rewind">◀◀ REWIND</div>
+</div>
+<div class="tv-bar">
+<span>SIDE A — THE WEIGHT</span>
+<span id="counter">00:00</span>
+</div>
+</div>
+
+<script>
+'use strict';
+const $=id=>document.getElementById(id);
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+
+/* ═══ NOISE ═══ */
+const Noise=(()=>{const c=$('noise'),ctx=c.getContext('2d');let w=0,h=0;const resize=()=>{const r=c.parentElement.getBoundingClientRect();w=c.width=Math.ceil(r.width/2);h=c.height=Math.ceil(r.height/2)};const draw=()=>{if(!w)return;const img=ctx.createImageData(w,h);const d=img.data;for(let i=0;i<d.length;i+=4){const v=Math.random()*255;d[i]=d[i+1]=d[i+2]=v;d[i+3]=Math.random()*25}ctx.putImageData(img,0,0);requestAnimationFrame(draw)};window.addEventListener('resize',resize);return{init(){resize();draw()},burst(d=400){c.style.opacity='0.3';setTimeout(()=>c.style.opacity='0.07',d)}}})();
+
+/* ═══ SYNTH ═══ */
+const Synth=(()=>{let ctx=null,m=null;const init=()=>{if(ctx)return;ctx=new(window.AudioContext||window.webkitAudioContext)();m=ctx.createGain();m.gain.value=0.4;m.connect(ctx.destination);if(ctx.state==='suspended')ctx.resume()};const note=(f,dur,type='triangle',vol=0.08,atk=0.01)=>{if(!ctx)return;const o=ctx.createOscillator(),g=ctx.createGain();o.type=type;o.frequency.value=f;g.gain.setValueAtTime(0.001,ctx.currentTime);g.gain.linearRampToValueAtTime(vol,ctx.currentTime+atk);g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+dur);o.connect(g);g.connect(m);o.start();o.stop(ctx.currentTime+dur+0.05)};const noiseBurst=(dur=0.1,vol=0.06)=>{if(!ctx)return;const sz=Math.floor(ctx.sampleRate*dur),buf=ctx.createBuffer(1,sz,ctx.sampleRate),d=buf.getChannelData(0);for(let i=0;i<sz;i++)d[i]=Math.random()*2-1;const s=ctx.createBufferSource();s.buffer=buf;const g=ctx.createGain();g.gain.setValueAtTime(vol,ctx.currentTime);g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+dur);s.connect(g);g.connect(m);s.start()};
+const typeClick=()=>note(1600+Math.random()*500,0.012,'square',0.02);
+const voiceHum=(pitch=200)=>note(pitch,0.04,'square',0.015);
+const rewindSfx=()=>{for(let i=0;i<8;i++)setTimeout(()=>note(400-i*25,0.05,'sawtooth',0.035),i*35)};
+const glitchSfx=()=>{noiseBurst(0.15,0.1);note(80,0.1,'sawtooth',0.08)};
+const startBg=()=>{if(!ctx)return;const o=ctx.createOscillator(),f=ctx.createBiquadFilter(),g=ctx.createGain();o.type='sawtooth';o.frequency.value=110;f.type='lowpass';f.frequency.value=200;g.gain.value=0.012;o.connect(f);f.connect(g);g.connect(m);o.start();const h=ctx.createOscillator(),hg=ctx.createGain();h.type='sine';h.frequency.value=60;hg.gain.value=0.008;h.connect(hg);hg.connect(m);h.start()};
+return{init,note,noiseBurst,typeClick,voiceHum,rewindSfx,glitchSfx,startBg}})();
+
+/* ═══ COUNTER ═══ */
+let sec=0;setInterval(()=>{sec++;$('counter').textContent=`${String(Math.floor(sec/60)).padStart(2,'0')}:${String(sec%60).padStart(2,'0')}`},1000);
+
+/* ═══ SVG CHARACTERS ═══ */
+const Characters={
+  anushri(mood='neutral'){
+    const eyes={neutral:'M34,28a2,2 0 1,1 0,0.01 M46,28a2,2 0 1,1 0,0.01',down:'M34,30a2,2 0 1,1 0,0.01 M46,30a2,2 0 1,1 0,0.01',determined:'M33,28a2.5,2 0 1,1 0,0.01 M45,28a2.5,2 0 1,1 0,0.01'};
+    const posture=mood==='small'?'translate(0,8) scale(0.9)':mood==='determined'?'translate(0,-2)':'';
+    return `<svg viewBox="0 0 80 110" width="55" class="char-svg" style="transform:${posture}">
+      <ellipse cx="40" cy="105" rx="20" ry="3" fill="rgba(0,0,0,0.3)"/>
+      <rect x="26" y="48" width="28" height="36" rx="5" fill="#4a5a8a">
+        <animate attributeName="height" values="36;37;36" dur="3s" repeatCount="indefinite"/>
+      </rect>
+      <rect x="20" y="56" width="10" height="22" rx="4" fill="#4a5a8a"/>
+      <rect x="50" y="56" width="10" height="22" rx="4" fill="#4a5a8a"/>
+      <circle cx="40" cy="36" r="15" fill="#ddb896"/>
+      <path d="M22,24 Q40,8 58,24 L58,36 Q48,30 40,32 Q32,30 22,36 Z" fill="#1a1a1a"/>
+      <path d="${eyes[mood==='small'?'down':mood==='determined'?'determined':'neutral']}" fill="#111"/>
+      <path d="${mood==='small'?'M36,42 Q40,40 44,42':'M36,42 Q40,44 44,42'}" stroke="#888" stroke-width="1.2" fill="none"/>
+      <circle cx="40" cy="36" r="18" fill="none" stroke="rgba(168,230,163,${mood==='determined'?0.15:0.05})" stroke-width="2">
+        <animate attributeName="r" values="18;20;18" dur="4s" repeatCount="indefinite"/>
+      </circle>
+    </svg>`;
+  },
+  priya(){
+    return `<svg viewBox="0 0 80 110" width="50" class="char-svg" style="opacity:0.7">
+      <rect x="26" y="48" width="28" height="36" rx="5" fill="#8a5a7a"/>
+      <circle cx="40" cy="36" r="14" fill="#c4a882"/>
+      <path d="M24,22 Q40,10 56,22 L58,40 Q48,32 40,34 Q32,32 22,40 Z" fill="#2a1a0a"/>
+      <circle cx="35" cy="35" r="1.8" fill="#111"/>
+      <circle cx="45" cy="35" r="1.8" fill="#111"/>
+      <path d="M36,42 Q40,44 44,42" stroke="#888" stroke-width="1" fill="none"/>
+    </svg>`;
+  },
+  msrao(){
+    return `<svg viewBox="0 0 80 110" width="50" class="char-svg" style="opacity:0.65">
+      <rect x="24" y="48" width="32" height="40" rx="4" fill="#5a6a5a"/>
+      <circle cx="40" cy="34" r="14" fill="#c4a480"/>
+      <path d="M24,22 Q40,14 56,22 L54,28 Q40,20 26,28 Z" fill="#333"/>
+      <rect x="32" y="30" width="7" height="5" rx="1" fill="none" stroke="#888" stroke-width="1"/>
+      <rect x="42" y="30" width="7" height="5" rx="1" fill="none" stroke="#888" stroke-width="1"/>
+      <path d="M36,40 L44,40" stroke="#888" stroke-width="1"/>
+    </svg>`;
+  }
+};
+
+/* ═══ NARRATIVE ENGINE ═══ */
+const sceneEl=$('scene');
+const uiEl=$('ui-area');
+const stageEl=$('stage');
+const rewindEl=$('rewind');
+
+let typing=false,skipType=false;
+let resilience=0,avoidance=0;
+
+const type=async(html,spd=25)=>{
+  typing=true;skipType=false;
+  const span=document.createElement('span');sceneEl.appendChild(span);
+  for(let i=0;i<html.length;i++){
+    if(skipType){span.innerHTML=html;break}
+    if(html[i]==='<'){const j=html.indexOf('>',i);span.innerHTML+=html.substring(i,j+1);i=j}
+    else{span.innerHTML+=html[i];Synth.typeClick()}
+    await sleep(spd);
+  }
+  typing=false;sceneEl.scrollTop=sceneEl.scrollHeight;
+};
+
+const ln=async(text,cls='narrator',spd=25)=>{
+  await type(`<span class="${cls}">${text}</span><br>`,spd);
+};
+
+const br=()=>{sceneEl.innerHTML+='<br>';sceneEl.scrollTop=sceneEl.scrollHeight};
+const clear=()=>{sceneEl.innerHTML=''};
+
+const wait=()=>new Promise(r=>{
+  const h=document.createElement('div');h.className='hint';h.textContent='[CLICK / ENTER]';
+  uiEl.innerHTML='';uiEl.appendChild(h);
+  const handler=()=>{if(typing){skipType=true;return}uiEl.innerHTML='';document.removeEventListener('click',handler);document.removeEventListener('keydown',kh);r()};
+  const kh=e=>{if(e.key==='Enter'||e.key===' ')handler()};
+  document.addEventListener('click',handler);document.addEventListener('keydown',kh);
+});
+
+const choose=(options)=>new Promise(r=>{
+  const div=document.createElement('div');div.className='choices';
+  options.forEach(o=>{
+    const btn=document.createElement('button');btn.className='choice';
+    btn.textContent='> '+o.text;
+    btn.addEventListener('click',()=>{Synth.note(440,0.04,'square',0.04);uiEl.innerHTML='';r(o.value)});
+    div.appendChild(btn);
+  });
+  uiEl.innerHTML='';uiEl.appendChild(div);
+});
+
+const doRewind=async(dur=1200)=>{
+  Synth.rewindSfx();Noise.burst(dur);
+  rewindEl.classList.add('show');
+  await sleep(dur);
+  rewindEl.classList.remove('show');
+};
+
+const glitch=async()=>{
+  Synth.glitchSfx();Noise.burst(300);
+  await sleep(300);
+};
+
+const setScene=(n,chars=[])=>{
+  $('scene-tag').textContent=`SCENE ${n}/6`;
+  stageEl.innerHTML=chars.join('');
+};
+
+/* ═══ STORY ═══ */
+const story=async()=>{
+  Synth.init();Synth.startBg();
+  await sleep(500);
+
+  await ln('> PLAYING: SIDE A','narrator',15);
+  await ln('> TIMESTAMP: A SCHOOL DAY','narrator',15);
+  await sleep(600);clear();
+
+  // ──── SCENE 1: MORNING ────
+  setScene(1,[Characters.anushri('small')]);
+  await ln('The alarm goes off at 6:15.','narrator');
+  await wait();
+  await ln('Same sound. Same ceiling. Same weight on the chest before the day has even started.','narrator');
+  await wait();
+  await ln('You check your phone.','narrator');
+  await ln('The class group chat has 47 new messages. You are not in it.','narrator');
+  await wait();
+  await ln('You know this because Priya\'s status shows a screenshot. You can see the chat name. You can count the members.','narrator');
+  await ln('You are not one of them.','narrator');
+  await wait();
+
+  await ln('"47 messages. None of them for you."','voice');
+  await ln('"It\'s fine. It\'s just a group chat."','self');
+  await ln('"Is it, though?"','voice');
+  await wait();
+
+  const morning=await choose([
+    {text:'Check Priya\'s status again. Count the members again.',value:'dwell'},
+    {text:'Put the phone face-down. Get dressed.',value:'move'}
+  ]);
+
+  if(morning==='dwell'){
+    avoidance++;
+    await ln('You check again. 23 members. You count twice. Still 23. Still not you.','narrator');
+    await ln('"Now you know for sure. Feel better?"','voice');
+    await ln('You don\'t.','narrator');
+  }else{
+    resilience++;
+    await ln('The phone goes face-down. The screen goes dark. You get dressed.','narrator');
+    await ln('Not because it doesn\'t hurt. Because you have a chemistry exam in four hours and the periodic table won\'t memorize itself.','narrator');
+  }
+  await wait();
+
+  // ──── SCENE 2: SCHOOL GATE ────
+  await glitch();clear();
+  setScene(2,[Characters.anushri('neutral')]);
+
+  await ln('The school gate. 7:50am.','narrator');
+  await ln('Two classmates walk ahead of you. You recognize their bags.','narrator');
+  await ln('They notice you behind them. They walk faster.','narrator');
+  await wait();
+  await ln('"They sped up. They saw you and sped up."','voice');
+  await wait();
+
+  // REWIND
+  await ln('[THE TAPE STUTTERS]','narrator',15);
+  await doRewind(1000);
+  clear();
+  setScene(2,[Characters.anushri('neutral')]);
+
+  await ln('Same gate. Same two classmates. Same moment.','narrator');
+  await ln('But the camera angle is wider now.','narrator');
+  await wait();
+  await ln('One of them is checking her watch. They\'re late. The first bell rang two minutes ago.','narrator');
+  await ln('They didn\'t speed up because of you.','narrator');
+  await ln('They sped up because of the bell.','narrator');
+  await wait();
+  await ln('"Both versions are real. The question is: which one did you believe first?"','narrator');
+  await wait();
+
+  // ──── SCENE 3: HALLWAY ────
+  await glitch();clear();
+  setScene(3,[Characters.anushri('neutral'),Characters.priya()]);
+
+  await ln('The hallway is loud. Lockers. Laughter. The smell of floor polish and anxiety.','narrator');
+  await wait();
+  await ln('Priya appears beside you. She smells like vanilla. She always does.','narrator');
+  await ln('"Hey! Cute bag."','priya');
+  await ln('She says it while walking past. She doesn\'t slow down. She doesn\'t wait for a response.','narrator');
+  await wait();
+
+  const hallway=await choose([
+    {text:'Say "thanks" to her back as she walks away.',value:'thanks'},
+    {text:'Say nothing. She wasn\'t really talking to you.',value:'nothing'},
+    {text:'Speed up. Walk beside her. Force the conversation.',value:'force'}
+  ]);
+
+  if(hallway==='thanks'){
+    await ln('"Thanks," you say. Quiet enough that she might not hear.','narrator');
+    await ln('She doesn\'t turn around.','narrator');
+    await ln('"See? Talking to a wall."','voice');
+  }else if(hallway==='nothing'){
+    avoidance++;
+    await ln('You say nothing. The word "cute" echoes in your head, turning over and over until it sounds like mockery.','narrator');
+    await ln('"Was that sarcasm? Was she making fun of you?"','voice');
+    await ln('Probably not. But the doubt has already settled in.','narrator');
+  }else{
+    resilience++;
+    await ln('You walk faster. Pull alongside her.','narrator');
+    await ln('"Thanks. I got it from that shop near—"','self');
+    await ln('Her friend grabs her arm. "Come on, we\'re gonna miss Mr. Das."','narrator');
+    await ln('She waves. "Tell me later!" And she\'s gone.','narrator');
+    await ln('"Later never comes with people like her."','voice');
+    await ln('Maybe. But you tried.','narrator');
+  }
+  await wait();
+
+  // ──── SCENE 4: CLASSROOM ────
+  await glitch();clear();
+  setScene(4,[Characters.anushri('neutral'),Characters.msrao()]);
+
+  await ln('Chemistry. Ms. Rao hands back the mock exams.','narrator');
+  await ln('She places yours face-down on the desk. She always does that. For everyone.','narrator');
+  await ln('But it feels like she does it specifically for you. To delay the disappointment.','narrator');
+  await wait();
+  await ln('You turn it over.','narrator');
+  await ln('B+.','narrator');
+  await wait();
+  await ln('The girl next to you got an A. She was on her phone for half the revision period.','narrator');
+  await ln('"Six hours of studying. She did three. Do the math."','voice');
+  await wait();
+
+  await ln('Ms. Rao pauses at your desk.','narrator');
+  await ln('"Good improvement, Anushri."','rao');
+  await ln('She moves on.','narrator');
+  await wait();
+  await ln('"Good improvement. Not \'good.\' Improvement. As in: you were bad before."','voice');
+  await wait();
+
+  // REWIND
+  await ln('[TRACKING DISTORTION — REWINDING]','narrator',15);
+  await doRewind(1000);
+  clear();
+  setScene(4,[Characters.anushri('neutral'),Characters.msrao()]);
+
+  await ln('Same classroom. Same moment. But look at her face this time.','narrator');
+  await wait();
+  await ln('Ms. Rao is smiling when she says it. Not the polite smile she gives the class. A real one.','narrator');
+  await ln('She said "improvement" because you moved up a set. A B+ in advanced chemistry is a different animal than an A in regular.','narrator');
+  await ln('She meant it as praise.','narrator');
+  await wait();
+  await ln('"But your mind edited the tape. Stripped the warmth. Kept only the sting."','narrator');
+  await wait();
+
+  const exam=await choose([
+    {text:'A B+ is still not an A.',value:'bitter'},
+    {text:'A B+ in advanced. That is... actually not bad.',value:'reframe'}
+  ]);
+
+  if(exam==='bitter'){
+    await ln('"No. It\'s not an A. And it might never be."','self');
+    await ln('The Voice has no response to that. Even it knows some truths are just true.','narrator');
+    await ln('But you circled the questions you got wrong. And you\'ll look at them tonight.','narrator');
+  }else{
+    resilience++;
+    await ln('You look at the paper again. B+. In advanced chemistry. The set you fought to get into.','narrator');
+    await ln('It\'s not an A. But six months ago you were getting Cs.','narrator');
+    await ln('"That\'s... a slope. That\'s a trajectory."','self');
+    await ln('"A slow one."','voice');
+    await ln('"A real one."','self');
+  }
+  await wait();
+
+  // ──── SCENE 5: LUNCHROOM ────
+  await glitch();clear();
+  setScene(5,[Characters.anushri('small')]);
+
+  await ln('The lunchroom. Noon.','narrator');
+  await ln('You scan for a seat. Every table looks full.','narrator');
+  await wait();
+  await ln('There\'s one near Priya\'s group. A bag is on the chair.','narrator');
+  await ln('"Taken. Like always."','voice');
+  await wait();
+
+  // REWIND
+  await ln('[TAPE DISTORTION]','narrator',15);
+  await doRewind(800);
+  clear();
+  setScene(5,[Characters.anushri('small')]);
+
+  await ln('Same lunchroom. Same chair. Wider angle.','narrator');
+  await ln('The bag belongs to nobody. Someone left it there and moved tables. The chair is free.','narrator');
+  await ln('You assumed rejection before it happened. The Voice filled in the story before reality could.','narrator');
+  await wait();
+
+  const lunch=await choose([
+    {text:'Sit at the empty chair. Open the textbook.',value:'sit'},
+    {text:'Find a corner alone. Open the textbook.',value:'corner'}
+  ]);
+
+  if(lunch==='sit'){
+    resilience++;
+    await ln('You sit. Nobody tells you to move. Nobody looks up.','narrator');
+    await ln('The world didn\'t end. The chair was just a chair.','narrator');
+    await ln('You open the textbook and start reviewing the questions you got wrong.','narrator');
+  }else{
+    await ln('You find the corner by the window. The one with the scratch on the table that says "I WAS HERE."','narrator');
+    await ln('You trace it with your finger. Then you open the textbook.','narrator');
+    await ln('Alone is not the same as defeated.','narrator');
+  }
+  await wait();
+
+  // ──── SCENE 6: EVENING ────
+  await glitch();clear();
+  setScene(6,[Characters.anushri(resilience>=3?'determined':'neutral')]);
+
+  await ln('10:47pm. Your room. The desk lamp buzzes.','narrator');
+  await ln('The textbook is open to chapter 14. The same page you\'ve been staring at for twenty minutes.','narrator');
+  await wait();
+  await ln('"Six hours yesterday. Another three tonight. And for what? Another B+? Another \'improvement\'?"','voice');
+  await wait();
+  await ln('"What if you just... stopped? Aimed lower. It hurts less that way."','voice');
+  await wait();
+
+  const evening=await choose([
+    {text:'Close the book.',value:'close'},
+    {text:'One more page.',value:'more'}
+  ]);
+
+  if(evening==='close'){
+    await ln('You close the book.','narrator');
+    await ln('Not because the Voice won. Because it\'s 10:47 and you\'ve been going since 6:15 and your eyes burn.','narrator');
+    await ln('You set the alarm for 6:15 again.','narrator');
+    await ln('"See? Giving up."','voice');
+    await ln('"Resting."','self');
+    await ln('"Same thing."','voice');
+    await ln('"No. It isn\'t."','self');
+  }else{
+    resilience++;
+    await ln('One more page. Then one more. Then you close the book at 11:20.','narrator');
+    await ln('You set the alarm for 6:15.','narrator');
+    await ln('"You know it won\'t be enough."','voice');
+    await ln('"Maybe not. But it\'s more than yesterday."','self');
+  }
+  await wait();
+
+  // ──── TAPE ENDING ────
+  await glitch();clear();
+  setScene('END',[]);
+
+  await ln('[TAPE CORRUPTION — UNKNOWN SEGMENT FOUND]','narrator',15);
+  await sleep(600);
+
+  await ln('...','narrator',150);
+  await sleep(400);
+  await ln('Wait.','narrator');
+  await ln('This part of the tape isn\'t a school day.','narrator');
+  await wait();
+  await ln('This was recorded at night. By you. Months ago.','narrator');
+  await ln('You must have forgotten you made it.','narrator');
+  await wait();br();
+
+  if(resilience>=3){
+    await ln('"I don\'t know if I\'ll make it to the top."','self');
+    await ln('"But I showed up every single day this year."','self');
+    await ln('"Every single one."','self');
+    await ln('"Even the ones where I cried in the bathroom between periods."','self');
+    await wait();
+    await ln('"That has to mean something. Even if no one else counts it."','self');
+    await ln('"I count it."','self');
+  }else if(resilience>=1){
+    await ln('"I\'m tired."','self');
+    await ln('"I don\'t know if I\'m good enough."','self');
+    await ln('"But I set the alarm again. And I\'ll set it again tomorrow."','self');
+    await ln('"That\'s not nothing."','self');
+  }else{
+    await ln('"I don\'t think I can do this."','self');
+    await ln('"Everyone is ahead. Everyone knows it. I know it."','self');
+    await sleep(600);
+    await ln('"...but I pressed record on this tape."','self');
+    await ln('"Which means some part of me still wants to try."','self');
+  }
+  await wait();br();
+
+  await ln('The tape hisses. The screen dims.','narrator');
+  await ln('But beneath the noise, something steady.','narrator');
+  await ln('A pulse. Quiet. Stubborn.','narrator');
+  await ln('Yours.','gold');
+  await wait();
+
+  await ln(`> END OF SIDE A`,'narrator',15);
+  await ln(`> RESILIENCE: ${resilience}/5`,'narrator',15);
+  await sleep(800);
+
+  try{const s=JSON.parse(localStorage.getItem('anushri_archive_v2')||'{}');s.tape1={complete:true,resilience};localStorage.setItem('anushri_archive_v2',JSON.stringify(s))}catch{}
+
+  await ln('> EJECTING...','narrator',15);
+  await sleep(1200);
+  window.location.href='index.html';
+};
+
+/* ═══ INIT ═══ */
+Noise.init();
+story();
+</script>
+</body>
+</html>
